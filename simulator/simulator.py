@@ -232,6 +232,7 @@ class Cluster(object):
             # Optimize allocations.
             node_infos = self.get_node_infos()
             self.allocations = {k: v for k, v in self.allocations.items() if k in job_infos}
+
             results = self.policy.optimize(job_infos, node_infos,
                                            self.allocations, node_infos[0])
             allocations, desired_nodes = results

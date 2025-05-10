@@ -18,7 +18,7 @@ def build_images(models, repository):
     templates = {}
     for model in models:
         with open(os.path.join(models_dir, model, "adaptdljob.yaml")) as f:
-            template = yaml.load(f)
+            template = yaml.load(f, Loader=yaml.SafeLoader) # Change here!
         dockerfile = os.path.join(models_dir, model, "Dockerfile")
         image = repository + ":" + model
         subprocess.check_call(["docker", "build", "-t", image, project_root, "-f", dockerfile])
@@ -55,7 +55,9 @@ def cache_images(templates):
             "command": ["sleep", "1000000000"],
         })
     apps_api = client.AppsV1Api()
-    namespace = config.list_kube_config_contexts()[1]["context"].get("namespace", "default")
+    # Use adaptdl namespace explicitly
+    # namespace = config.list_kube_config_contexts()[1]["context"].get("namespace", "default")
+    namespace = "adaptdl"
     apps_api.create_namespaced_daemon_set(namespace, daemonset)
     while True:
         # Wait for DaemonSet to be ready.
@@ -71,18 +73,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("policy", type=str, choices=["pollux", "optimus", "tiresias"])
     parser.add_argument("workload", type=str, help="path to workload csv")
-    parser.add_argument("--repository", type=str, default="localhost:32000/pollux")
+    # parser.add_argument("--repository", type=str, default="localhost:32000/pollux")
+    parser.add_argument("--repository", type=str, default="host.docker.internal:32000/adaptdl-submit")
     args = parser.parse_args()
 
     workload = pandas.read_csv(args.workload)
 
     config.load_kube_config()
 
-    templates = build_images(["bert", "cifar10", "deepspeech2", "imagenet", "ncf", "yolov3"], args.repository)
+    # Only build the cifar10 model since that's what we need
+    # templates = build_images(["bert", "cifar10", "deepspeech2", "imagenet", "ncf", "yolov3"], args.repository)
+    templates = build_images(["cifar10"], args.repository) # Change here!
     cache_images(templates)
 
     objs_api = client.CustomObjectsApi()
-    namespace = config.list_kube_config_contexts()[1]["context"].get("namespace", "default")
+    # namespace = config.list_kube_config_contexts()[1]["context"].get("namespace", "default")
+    namespace = "adaptdl" # Change here!
     obj_args = ("adaptdl.petuum.com", "v1", namespace, "adaptdljobs")
 
     print("start workload")

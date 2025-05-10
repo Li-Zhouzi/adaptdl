@@ -1,0 +1,36 @@
+{"timestamp": 1746888540.036574, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746888600.069039, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746888660.096672, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746888720.124408, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746888780.1541178, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746888840.184151, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746888900.212225, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746888960.2679749, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746889020.299741, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746889080.919134, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746889140.9477818, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746889200.985863, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T14:47:19Z", "completion_time": null}]}
+{"timestamp": 1746889261.017837, "submitted_jobs": []}
+{"timestamp": 1746889321.0422232, "submitted_jobs": [{"name": "cifar10-1", "epoch": 0, "allocation": ["ip-192-168-63-118.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-10T15:01:02Z", "completion_time": null}]}
+{"timestamp": 1746889381.0696099, "submitted_jobs": []}
+{"timestamp": 1746889441.099089, "submitted_jobs": []}
+{"timestamp": 1746889501.15438, "submitted_jobs": []}
+{"timestamp": 1746889561.1801012, "submitted_jobs": []}
+{"timestamp": 1746889621.9031959, "submitted_jobs": []}
+{"timestamp": 1746889681.93034, "submitted_jobs": []}
+{"timestamp": 1746889741.961643, "submitted_jobs": []}
+{"timestamp": 1746889801.99281, "submitted_jobs": []}
+{"timestamp": 1746889862.032054, "submitted_jobs": []}
+{"timestamp": 1746889922.0580611, "submitted_jobs": []}
+{"timestamp": 1746889982.0985322, "submitted_jobs": []}
+{"timestamp": 1746890042.174002, "submitted_jobs": []}
+{"timestamp": 1746890102.207061, "submitted_jobs": []}
+{"timestamp": 1746890162.853826, "submitted_jobs": []}
+{"timestamp": 1746890222.8886669, "submitted_jobs": []}
+{"timestamp": 1746890282.917054, "submitted_jobs": []}
+{"timestamp": 1746890342.950281, "submitted_jobs": []}
+{"timestamp": 1746890402.984415, "submitted_jobs": []}
+{"timestamp": 1746890463.024576, "submitted_jobs": []}
+{"timestamp": 1746890523.063315, "submitted_jobs": []}
+{"timestamp": 1746890583.0984058, "submitted_jobs": []}
+{"timestamp": 1746890643.123787, "submitted_jobs": []}
