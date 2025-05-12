@@ -59,7 +59,7 @@ def build_images(models, repository):
         repo_and_digest_part = repodigest_from_local_push.split('/', 1)[-1] # e.g., "adaptdl-submit@sha256:digest"
         
         # k8s_image_name is like "localhost:NODE_PORT/adaptdl-submit@sha256:digest"
-        k8s_image_name = f"localhost:{node_port}/{repo_and_digest_part}"
+        k8s_image_name = repodigest_from_local_push 
         
         print(f"Using image for Kubernetes PodSpec: {k8s_image_name}")
         template["spec"]["template"]["spec"]["containers"][0]["image"] = k8s_image_name
