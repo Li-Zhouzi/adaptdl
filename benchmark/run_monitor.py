@@ -24,15 +24,19 @@ if __name__ == "__main__":
             "submitted_jobs": [],
         }
         for obj in obj_list["items"]:
+            # Try to get globalBatchSize, fall back to initBatchSize
+            train_status = obj.get("status", {}).get("train", {})
+            batch_size_val = train_status.get("globalBatchSize", 0)
+
             record["submitted_jobs"].append({
                 "name": obj["metadata"]["name"],
-                "epoch": obj.get("status", {}).get("train", {}).get("epoch", 0),
+                "epoch": train_status.get("epoch", 0),
                 "allocation": obj.get("status", {}).get("allocation", []),
-                "batch_size": obj.get("status", {}).get("train", {}).get("globalBatchSize", 0),
+                "batch_size": batch_size_val,
                 "submission_time": obj["metadata"]["creationTimestamp"],
                 "completion_time": obj.get("status", {}).get("completionTimestamp", None),
             })
         with open(args.output, "a") as f:
             json.dump(record, f)
             f.write("\n")
-        time.sleep(60)
+        time.sleep(30)

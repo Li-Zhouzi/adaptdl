@@ -32,5 +32,5 @@ spec:
         hostPath:
           path: /mnt
           type: Directory
-      imagePullSecrets:
-      - name: regcred
+      # imagePullSecrets:
+      # - name: regcred

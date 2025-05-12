@@ -18,10 +18,16 @@ def build_images(models, repository):
     templates = {}
     for model in models:
         with open(os.path.join(models_dir, model, "adaptdljob.yaml")) as f:
-            template = yaml.load(f, Loader=yaml.SafeLoader) # Change here!
+            template = yaml.load(f, Loader=yaml.SafeLoader)
+        # Modify readOnly flag for /mnt mount, changed here!
+        for container_spec in template.get("spec", {}).get("template", {}).get("spec", {}).get("containers", []):
+            for mount in container_spec.get("volumeMounts", []):
+                if mount.get("mountPath") == "/mnt":
+                    mount["readOnly"] = False
         dockerfile = os.path.join(models_dir, model, "Dockerfile")
         image = repository + ":" + model
-        subprocess.check_call(["docker", "build", "-t", image, project_root, "-f", dockerfile])
+        # subprocess.check_call(["docker", "build", "-t", image, project_root, "-f", dockerfile])
+        subprocess.check_call(["docker", "buildx", "build", "--platform", "linux/amd64", "-t", image, project_root, "-f", dockerfile, "--load"])
         subprocess.check_call(["docker", "push", image])
         repodigest = subprocess.check_output(
                 ["docker", "image", "inspect", image, "--format={{index .RepoDigests 0}}"])
@@ -43,7 +49,7 @@ def cache_images(templates):
                 "metadata": {"labels": {"name": "images"}},
                 "spec": {
                     "containers": [],
-                    "imagePullSecrets": [{"name": "regcred"}],
+                    # "imagePullSecrets": [{"name": "regcred"}],
                 }
             }
         }
