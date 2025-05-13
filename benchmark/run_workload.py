@@ -59,6 +59,15 @@ def cache_images(templates):
     # Use adaptdl namespace explicitly
     # namespace = config.list_kube_config_contexts()[1]["context"].get("namespace", "default")
     namespace = "adaptdl"
+    try:
+        apps_api.delete_namespaced_daemon_set("images", namespace, body=client.V1DeleteOptions())
+        print("Deleted existing 'images' DaemonSet.")
+        time.sleep(5) 
+    except client.exceptions.ApiException as e:
+        if e.status == 404:
+            print("No existing 'images' DaemonSet to delete.")
+        else:
+            print(f"Error deleting existing DaemonSet (continuing): {e}") # Log and continue
     apps_api.create_namespaced_daemon_set(namespace, daemonset)
     while True:
         # Wait for DaemonSet to be ready.
