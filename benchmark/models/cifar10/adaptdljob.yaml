@@ -1,7 +1,7 @@
 apiVersion: adaptdl.petuum.com/v1
 kind: AdaptDLJob
 metadata:
-  generateName: cifar10-
+  name: cifar10
 spec:
   template:
     spec:
