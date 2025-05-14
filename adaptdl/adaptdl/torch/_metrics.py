@@ -16,6 +16,7 @@
 import collections
 import pickle
 import time
+import json
 
 import numpy as np
 
@@ -195,5 +196,30 @@ def _metrics_state():
         adaptdl.checkpoint.load_state(_METRICS_STATE)
     return _METRICS_STATE
 
+def report_train_metrics(epoch, loss, **kwargs):
+    if adaptdl.env.replica_rank() > 0:
+        return
+    with open(adaptdl.env.checkpoint_path() + "/train.txt", "a") as f:
+        json.dump(dict(
+            time=time.time(),
+            progress=get_progress(),
+            epoch=epoch,
+            loss=loss,
+            **kwargs
+        ), f)
+        f.write("\n")
 
+
+def report_valid_metrics(epoch, loss, **kwargs):
+    if adaptdl.env.replica_rank() > 0:
+        return
+    with open(adaptdl.env.checkpoint_path() + "/valid.txt", "a") as f:
+        json.dump(dict(
+            time=time.time(),
+            progress=get_progress(),
+            epoch=epoch,
+            loss=loss,
+            **kwargs
+        ), f)
+        f.write("\n")
 _METRICS_STATE = None
