@@ -41,7 +41,7 @@ def profile_sync_time(sync_time):
 _PREV_REPORT = None
 
 
-def profile_step_commit(accumulation_step=False):
+def profile_step_commit(epoch, accumulation_step=False):
     global _PREV_REPORT
     state = _metrics_state()
     step_time = time.time() - state.step_start
@@ -63,7 +63,7 @@ def profile_step_commit(accumulation_step=False):
             _PREV_REPORT = time.time()
         if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 30:
             _fit_perf_params()
-            _report_sched_hints()
+            _report_sched_hints(epoch)
             _PREV_REPORT = time.time()
 
 
@@ -136,7 +136,7 @@ def _get_sched_hints():
     return _metrics_state()
 
 
-def _report_sched_hints():
+def _report_sched_hints(epoch):
     assert adaptdl.env.replica_rank() == 0
     state = _metrics_state()
     # Scheduling hints
@@ -152,6 +152,7 @@ def _report_sched_hints():
         sched_hints["gradParams"]["norm"] = state.grad_params[0]
         sched_hints["gradParams"]["var"] = state.grad_params[1]
     sched_hints["maxProfiledReplicas"] = max(key[1] for key in state.profile)
+    sched_hints["epoch"] = epoch
     sched_hints["gradientAccumulation"] = state.gradient_accumulation
     post_sched_hints(sched_hints, adaptdl.env.job_id())
 

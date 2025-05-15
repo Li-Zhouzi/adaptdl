@@ -329,7 +329,7 @@ class AdaptiveDataLoaderHelper(object):
         profile_step_start(self.current_local_bsz)
         yield
         if commit:
-            profile_step_commit(self.is_accum_step())
+            profile_step_commit(current_epoch(), self.is_accum_step())
         self._accum_count = (0 if self.is_optim_step()
                              else self._accum_count + 1)
 
