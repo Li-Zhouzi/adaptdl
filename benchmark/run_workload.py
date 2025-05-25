@@ -21,7 +21,8 @@ def build_images(models, repository):
             template = yaml.load(f, Loader=yaml.SafeLoader) # Change here!
         dockerfile = os.path.join(models_dir, model, "Dockerfile")
         image = repository + ":" + model
-        subprocess.check_call(["docker", "build", "-t", image, project_root, "-f", dockerfile])
+        # subprocess.check_call(["docker", "build", "-t", image, project_root, "-f", dockerfile])
+        subprocess.check_call(["docker", "buildx", "build", "--platform", "linux/amd64", "-t", image, project_root, "-f", dockerfile, "--load"])
         subprocess.check_call(["docker", "push", image])
         repodigest = subprocess.check_output(
                 ["docker", "image", "inspect", image, "--format={{index .RepoDigests 0}}"])
@@ -93,7 +94,7 @@ if __name__ == "__main__":
 
     # Only build the cifar10 model since that's what we need
     # templates = build_images(["bert", "cifar10", "deepspeech2", "imagenet", "ncf", "yolov3"], args.repository)
-    templates = build_images(["deepspeech2"], args.repository) # Change here!
+    templates = build_images(["cifar10"], args.repository) # Change here!
     cache_images(templates)
 
     objs_api = client.CustomObjectsApi()
@@ -140,5 +141,16 @@ if __name__ == "__main__":
             env.append({"name": "TARGET_NUM_REPLICAS", "value": str(row.num_replicas)})
         if args.policy in ["tiresias", "optimus"]:
             env.append({"name": "TARGET_BATCH_SIZE", "value": str(row.batch_size)})
+        
+        # Ensure /mnt is writable
+        if "volumeMounts" in job["spec"]["template"]["spec"]["containers"][0]:
+            for mount in job["spec"]["template"]["spec"]["containers"][0]["volumeMounts"]:
+                # Assuming the mount for CIFAR-10 data is named 'data' in the YAML 
+                # and is mounted at /mnt, or its mountPath is /mnt.
+                # We need to ensure this specific mount is writable.
+                if mount.get("name") == "data" or mount.get("mountPath") == "/mnt":
+                    mount["readOnly"] = False
+                    print(f"Set readOnly=False for volumeMount: {mount.get('name', mount.get('mountPath'))}")
+
         print(yaml.dump(job))
         objs_api.create_namespaced_custom_object(*obj_args, job)
