@@ -11,8 +11,8 @@ spec:
         - python
         - /root/deepspeech2/train.py
         - --cuda
-        - --train-manifest=/mnt/deepspeech2_data/voxforge_cmu_us_train_manifest_part1.csv
-        - --val-manifest=/mnt/deepspeech2_data/voxforge_cmu_us_train_manifest_part2.csv
+        - --train-manifest=/root/deepspeech2/voxforge_train_manifest.csv
+        - --val-manifest=/root/deepspeech2/voxforge_val_manifest.csv
         - --max-norm=1
         - --batch-size=20
         - --lr=0.12
@@ -24,21 +24,12 @@ spec:
           value: "true"
         resources:
           limits:
-            nvidia.com/gpu: 4
-            cpu: 4
+            nvidia.com/gpu: 1
+            cpu: 1
             memory: "12G"
           requests:
             nvidia.com/gpu: 1
-            cpu: 4
+            cpu: 1
             memory: "12G"
-        volumeMounts:
-        - name: data
-          mountPath: /mnt
-          readOnly: true
-      volumes:
-      - name: data
-        hostPath:
-          path: /mnt
-          type: Directory
       imagePullSecrets:
       - name: regcred

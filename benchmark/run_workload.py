@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     # Only build the cifar10 model since that's what we need
     # templates = build_images(["bert", "cifar10", "deepspeech2", "imagenet", "ncf", "yolov3"], args.repository)
-    templates = build_images(["bert"], args.repository) # Change here!
+    templates = build_images(["deepspeech2"], args.repository) # Change here!
     cache_images(templates)
 
     objs_api = client.CustomObjectsApi()
