@@ -209,6 +209,7 @@ class PolluxPolicy(object):
         values = result.F[nds]
         # Construct return values.
         utilities = problem.get_cluster_utilities(states)
+        LOG.info(f"utilities: {utilities}")
         desired_nodes = self._desired_nodes(utilities, values, nodes)
         idx = self._select_result(values, min(len(nodes), desired_nodes))
         LOG.info("\n" + "-" * 80)
