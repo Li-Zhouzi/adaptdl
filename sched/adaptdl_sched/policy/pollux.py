@@ -209,8 +209,10 @@ class PolluxPolicy(object):
         values = result.F[nds]
         # Construct return values.
         utilities = problem.get_cluster_utilities(states)
-        LOG.info(f"utilities: {utilities}")
         desired_nodes = self._desired_nodes(utilities, values, nodes)
+        import random
+        if random.random() < 0.5:
+            desired_nodes = 2 # changed here to test autoscaling.
         idx = self._select_result(values, min(len(nodes), desired_nodes))
         LOG.info("\n" + "-" * 80)
         for i, state in enumerate(states):
