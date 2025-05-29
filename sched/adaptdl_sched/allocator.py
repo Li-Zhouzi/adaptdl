@@ -22,6 +22,7 @@ import time
 from adaptdl.goodput import GoodputFunction, PerfParams, GradParams
 from adaptdl.sched_hints import PERF_PARAMS
 from adaptdl_sched.policy.pollux import PolluxPolicy
+from adaptdl_sched.policy.dummy import DummyPolicy
 from adaptdl_sched.policy.speedup import SpeedupFunction
 from adaptdl_sched.policy.utils import JobInfo, NodeInfo
 from adaptdl_sched.resources import (get_node_unrequested, get_pod_requests,
@@ -41,7 +42,18 @@ class AdaptDLAllocator(object):
         self._custom_resource = ("adaptdl.petuum.com", "v1",
                                  "", "adaptdljobs")
         self._cluster_expander = expander
-        self._policy = PolluxPolicy()
+
+        # Select the policy to use
+        # Options: "pollux", "dummy"
+        SELECTED_POLICY = "dummy"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+
+        if SELECTED_POLICY == "pollux":
+            self._policy = PolluxPolicy()
+        elif SELECTED_POLICY == "dummy":
+            self._policy = DummyPolicy(num_gpus_per_job=2) # Configure dummy as needed
+        else:
+            raise ValueError(f"Unknown policy: {SELECTED_POLICY}")
+
         # lock for the two corountines in run()
         self._lock = asyncio.Lock()
 
