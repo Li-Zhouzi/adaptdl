@@ -148,6 +148,7 @@ def save_state(state, checkpoint_dir, sync=True):
     if sync:
         state.sync()
 
+    return # changed here! remove the checkpoint storages.
     if replica_rank() == 0 and checkpoint_dir is not None:
         name = _STATES_TO_NAMES[state]
         state_file = os.path.join(_get_tmp_ckpt_dir(checkpoint_dir), name)
