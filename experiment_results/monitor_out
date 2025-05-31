@@ -1,4 +1,0 @@
-{"timestamp": 1748487015.0180979, "submitted_jobs": [{"name": "cifar10-0", "epoch": 76, "allocation": ["ip-192-168-23-211.ec2.internal", "ip-192-168-36-52.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-29T02:46:49Z", "completion_time": null}]}
-{"timestamp": 1748487075.064215, "submitted_jobs": [{"name": "cifar10-0", "epoch": 79, "allocation": ["ip-192-168-23-211.ec2.internal", "ip-192-168-36-52.ec2.internal"], "batch_size": 0, "submission_time": "2025-05-29T02:46:49Z", "completion_time": null}]}
-{"timestamp": 1748487135.1009018, "submitted_jobs": []}
-{"timestamp": 1748487195.131309, "submitted_jobs": []}
