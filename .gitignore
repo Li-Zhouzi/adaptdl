@@ -1,5 +1,7 @@
 .values.yaml
 .DS_Store
+tutorial/
+experiment_results/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
