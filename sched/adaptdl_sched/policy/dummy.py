@@ -6,7 +6,7 @@ LOG.setLevel(logging.INFO)
 
 
 class DummyPolicy(object):
-    def __init__(self, num_gpus_per_job=3):
+    def __init__(self, num_gpus_per_job=1):
         self._num_gpus_per_job = num_gpus_per_job
         LOG.info(f"DummyPolicy initialized with {self._num_gpus_per_job} GPUs per job.")
 

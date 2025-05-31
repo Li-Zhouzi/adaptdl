@@ -50,7 +50,7 @@ class AdaptDLAllocator(object):
         if SELECTED_POLICY == "pollux":
             self._policy = PolluxPolicy()
         elif SELECTED_POLICY == "dummy":
-            self._policy = DummyPolicy(num_gpus_per_job=2) # Configure dummy as needed
+            self._policy = DummyPolicy(num_gpus_per_job=3) # Configure dummy as needed
         else:
             raise ValueError(f"Unknown policy: {SELECTED_POLICY}")
 
