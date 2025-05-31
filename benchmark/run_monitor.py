@@ -35,4 +35,4 @@ if __name__ == "__main__":
         with open(args.output, "a") as f:
             json.dump(record, f)
             f.write("\n")
-        time.sleep(60)
+        time.sleep(1)
