@@ -18,6 +18,7 @@ from aiohttp import web
 import logging
 from adaptdl.sched_hints import SCHED_HINTS
 from adaptdl_sched.config import get_supervisor_port
+from datetime import datetime
 
 
 LOG = logging.getLogger(__name__)
@@ -74,7 +75,7 @@ class Supervisor:
         hints = {k: hints[k] for k in SCHED_HINTS if k in hints}
         # Patch only the train field to avoid conflicts with controller.
         patch = {"status": {"train": hints}}
-        LOG.info("Patch AdaptDLJob %s/%s: %s", namespace, name, patch)
+        LOG.info("Patch AdaptDLJob %s/%s at %s: %s", namespace, name, datetime.now(), patch)
         await self._objs_api.patch_namespaced_custom_object_status(
             "adaptdl.petuum.com", "v1", namespace, "adaptdljobs", name, patch)
         return web.Response()

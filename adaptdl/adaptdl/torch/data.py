@@ -328,6 +328,8 @@ class AdaptiveDataLoaderHelper(object):
                     get_exit_flag(), lambda a, b: a or b)
         profile_step_start(self.current_local_bsz)
         yield
+        import datetime
+        LOG.info("at %s: commit %s", datetime.datetime.now(), commit)
         if commit:
             profile_step_commit(current_epoch(), self.is_accum_step())
         self._accum_count = (0 if self.is_optim_step()
