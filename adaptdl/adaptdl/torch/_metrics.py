@@ -61,7 +61,7 @@ def profile_step_commit(epoch, accumulation_step=False):
     if not accumulation_step:
         if _PREV_REPORT is None:
             _PREV_REPORT = time.time()
-        if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 30:
+        if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 5:
             _fit_perf_params()
             _report_sched_hints(epoch)
             _PREV_REPORT = time.time()
