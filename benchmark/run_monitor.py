@@ -13,15 +13,26 @@ if __name__ == "__main__":
 
     config.load_kube_config()
     objs_api = client.CustomObjectsApi()
+    core_api = client.CoreV1Api()
     # namespace = config.list_kube_config_contexts()[1]["context"].get("namespace", "default")
     # obj_args = ("esper.petuum.com", "v1", namespace, "esperjobs")
     namespace = "adaptdl"
     obj_args = ("adaptdl.petuum.com", "v1", namespace, "adaptdljobs")
     while True:
         obj_list = objs_api.list_namespaced_custom_object(*obj_args)
+        # Get node information
+        nodes = core_api.list_node()
+        total_nodes = len(nodes.items)
+        ready_nodes = sum(1 for node in nodes.items if any(condition.type == "Ready" and condition.status == "True" 
+                          for condition in node.status.conditions))
+        
         record = {
             "timestamp": time.time(),
             "submitted_jobs": [],
+            "cluster_nodes": {
+                "total": total_nodes,
+                "ready": ready_nodes
+            }
         }
         for obj in obj_list["items"]:
             record["submitted_jobs"].append({
