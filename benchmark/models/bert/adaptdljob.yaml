@@ -15,15 +15,15 @@ spec:
         - --model_name_or_path=bert-base-uncased
         - --do_train
         - --do_lower_case
-        - --train_file=./train-v1.1.json
-        - --predict_file=./dev-v1.1.json
+        - --train_file=/mnt/squad/train-v1.1.json
+        - --predict_file=/mnt/squad/dev-v1.1.json
         - --per_gpu_train_batch_size=12
         - --learning_rate=3e-5
         - --num_train_epochs=2.0
         - --max_seq_length=384
         - --doc_stride=128
-        - --cache_dir=.
-        - --data_dir=.
+        - --cache_dir=/mnt/squad
+        - --data_dir=/mnt/squad
         - --output_dir=/tmp/output
         env:
         - name: PYTHONUNBUFFERED
@@ -37,13 +37,13 @@ spec:
             nvidia.com/gpu: 1
             cpu: 2
             memory: "12G"
-        volumeMounts:
-        - name: data
-          mountPath: /mnt
-      volumes:
-      - name: data
-        hostPath:
-          path: /mnt
-          type: Directory
+        # volumeMounts:
+        # - name: data
+        #   mountPath: /mnt
+      # volumes:
+      # - name: data
+      #   hostPath:
+      #     path: /mnt
+      #     type: Directory
       imagePullSecrets:
       - name: regcred
