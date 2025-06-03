@@ -155,6 +155,8 @@ class AdaptiveDataLoaderHelper(object):
         self._gradient_accumulation = False
         self._speedup_threshold = 1.05
         self._accum_count = 0
+        self._last_profiled_epoch = None
+        self._last_profiled_batch_size = None
 
     @property
     def current_index(self):
@@ -322,6 +324,7 @@ class AdaptiveDataLoaderHelper(object):
         Every iteration of every epoch should be profiled under this context.
         Note that, custom DataLoader writers should make sure that it gets
         called equal number of times on each replica.
+        Only profiles when either the epoch or batch size changes from the last profile.
         """
         # Synchronize the exit signal so all replicas exit after
         # the same iteration. Do this asynchronously to prevent
@@ -331,11 +334,21 @@ class AdaptiveDataLoaderHelper(object):
             exit(143)  # Standard exit code response to SIGTERM.
         self.future_exit = adaptdl.collective.allreduce_async(
                     get_exit_flag(), lambda a, b: a or b)
-        profile_step_start(self.current_local_bsz)
+
+        current_epoch_val = current_epoch()
+        should_profile = (self._last_profiled_epoch != current_epoch_val or 
+                         self._last_profiled_batch_size != self.current_local_bsz)
+
+        if should_profile:
+            profile_step_start(self.current_local_bsz)
+            self._last_profiled_epoch = current_epoch_val
+            self._last_profiled_batch_size = self.current_local_bsz
+
         yield
+
         # Don't profile the first batch since it may be slower.
-        if self.training and self.current_index > self.current_batch_size and record:
-            profile_step_commit(current_epoch(), self.current_batch_size, not self.is_sync_step())
+        if should_profile and self.training and self.current_index > self.current_batch_size and record:
+            profile_step_commit(current_epoch_val, self.current_batch_size, not self.is_sync_step())
         self._accum_count = 0 if self.is_sync_step() else self._accum_count + 1
 
     @contextmanager
