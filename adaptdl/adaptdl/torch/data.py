@@ -339,15 +339,15 @@ class AdaptiveDataLoaderHelper(object):
         should_profile = (self._last_profiled_epoch != current_epoch_val or 
                          self._last_profiled_batch_size != self.current_local_bsz)
 
-        if should_profile:
-            profile_step_start(self.current_local_bsz)
-            self._last_profiled_epoch = current_epoch_val
-            self._last_profiled_batch_size = self.current_local_bsz
+        profile_step_start(self.current_local_bsz)
+            
 
         yield
 
         # Don't profile the first batch since it may be slower.
         if should_profile and self.training and self.current_index > self.current_batch_size and record:
+            self._last_profiled_epoch = current_epoch_val
+            self._last_profiled_batch_size = self.current_local_bsz
             profile_step_commit(current_epoch_val, self.current_batch_size, not self.is_sync_step())
         self._accum_count = 0 if self.is_sync_step() else self._accum_count + 1
 

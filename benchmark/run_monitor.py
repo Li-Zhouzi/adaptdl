@@ -39,7 +39,7 @@ if __name__ == "__main__":
                 "name": obj["metadata"]["name"],
                 "epoch": obj.get("status", {}).get("train", {}).get("epoch", 0),
                 "allocation": obj.get("status", {}).get("allocation", []),
-                "batch_size": obj.get("status", {}).get("train", {}).get("globalBatchSize", 0),
+                "batch_size": obj.get("status", {}).get("train", {}).get("batchSize", 0),
                 "submission_time": obj["metadata"]["creationTimestamp"],
                 "completion_time": obj.get("status", {}).get("completionTimestamp", None),
             })

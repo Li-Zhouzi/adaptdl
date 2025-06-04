@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     # Only build the cifar10 model since that's what we need
     # templates = build_images(["bert", "cifar10", "deepspeech2", "imagenet", "ncf", "yolov3"], args.repository)
-    templates = build_images(["bert"], args.repository) # Change here!
+    templates = build_images(["cifar10"], args.repository) # Change here!
     cache_images(templates)
 
     objs_api = client.CustomObjectsApi()
@@ -132,11 +132,11 @@ if __name__ == "__main__":
             "mountPath": "/pollux/tensorboard",
             "subPath": "pollux/tensorboard/" + row.name,
         })
-        mounts.append({
-            "name": "pollux",
-            "mountPath": "/mnt"
-            # no subPath — this mounts the EFS root at /mnt
-        })
+        # mounts.append({
+        #     "name": "pollux",
+        #     "mountPath": "/mnt"
+        #     # no subPath — this mounts the EFS root at /mnt
+        # })
         env = job["spec"]["template"]["spec"]["containers"][0].setdefault("env", [])
         env.append({"name": "ADAPTDL_CHECKPOINT_PATH", "value": "/pollux/checkpoint"})
         env.append({"name": "ADAPTDL_TENSORBOARD_LOGDIR", "value": "/pollux/tensorboard"})
