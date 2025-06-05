@@ -1,5 +1,6 @@
 import logging
 import math
+from collections import OrderedDict
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -27,6 +28,11 @@ class DummyPolicy(object):
                 return node_list
         else:
             return []
+    
+    def _sort_nodes(self, nodes):
+        return OrderedDict(  # Sort preemptible nodes last.
+            sorted(nodes.items(), key=lambda kv: (kv[1].preemptible,
+                                                  kv[0])))
 
     def optimize(self, jobs, nodes, prev_allocations, node_template):
         """
