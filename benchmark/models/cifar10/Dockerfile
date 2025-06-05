@@ -1,4 +1,5 @@
-FROM nvcr.io/nvidia/pytorch:20.03-py3
+# FROM nvcr.io/nvidia/pytorch:20.03-py3
+FROM nvcr.io/nvidia/pytorch:22.12-py3
 WORKDIR /root
 
 COPY adaptdl/requirements.txt requirements.txt
