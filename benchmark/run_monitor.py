@@ -26,6 +26,23 @@ if __name__ == "__main__":
         ready_nodes = sum(1 for node in nodes.items if any(condition.type == "Ready" and condition.status == "True" 
                           for condition in node.status.conditions))
         
+        # Get pod information for all pods in the namespace
+        pods = core_api.list_namespaced_pod(namespace)
+        pod_status = {pod.metadata.name: {
+            "phase": pod.status.phase,
+            "container_statuses": [{
+                "name": container.name,
+                "state": (
+                    "running" if container.state and container.state.running else
+                    container.state.waiting.reason if container.state and container.state.waiting and container.state.waiting.reason else
+                    "waiting" if container.state and container.state.waiting else
+                    "terminated" if container.state and container.state.terminated else
+                    None
+                ),
+                "ready": container.ready
+            } for container in pod.status.container_statuses] if pod.status.container_statuses else []
+        } for pod in pods.items}
+        
         record = {
             "timestamp": time.time(),
             "submitted_jobs": [],
@@ -35,13 +52,19 @@ if __name__ == "__main__":
             }
         }
         for obj in obj_list["items"]:
+            job_name = obj["metadata"]["name"]
+            # Find pods associated with this job
+            job_pods = {name: status for name, status in pod_status.items() 
+                       if name.startswith(f"{job_name}-")}
+            
             record["submitted_jobs"].append({
-                "name": obj["metadata"]["name"],
+                "name": job_name,
                 "epoch": obj.get("status", {}).get("train", {}).get("epoch", 0),
                 "allocation": obj.get("status", {}).get("allocation", []),
                 "batch_size": obj.get("status", {}).get("train", {}).get("batchSize", 0),
                 "submission_time": obj["metadata"]["creationTimestamp"],
                 "completion_time": obj.get("status", {}).get("completionTimestamp", None),
+                "pod_status": job_pods
             })
         with open(args.output, "a") as f:
             json.dump(record, f)

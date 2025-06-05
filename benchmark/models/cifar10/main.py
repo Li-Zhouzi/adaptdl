@@ -25,7 +25,7 @@ from adaptdl.torch._metrics import report_train_metrics, report_valid_metrics
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--bs', default=128, type=int, help='batch size')
 parser.add_argument('--lr', default=0.08, type=float, help='learning rate')
-parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
+parser.add_argument('--epochs', default=20, type=int, help='number of epochs')
 parser.add_argument('--model', default='ResNet18', type=str, help='model')
 args = parser.parse_args()
 
