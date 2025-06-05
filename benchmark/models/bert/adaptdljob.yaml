@@ -37,9 +37,9 @@ spec:
             nvidia.com/gpu: 1
             cpu: 2
             memory: "12G"
-        # volumeMounts:
-        # - name: data
-        #   mountPath: /mnt
+        volumeMounts:
+        - name: pollux
+          mountPath: /mnt
       # volumes:
       # - name: data
       #   hostPath:

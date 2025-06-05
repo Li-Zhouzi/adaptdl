@@ -1,4 +1,5 @@
 FROM nvcr.io/nvidia/pytorch:20.10-py3
+# FROM nvcr.io/nvidia/pytorch:22.12-py3
 WORKDIR /root
 
 # Install dependencies
@@ -23,16 +24,16 @@ ENV PYTHONPATH=/root/deepspeech2:$PYTHONPATH
 # Working directory for training code
 WORKDIR /root/deepspeech2
 
-# Run VoxForge data prep (already limited to 3 samples in your script)
-RUN mkdir -p /root/deepspeech2/voxforge_data && \
-    python data/voxforge.py --target-dir /root/deepspeech2/voxforge_data
+# # Run VoxForge data prep (already limited to 3 samples in your script)
+# RUN mkdir -p /root/deepspeech2/voxforge_data && \
+#     python data/voxforge.py --target-dir /root/deepspeech2/voxforge_data
 # After running prepare_voxforge.py
-RUN python -c "\
-import random; \
-lines = open('/root/deepspeech2/voxforge_train_manifest.csv').readlines(); \
-random.shuffle(lines); \
-split = int(0.9 * len(lines)); \
-open('/root/deepspeech2/voxforge_train_manifest.csv', 'w').writelines(lines[:split]); \
-open('/root/deepspeech2/voxforge_val_manifest.csv', 'w').writelines(lines[split:])"
+# RUN python -c "\
+# import random; \
+# lines = open('/root/deepspeech2/voxforge_train_manifest.csv').readlines(); \
+# random.shuffle(lines); \
+# split = int(0.9 * len(lines)); \
+# open('/root/deepspeech2/voxforge_train_manifest.csv', 'w').writelines(lines[:split]); \
+# open('/root/deepspeech2/voxforge_val_manifest.csv', 'w').writelines(lines[split:])"
 
 ENV PYTHONUNBUFFERED=true
