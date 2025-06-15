@@ -34,6 +34,8 @@ class JobInfo(object):
         self.max_replicas = max_replicas
         self.min_replicas = min_replicas
         self.preemptible = preemptible
+        self.epoch = None
+        self.application = None
 
 
 class NodeInfo(object):

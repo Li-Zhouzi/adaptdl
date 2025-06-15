@@ -30,6 +30,7 @@ from adaptdl_sched.resources import (get_node_unrequested, get_pod_requests,
 from adaptdl_sched.utils import patch_job_status
 from adaptdl_sched.cluster_expander import ClusterExpander
 from adaptdl_sched.config import allowed_taints
+from adaptdl_sched.policy.fixed_width import APPLICATION_NAMES
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -228,9 +229,20 @@ class AdaptDLAllocator(object):
             speedup_fn = lambda n, r: r  # noqa: E731
         creation_ts = dateutil.parser.isoparse(
                 job["metadata"]["creationTimestamp"])
-        return JobInfo(
+        
+        job_name = job["metadata"]["name"]
+        job_application = job_name.split("-")[0]
+        if job_application not in APPLICATION_NAMES:
+            raise ValueError(f"Unknown application: {job_application}")
+        job_epoch = hints.get("epoch", None)
+        if job_epoch is None:
+            raise ValueError(f"Epoch is not set for job: {job_name}")
+        job_info = JobInfo(
                 resources, speedup_fn, creation_ts, min_replicas,
                 max_replicas, preemptible)
+        job_info.epoch = job_epoch
+        job_info.application = job_application
+        return job_info
 
     async def _find_jobs_and_allocations(self):
         job_list = await self._objs_api.list_namespaced_custom_object(

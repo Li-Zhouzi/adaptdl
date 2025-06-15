@@ -5,6 +5,8 @@ from collections import OrderedDict
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 
+APPLICATION_NAMES = ["bert", "cifar10", "ncf", "imagenet", "deepspeech2", "yolov3"]
+
 class FixedWidthPolicy(object):
     '''
     This policy is used to allocate jobs to nodes with a fixed width.
@@ -46,7 +48,7 @@ class FixedWidthPolicy(object):
         # Track available GPUs on each node
         available_gpus = {node_name: node.resources.get("nvidia.com/gpu", 0) 
                          for node_name, node in nodes.items()}
-        
+        total_gpus_needed = 0
         # First pass: preserve existing allocations that already have the correct number of GPUs
         for job_key, prev_alloc in prev_allocations.items():
             if job_key not in jobs:
@@ -58,29 +60,15 @@ class FixedWidthPolicy(object):
                 
             # Calculate total GPUs this job had in its previous allocation
             gpus_in_prev_alloc = len(prev_alloc)
-            gpu_wanted = self.width[job_key][job_info.epoch]
-                
+            gpu_wanted = self.width[job_info.application][job_info.epoch]
+            
+            # only fulfill the job if it has the correct number of GPUs
             if gpus_in_prev_alloc == gpu_wanted:
-                # Check if this previous allocation can be preserved
-                can_preserve = True
-                # Count how many replicas were on each node in the previous allocation for this job
-                replicas_on_nodes_map = {}
+                new_allocations[job_key] = prev_alloc
+                # Deduct the GPUs from available_gpus. This iterates once per replica in prev_alloc.
                 for node_name_from_prev in prev_alloc:
-                    replicas_on_nodes_map[node_name_from_prev] = \
-                        replicas_on_nodes_map.get(node_name_from_prev, 0) + 1
-                
-                # Check if current nodes have enough resources for these previously allocated replicas
-                for node_name_val, num_replicas_on_node in replicas_on_nodes_map.items():
-                    gpus_needed_on_this_node = num_replicas_on_node * gpus_per_replica
-                    if available_gpus.get(node_name_val, 0) < gpus_needed_on_this_node:
-                        can_preserve = False
-                        break
-                
-                if can_preserve:
-                    new_allocations[job_key] = prev_alloc
-                    # Deduct the GPUs from available_gpus. This iterates once per replica in prev_alloc.
-                    for node_name_from_prev in prev_alloc:
-                        available_gpus[node_name_from_prev] -= gpus_per_replica
+                    available_gpus[node_name_from_prev] -= gpus_per_replica
+                total_gpus_needed += gpu_wanted
         
         # Second pass: assign remaining jobs
         for job_key, job_info in jobs.items():
@@ -90,22 +78,88 @@ class FixedWidthPolicy(object):
             gpus_per_replica = job_info.resources.get("nvidia.com/gpu", 1)
             assert gpus_per_replica == 1, f"Job {job_key} requests {gpus_per_replica} GPUs per replica, which is not 1."
                 
-            num_replicas = self._num_gpus_per_job // gpus_per_replica        
+            gpu_wanted = self.width[job_info.application][job_info.epoch]     
             # Try to allocate the job
             current_alloc = []
             for node_name, gpus in available_gpus.items():
-                while len(current_alloc) < num_replicas and gpus >= gpus_per_replica:
+                while len(current_alloc) < gpu_wanted and gpus >= gpus_per_replica:
                     current_alloc.append(node_name)
                     gpus -= gpus_per_replica
                     available_gpus[node_name] = gpus
             
             new_allocations[job_key] = current_alloc
-            if len(current_alloc) < num_replicas:
-                LOG.warning(f"Job {job_key}: wanted {num_replicas} replicas, got {len(current_alloc)}")
+            total_gpus_needed += gpu_wanted
+            if len(current_alloc) < gpu_wanted:
+                LOG.warning(f"Job {job_key}: wanted {gpu_wanted} GPUs, got {len(current_alloc)}")
         
-        # Calculate desired number of nodes based on total GPUs needed
-        total_gpus_needed = len(jobs) * self._num_gpus_per_job
-        gpus_per_node = node_template.resources.get("nvidia.com/gpu", 1)
-        desired_nodes = math.ceil(total_gpus_needed / gpus_per_node)        
-        LOG.info(f"DummyPolicy optimize results: {new_allocations}, desired_nodes: {desired_nodes}")
+        desired_nodes = math.ceil(total_gpus_needed / node_template.resources.get("nvidia.com/gpu", 1))        
+        LOG.info(f"FixedWidthPolicy optimize results: {new_allocations}, desired_nodes: {desired_nodes}")
         return new_allocations, desired_nodes 
+    
+
+class FixedWidthPolicyImperfectInfo(object):
+    def __init__(self, budget, arrival_dict, size_profile, params_profile, recompute_time = 600):
+        '''Take the input of a budget, profiled arrival, size and params'''
+        self.budget = budget
+        self.arrival_dict = arrival_dict
+        self.size_profile_path = size_profile
+        self.params_profile_path = params_profile
+        self.recompute_time = recompute_time
+        self.recompute_time_remaining = recompute_time
+        self.width = None
+
+    def allocate_job(self, job_info, nodes):
+        """
+        Copied from Pollux Policy. allocate the min number of replicas to a new arrival.
+        """
+        job_resources = job_info.resources
+        min_replicas = max(job_info.min_replicas, 1)
+        node_list = []
+        nodes = self._sort_nodes(nodes)
+        for node_name, node in nodes.items():
+            # number of replica fit in this node
+            replica_this = min(node.resources.get(key, 0) // val
+                               for key, val in job_resources.items())
+            if replica_this >= min_replicas:
+                node_list = [node_name] * min_replicas
+                return node_list
+        else:
+            return []
+
+    def optimize(self, jobs, nodes, prev_allocations, node_template):    
+        # updating recompute time
+        if current_time > 10 * self.recompute_time:
+            self.recompute_time = 10 * self.recompute_time
+        
+        if self.recompute_time_remaining > 0 and self.width is not None:
+            # print("Using cached width")
+            # use the width
+            return FixedWidthPolicy(self.width, self.budget).optimize(jobs, nodes, prev_allocations)
+
+        elif self.recompute_time_remaining <= 0:
+            self.recompute_time_remaining = self.recompute_time
+            assert self.cluster.size_dict is not None and self.cluster.arrival_dict is not None
+            print("Recomputing width", flush=True)
+            start_time = time.time()
+            new_width, _, _ = get_width_with_predictions_no_workload(self.cluster.grad_params, self.cluster.perf_params, 
+                self.cluster.size_dict, self.cluster.arrival_dict, self.budget * self.budget_fixing_factor, glue=True, output_dir="profile_all", goodput_profiles=self.cluster.goodput_profiles, time=current_time, use_gpr=self.use_gpr, 
+                true_size_path=self.size_path, true_workload=self.workload) # the true workload and size path are used for debug 
+            end_time = time.time()
+            print(f"Time to recompute width at {current_time}: {end_time - start_time} seconds")
+            if new_width is None:
+                if self.width is not None:
+                    print("No valid width found, using previous width")
+                    self.budget_fixing_factor = self.previous_budget / self.budget
+                    return FixedWidthPolicy(self.width, self.budget).optimize(jobs, nodes, prev_allocations)
+                else:
+                    print("No valid width found, using Sia policy")
+                    return self.sia_policy.optimize(jobs, nodes, prev_allocations)
+
+            self.previous_budget = self.budget * self.budget_fixing_factor
+            self.width = new_width
+            self.cluster.recent_completion_times = dict() # clear the recent completion times
+            return FixedWidthPolicy(self.width, self.budget * self.budget_fixing_factor).optimize(jobs, nodes, prev_allocations)
+        else:
+            print("No feasible width found, using Sia policy")
+            return self.sia_policy.optimize(jobs, nodes, prev_allocations)
+    
