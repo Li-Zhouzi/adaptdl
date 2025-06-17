@@ -57,6 +57,19 @@ spec:
           containerPort: {{ .Values.supervisor.service.targetPort }}
           protocol: TCP
         imagePullPolicy: Always
+      - name: width-calculator
+        image: {{ .Values.image.repository }}{{ empty .Values.image.digest | ternary ":" "@" }}{{ coalesce .Values.image.digest .Values.image.tag .Chart.AppVersion }}
+        args: ["python", "-m", "adaptdl_sched.width_calculator"]
+        envFrom:
+        - configMapRef:
+            name: adaptdl-config
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        imagePullPolicy: Always
+        resources:
+{{ toYaml .Values.sched.resources | indent 10 }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{ toYaml . | indent 8 }}
