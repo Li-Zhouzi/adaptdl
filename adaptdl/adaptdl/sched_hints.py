@@ -39,7 +39,9 @@ SCHED_HINTS = MappingProxyType({'initBatchSize': 0,
                                 'gradParams': None,
                                 'perfParams': None,
                                 'epoch': None,
-                                'batchSize': None})
+                                'batchSize': None,
+                                'new_profile': None,
+                                'new_goodput_profile': None})
 
 
 def post_sched_hints(sched_hints, job_key):
