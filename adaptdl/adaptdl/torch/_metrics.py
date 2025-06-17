@@ -69,7 +69,7 @@ def profile_sync_time(sync_time):
 _PREV_REPORT = None
 
 
-def profile_step_commit(epoch, batch_size, accumulation_step=False):
+def profile_step_commit(epoch, batch_size, accumulation_step=False, gain=None):
     global _PREV_REPORT
     state = _metrics_state()
     step_time = time.time() - state.step_start
@@ -83,6 +83,13 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
         state.profile[key]["optim_step_time"] += step_time
         state.profile[key]["optim_sync_time"] += state.sync_time
         state.profile[key]["optim_count"] += 1
+        
+        # Compute goodput (gain/step_time) and store in goodput_profile
+        if gain is not None:
+            goodput = gain / step_time
+            goodput_key = (num_nodes, num_replicas)
+            state.goodput_profile[goodput_key]["goodput"] = goodput
+    
     del state.atomic_bsz
     del state.step_start
     del state.sync_time
@@ -181,6 +188,7 @@ class _MetricsState(adaptdl.checkpoint.State):
     def __init__(self):
         super().__init__("adaptdl-metrics")
         self.profile = collections.defaultdict(collections.Counter)
+        self.goodput_profile = collections.defaultdict(collections.Counter)
         self.perf_params = None
         self.grad_params = None
         self.init_batch_size = None
@@ -191,6 +199,7 @@ class _MetricsState(adaptdl.checkpoint.State):
 
     def save(self, fileobj):
         pickle.dump(self.profile, fileobj)
+        pickle.dump(self.goodput_profile, fileobj)
         pickle.dump(self.perf_params, fileobj)
         pickle.dump(self.grad_params, fileobj)
         pickle.dump(self.init_batch_size, fileobj)
@@ -201,6 +210,7 @@ class _MetricsState(adaptdl.checkpoint.State):
 
     def load(self, fileobj):
         self.profile = pickle.load(fileobj)
+        self.goodput_profile = pickle.load(fileobj)
         self.perf_params = pickle.load(fileobj)
         self.grad_params = pickle.load(fileobj)
         self.init_batch_size = pickle.load(fileobj)

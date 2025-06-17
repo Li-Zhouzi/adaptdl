@@ -130,6 +130,9 @@ class AdaptiveDataParallel(DistributedDataParallel):
 
         scale = dataloader.current_batch_size / dataloader.batch_size
         self._state.gain = self.adascale.gain(scale)
+        # Set the gain in the current dataloader for goodput computation
+        if hasattr(dataloader, '_elastic'):
+            dataloader._elastic._current_adp_gain = self._state.gain
         adaptdl.torch._metrics.update_progress(self.adascale.get_progress())
         if dataloader.max_batch_size and \
                 dataloader.max_batch_size > dataloader.batch_size:

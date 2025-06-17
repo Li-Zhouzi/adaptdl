@@ -340,7 +340,7 @@ class AdaptiveDataLoaderHelper(object):
                          self._last_profiled_batch_size != self.current_batch_size)
         print("should_profile: %s, current_epoch_val: %s, current_batch_size: %s", should_profile, current_epoch_val, self.current_batch_size)
         profile_step_start(self.current_local_bsz)
-            
+        
 
         yield
 
@@ -349,7 +349,9 @@ class AdaptiveDataLoaderHelper(object):
             print("profiling")
             self._last_profiled_epoch = current_epoch_val
             self._last_profiled_batch_size = self.current_batch_size
-            profile_step_commit(current_epoch_val, self.current_batch_size, not self.is_sync_step())
+            # Get gain from the current AdaptiveDataParallel instance if available
+            gain = getattr(self, '_current_adp_gain', None)
+            profile_step_commit(current_epoch_val, self.current_batch_size, not self.is_sync_step(), gain)
         self._accum_count = 0 if self.is_sync_step() else self._accum_count + 1
 
     @contextmanager
@@ -370,6 +372,9 @@ class AdaptiveDataLoaderHelper(object):
             self._state.end_index = 0
             self._state.last_position[epoch] = self._position[epoch]
             self._position[epoch] += 1
+            # Clear the gain reference
+            if hasattr(self, '_current_adp_gain'):
+                delattr(self, '_current_adp_gain')
             AdaptiveDataLoaderHelper._current = None
 
     @property
