@@ -77,6 +77,7 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False, gain=None):
     num_replicas = adaptdl.env.num_replicas()
     key = (num_nodes, num_replicas, state.atomic_bsz)
     if accumulation_step:
+        raise ValueError("Accumulation step is not supported now")
         state.profile[key]["accum_step_time"] += step_time
         state.profile[key]["accum_count"] += 1
     else:
@@ -84,11 +85,30 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False, gain=None):
         state.profile[key]["optim_sync_time"] += state.sync_time
         state.profile[key]["optim_count"] += 1
         
-        # Compute goodput (gain/step_time) and store in goodput_profile
+        # Add to new_profile for reporting
+        if key not in state.new_profile:
+            state.new_profile[key] = {
+                "optim_step_time": step_time,
+                "optim_sync_time": state.sync_time,
+                "optim_count": 1
+            }
+        else:
+            state.new_profile[key]["optim_step_time"] += step_time
+            state.new_profile[key]["optim_sync_time"] += state.sync_time
+            state.new_profile[key]["optim_count"] += 1
+        
+        # Compute goodput (gain/step_time) and add to new_goodput_profile
         if gain is not None:
             goodput = gain / step_time
             goodput_key = (num_nodes, num_replicas)
-            state.goodput_profile[goodput_key]["goodput"] = goodput
+            if goodput_key not in state.new_goodput_profile:
+                state.new_goodput_profile[goodput_key] = {
+                    "goodput": goodput,
+                    "cnt": 1
+                }
+            else:
+                state.new_goodput_profile[goodput_key]["goodput"] = goodput
+                state.new_goodput_profile[goodput_key]["cnt"] += 1
     
     del state.atomic_bsz
     del state.step_start
@@ -181,14 +201,31 @@ def _report_sched_hints(epoch, batch_size):
     sched_hints["gradientAccumulation"] = state.gradient_accumulation
     sched_hints["epoch"] = epoch
     sched_hints["batchSize"] = batch_size
+    
+    # Send new profile data
+    if state.new_profile:
+        sched_hints["new_profile"] = state.new_profile
+    
+    # Send new goodput profile data
+    if state.new_goodput_profile:
+        sched_hints["new_goodput_profile"] = state.new_goodput_profile
+    
     post_sched_hints(sched_hints, adaptdl.env.job_id())
+    
+    # Clear new_profile and new_goodput_profile every 20 seconds
+    current_time = time.time()
+    if current_time - state._last_clear_time > 20:
+        state.new_profile.clear()
+        state.new_goodput_profile.clear()
+        state._last_clear_time = current_time
 
 
 class _MetricsState(adaptdl.checkpoint.State):
     def __init__(self):
         super().__init__("adaptdl-metrics")
         self.profile = collections.defaultdict(collections.Counter)
-        self.goodput_profile = collections.defaultdict(collections.Counter)
+        self.new_profile = {}
+        self.new_goodput_profile = {}
         self.perf_params = None
         self.grad_params = None
         self.init_batch_size = None
@@ -196,10 +233,12 @@ class _MetricsState(adaptdl.checkpoint.State):
         self.local_bsz_bounds = None
         self.gradient_accumulation = False
         self.progress = 0.0  # Progress in scale-invariant iterations.
+        self._last_clear_time = time.time()
 
     def save(self, fileobj):
         pickle.dump(self.profile, fileobj)
-        pickle.dump(self.goodput_profile, fileobj)
+        pickle.dump(self.new_profile, fileobj)
+        pickle.dump(self.new_goodput_profile, fileobj)
         pickle.dump(self.perf_params, fileobj)
         pickle.dump(self.grad_params, fileobj)
         pickle.dump(self.init_batch_size, fileobj)
@@ -207,10 +246,16 @@ class _MetricsState(adaptdl.checkpoint.State):
         pickle.dump(self.local_bsz_bounds, fileobj)
         pickle.dump(self.gradient_accumulation, fileobj)
         pickle.dump(self.progress, fileobj)
+        pickle.dump(self._last_clear_time, fileobj)
 
     def load(self, fileobj):
         self.profile = pickle.load(fileobj)
-        self.goodput_profile = pickle.load(fileobj)
+        try:
+            self.new_profile = pickle.load(fileobj)
+            self.new_goodput_profile = pickle.load(fileobj)
+        except EOFError:
+            self.new_profile = {}
+            self.new_goodput_profile = {}
         self.perf_params = pickle.load(fileobj)
         self.grad_params = pickle.load(fileobj)
         self.init_batch_size = pickle.load(fileobj)
@@ -218,6 +263,10 @@ class _MetricsState(adaptdl.checkpoint.State):
         self.local_bsz_bounds = pickle.load(fileobj)
         self.gradient_accumulation = pickle.load(fileobj)
         self.progress = pickle.load(fileobj)
+        try:
+            self._last_clear_time = pickle.load(fileobj)
+        except EOFError:
+            self._last_clear_time = time.time()
 
 
 def _metrics_state():
