@@ -61,6 +61,7 @@ class WidthCalculator:
             if epoch is None or application is None:
                 raise ValueError(f"Epoch or application is not set for job {job_name}")
             
+            # Process new_profile data
             if "new_profile" in hints:
                 if application not in self._profile_data:
                     self._profile_data[application] = {}
@@ -69,28 +70,42 @@ class WidthCalculator:
                 
                 for key, value in hints["new_profile"].items():
                     if key not in self._profile_data[application][epoch]:
-                    # key is (num_nodes, num_replicas, atomic_bsz)
-                        self._profile_data[application][epoch][key] = value
+                        self._profile_data[application][epoch][key] = {
+                            "optim_step_time": value["optim_step_time"],
+                            "optim_sync_time": value["optim_sync_time"],
+                            "optim_count": value["optim_count"]
+                        }
                     else:
+                        # Accumulate with existing data
                         self._profile_data[application][epoch][key]["optim_step_time"] += value["optim_step_time"]
                         self._profile_data[application][epoch][key]["optim_sync_time"] += value["optim_sync_time"]
                         self._profile_data[application][epoch][key]["optim_count"] += value["optim_count"]
                 
+            # Process new_goodput_profile data
             if "new_goodput_profile" in hints:
                 if application not in self._goodput_profile_data:
                     self._goodput_profile_data[application] = {}
+                if epoch not in self._goodput_profile_data[application]:
+                    self._goodput_profile_data[application][epoch] = {}
 
                 for key, value in hints["new_goodput_profile"].items():
-                    # key is (num_nodes, num_replicas)
                     if key not in self._goodput_profile_data[application][epoch]:
-                        self._goodput_profile_data[application][epoch][key] = value
+                        self._goodput_profile_data[application][epoch][key] = {
+                            "goodput": value["goodput"],
+                            "cnt": value["cnt"]
+                        }
                     else:
-                        self._goodput_profile_data[application][epoch][key] = value # overwrite the existing value
+                        # Update with latest goodput value and accumulate count
+                        self._goodput_profile_data[application][epoch][key]["goodput"] = value["goodput"]
+                        self._goodput_profile_data[application][epoch][key]["cnt"] += value["cnt"]
             
             LOG.info(f"Updated data for job {job_name}: {application}-{epoch}")
             
     async def _compute_width(self):
         """Compute the width of the job."""
+        LOG.info("Computing width based on aggregated profiles")
+        LOG.info(f"Profile data: {self._profile_data}")
+        LOG.info(f"Goodput profile data: {self._goodput_profile_data}")
         return 1
 
 
