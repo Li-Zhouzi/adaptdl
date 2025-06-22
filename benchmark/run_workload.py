@@ -21,7 +21,8 @@ def build_images(models, repository):
             template = yaml.load(f, Loader=yaml.SafeLoader) # Change here!
         dockerfile = os.path.join(models_dir, model, "Dockerfile")
         image = repository + ":" + model
-        subprocess.check_call(["docker", "build", "-t", image, project_root, "-f", dockerfile])
+        # subprocess.check_call(["docker", "build", "-t", image, project_root, "-f", dockerfile])
+        subprocess.check_call(["docker", "buildx", "build", "--platform", "linux/amd64", "-t", image, project_root, "-f", dockerfile, "--load"])
         subprocess.check_call(["docker", "push", image])
         repodigest = subprocess.check_output(
                 ["docker", "image", "inspect", image, "--format={{index .RepoDigests 0}}"])
@@ -131,6 +132,11 @@ if __name__ == "__main__":
             "mountPath": "/pollux/tensorboard",
             "subPath": "pollux/tensorboard/" + row.name,
         })
+        # mounts.append({
+        #     "name": "pollux",
+        #     "mountPath": "/mnt"
+        #     # no subPath — this mounts the EFS root at /mnt
+        # })
         env = job["spec"]["template"]["spec"]["containers"][0].setdefault("env", [])
         env.append({"name": "ADAPTDL_CHECKPOINT_PATH", "value": "/pollux/checkpoint"})
         env.append({"name": "ADAPTDL_TENSORBOARD_LOGDIR", "value": "/pollux/tensorboard"})
@@ -140,5 +146,16 @@ if __name__ == "__main__":
             env.append({"name": "TARGET_NUM_REPLICAS", "value": str(row.num_replicas)})
         if args.policy in ["tiresias", "optimus"]:
             env.append({"name": "TARGET_BATCH_SIZE", "value": str(row.batch_size)})
+        
+        # Ensure /mnt is writable
+        if "volumeMounts" in job["spec"]["template"]["spec"]["containers"][0]:
+            for mount in job["spec"]["template"]["spec"]["containers"][0]["volumeMounts"]:
+                # Assuming the mount for CIFAR-10 data is named 'data' in the YAML 
+                # and is mounted at /mnt, or its mountPath is /mnt.
+                # We need to ensure this specific mount is writable.
+                if mount.get("name") == "data" or mount.get("mountPath") == "/mnt":
+                    mount["readOnly"] = False
+                    print(f"Set readOnly=False for volumeMount: {mount.get('name', mount.get('mountPath'))}")
+
         print(yaml.dump(job))
         objs_api.create_namespaced_custom_object(*obj_args, job)

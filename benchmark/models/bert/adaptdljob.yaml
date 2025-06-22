@@ -31,19 +31,19 @@ spec:
         resources:
           limits:
             nvidia.com/gpu: 1
-            cpu: 10
-            memory: "40G"
+            cpu: 2
+            memory: "12G"
           requests:
             nvidia.com/gpu: 1
-            cpu: 10
-            memory: "40G"
-        volumeMounts:
-        - name: data
-          mountPath: /mnt
-      volumes:
-      - name: data
-        hostPath:
-          path: /mnt
-          type: Directory
+            cpu: 2
+            memory: "12G"
+        # volumeMounts:
+        # - name: data
+        #   mountPath: /mnt
+      # volumes:
+      # - name: data
+      #   hostPath:
+      #     path: /mnt
+      #     type: Directory
       imagePullSecrets:
       - name: regcred

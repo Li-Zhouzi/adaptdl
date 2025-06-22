@@ -235,8 +235,8 @@ class AdaptDLAllocator(object):
         if job_application not in APPLICATION_NAMES:
             raise ValueError(f"Unknown application: {job_application}")
         job_epoch = hints.get("epoch", None)
-        if job_epoch is None:
-            raise ValueError(f"Epoch is not set for job: {job_name}")
+        # if job_epoch is None:
+        #     raise ValueError(f"Epoch is not set for job: {job_name}")
         job_info = JobInfo(
                 resources, speedup_fn, creation_ts, min_replicas,
                 max_replicas, preemptible)

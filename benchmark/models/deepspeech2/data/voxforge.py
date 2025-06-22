@@ -96,7 +96,8 @@ if __name__ == '__main__':
     response = urllib.request.urlopen(request)
     content = response.read()
     all_files = re.findall("href\=\"(.*\.tgz)\"", content.decode("utf-8"))
-    for f in tqdm(all_files, total=len(all_files)):
+    NUM_SAMPLES = 3  # or 5, or 10 — however many you want
+    for f in tqdm(all_files[:NUM_SAMPLES], total=NUM_SAMPLES):
         prepare_sample(f.replace(".tgz", ""), VOXFORGE_URL_16kHz + f, target_dir)
     print('Creating manifests...')
     create_manifest(target_dir, 'voxforge_train_manifest.csv', args.min_duration, args.max_duration)
