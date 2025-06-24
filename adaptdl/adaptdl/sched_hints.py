@@ -36,10 +36,10 @@ SCHED_HINTS = MappingProxyType({'initBatchSize': 0,
                                 'maxBatchSize': 0,
                                 'maxProfiledReplicas': 0,
                                 'gradientAccumulation': False,
-                                'gradParams': None,
-                                'perfParams': None,
                                 'epoch': None,
                                 'batchSize': None,
+                                'gradParams': None,
+                                'perfParams': None,
                                 'new_profile': None,
                                 'new_goodput_profile': None})
 

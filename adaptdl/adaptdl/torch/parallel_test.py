@@ -24,9 +24,9 @@ class LRIterableDataset(Dataset):
     def __init__(self, size, true_values, noise):
         input_values = np.random.uniform(-5.0, 5.0, size)
         bias_input_values = np.stack([np.ones(size), input_values])
-        target_values = np.dot(
-            true_values, bias_input_values
-        ) + np.random.normal(0.0, noise, size=(size,))
+        target_values = (
+            np.dot(true_values, bias_input_values)
+            + np.random.normal(0.0, noise, size=(size,)))
         self._values = list(zip(input_values, target_values))
         self._len = size
 
@@ -38,15 +38,16 @@ class LRIterableDataset(Dataset):
 
 
 def test_single_replica_parallel():
-    adl.init_process_group("gloo")
+    adl.init_process_group("nccl" if torch.cuda.is_available() else "gloo")
     true_values = np.asarray([3.0, 4.0])
     dataset = LRIterableDataset(1000, true_values, 1.0)
     dataloader = adl.AdaptiveDataLoader(
-        dataset, batch_size=32, shuffle=False, num_workers=1
-    )
+        dataset, batch_size=32, shuffle=False, num_workers=1)
     model = torch.nn.Linear(1, 1, bias=True)
     params = [model.bias, model.weight]
-    sgd = torch.optim.SGD([{"params": [param]} for param in params], lr=0.01)
+    sgd = torch.optim.SGD(
+        [{"params": [param]} for param in params],
+        lr=0.01)
     schedule = torch.optim.lr_scheduler.MultiStepLR(sgd, [50])
     model = adl.AdaptiveDataParallel(model, sgd, schedule)
     loss = torch.nn.MSELoss()
@@ -62,7 +63,5 @@ def test_single_replica_parallel():
             sgd.step()
         schedule.step()
     params = np.asarray([param.item() for param in params])
-    assert np.all(np.isclose(params, true_values, atol=0.1)), (
-        params,
-        true_values,
-    )
+    assert(np.all(np.isclose(params, true_values, atol=0.1))), \
+        (params, true_values)

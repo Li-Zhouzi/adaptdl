@@ -2,10 +2,37 @@ import asyncio
 import kubernetes_asyncio as kubernetes
 import logging
 import time
+import sys
+import os
+import pickle
 from collections import defaultdict
+
+# Add adaptdl to path for importing checkpoint functionality
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'adaptdl'))
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
+
+
+class PartialMetricsState:
+    """
+    A partial metrics state that only contains profile and perf_params.
+    This is defined in the width_calculator to avoid modifying the original metrics code.
+    """
+    def __init__(self, name="width-calculator-partial-metrics"):
+        self.name = name
+        self.profile = defaultdict(lambda: defaultdict(float))
+        self.perf_params = None
+
+    def save(self, fileobj):
+        """Save only profile and perf_params to the checkpoint."""
+        pickle.dump(self.profile, fileobj)
+        pickle.dump(self.perf_params, fileobj)
+
+    def load(self, fileobj):
+        """Load profile and perf_params from the checkpoint."""
+        self.profile = pickle.load(fileobj)
+        self.perf_params = pickle.load(fileobj)
 
 
 class WidthCalculator:
@@ -20,6 +47,9 @@ class WidthCalculator:
         # Local dictionary to maintain job data
         self._profile_data = {} # _profile_data[application] = profile of the job
         self._goodput_profile_data = {} # _goodput_profile_data[application][epoch] = goodput
+        
+        # Partial metrics state for checkpointing
+        self._partial_metrics_state = PartialMetricsState()
 
     async def run(self):
         """Main loop that periodically aggregates job profiles."""
@@ -106,7 +136,71 @@ class WidthCalculator:
         LOG.info("Computing width based on aggregated profiles")
         LOG.info(f"Profile data: {self._profile_data}")
         LOG.info(f"Goodput profile data: {self._goodput_profile_data}")
+        
+        # Update the partial metrics state with aggregated data
+        self._update_partial_metrics_state()
+        
+        # Save the partial metrics checkpoint
+        self._save_partial_metrics_checkpoint()
+        
         return 1
+    
+    def _update_partial_metrics_state(self):
+        """Update the partial metrics state with aggregated profile data."""
+        # Clear existing profile data
+        self._partial_metrics_state.profile.clear()
+        
+        # Aggregate profile data from all applications and epochs
+        for application, epochs in self._profile_data.items():
+            for epoch, profiles in epochs.items():
+                for key, value in profiles.items():
+                    # Convert key to tuple format if it's a string
+                    if isinstance(key, str):
+                        try:
+                            # Parse the key string to extract components
+                            key_clean = key.strip("()")
+                            parts = [int(x.strip()) for x in key_clean.split(",")]
+                            if len(parts) == 3:
+                                key_tuple = tuple(parts)
+                                self._partial_metrics_state.profile[key_tuple]["optim_step_time"] += value["optim_step_time"]
+                                self._partial_metrics_state.profile[key_tuple]["optim_sync_time"] += value["optim_sync_time"]
+                                self._partial_metrics_state.profile[key_tuple]["optim_count"] += value["optim_count"]
+                        except (ValueError, AttributeError):
+                            LOG.warning(f"Could not parse profile key: {key}")
+                            continue
+                    else:
+                        # Key is already in tuple format
+                        self._partial_metrics_state.profile[key]["optim_step_time"] += value["optim_step_time"]
+                        self._partial_metrics_state.profile[key]["optim_sync_time"] += value["optim_sync_time"]
+                        self._partial_metrics_state.profile[key]["optim_count"] += value["optim_count"]
+        
+        # For now, set perf_params to None - you can compute this based on your logic
+        # self._partial_metrics_state.perf_params = computed_perf_params
+        
+        LOG.info(f"Updated partial metrics state with {len(self._partial_metrics_state.profile)} profile entries")
+    
+    def _save_partial_metrics_checkpoint(self):
+        """Save the partial metrics state to a checkpoint file."""
+        try:
+            # Import checkpoint path from adaptdl
+            from adaptdl.env import checkpoint_path
+            
+            checkpoint_dir = checkpoint_path()
+            if checkpoint_dir is None:
+                LOG.warning("Checkpoint path is None, cannot save partial metrics checkpoint")
+                return
+            
+            checkpoint_file = os.path.join(checkpoint_dir, self._partial_metrics_state.name)
+            
+            with open(checkpoint_file, "wb") as f:
+                self._partial_metrics_state.save(f)
+            
+            LOG.info(f"Successfully saved partial metrics checkpoint to {checkpoint_file}")
+            
+        except ImportError as e:
+            LOG.warning(f"Could not import adaptdl checkpoint functions: {e}")
+        except Exception as e:
+            LOG.error(f"Failed to save partial metrics checkpoint: {e}")
 
 
 async def main():

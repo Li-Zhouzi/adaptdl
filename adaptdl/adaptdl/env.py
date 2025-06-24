@@ -141,17 +141,6 @@ def num_restarts():
     return int(os.getenv("ADAPTDL_NUM_RESTARTS", "0"))
 
 
-def adaptdl_sched_version():
-    """
-    A string which gives the AdaptDL version of scheduler. Determined
-    by the environment variable ``ADAPTDL_SCHED_VERSION`` or ``None``
-
-    Returns:
-        str: AdaptDL version of scheduler, or ``None``.
-    """
-    return os.environ.get("ADAPTDL_SCHED_VERSION")
-
-
 def supervisor_url():
     """
     URL of the supervisor in an AdaptDL-scheduled cluster. The address of the
@@ -162,12 +151,3 @@ def supervisor_url():
         str: URL of the supervisor, or ``None``.
     """
     return os.getenv("ADAPTDL_SUPERVISOR_URL")
-
-
-def from_ray():
-    """ Returns True if the code is being called from Ray"""
-    if os.getenv("ADAPTDL_TUNE_TRIAL_SCHED", "False") == "True":
-        import ray
-        return ray.is_initialized()
-    else:
-        return False

@@ -16,9 +16,11 @@
 from contextlib import contextmanager
 import collections
 import functools
+import json
 import logging
 import math
 import numpy as np
+import os
 import pickle
 import random
 import torch
@@ -32,6 +34,8 @@ from adaptdl.torch._metrics import (
     profile_step_start, profile_step_commit,
     set_batch_size, get_goodput_fn, get_progress)
 from adaptdl._signal import get_exit_flag
+
+from adaptdl.torch._metrics import _metrics_state
 
 logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger(__name__)
@@ -151,6 +155,8 @@ class AdaptiveDataLoaderHelper(object):
         self._gradient_accumulation = False
         self._speedup_threshold = 1.05
         self._accum_count = 0
+        self._last_profiled_epoch = None
+        self._last_profiled_batch_size = None
 
     @property
     def current_index(self):
@@ -217,17 +223,8 @@ class AdaptiveDataLoaderHelper(object):
         """
         return self._state.accumulation_steps
 
-    def is_accum_step(self):
-        """
-        Whether the current step's gradient will be accumulated.
-        """
-        return self._accum_count < self._state.accumulation_steps
-
-    def is_optim_step(self):
-        """
-        Whether the optimizer step will be invoked in this step.
-        """
-        return not self.is_accum_step()
+    def is_sync_step(self):
+        return self._accum_count >= self._state.accumulation_steps
 
     def train(self):
         """
@@ -268,6 +265,19 @@ class AdaptiveDataLoaderHelper(object):
         self.train()
 
     def _sync_local_bsz(self):
+        if "TARGET_BATCH_SIZE" in os.environ:
+            eps = 1e-8
+            batch_size = int(os.environ["TARGET_BATCH_SIZE"])
+            local_bsz = math.ceil(batch_size / adaptdl.env.num_replicas() - eps)
+            if self._local_bsz_bounds is not None and self._local_bsz_bounds[1] is not None:
+                accum_steps = math.ceil(local_bsz / self._local_bsz_bounds[1] - eps) - 1
+            else:
+                accum_steps = 0
+            if adaptdl.env.num_replicas() == 1:
+                accum_steps = max(1, accum_steps)
+            self._state.current_local_bsz = math.ceil(local_bsz / (accum_steps + 1) - eps)
+            self._state.accumulation_steps = accum_steps
+            return self.current_local_bsz
         goodput_fn = get_goodput_fn()
         if self.max_batch_size is None or goodput_fn is None:
             # No autoscale batch size, just divide batch size evenly.
@@ -309,14 +319,12 @@ class AdaptiveDataLoaderHelper(object):
         return self is AdaptiveDataLoaderHelper._training
 
     @contextmanager
-    def profile(self, commit):
+    def profile(self, record):
         """
         Every iteration of every epoch should be profiled under this context.
         Note that, custom DataLoader writers should make sure that it gets
         called equal number of times on each replica.
-
-        Arguments:
-            commit (bool): Whether to commit the profiled results.
+        Only profiles when either the epoch or batch size changes from the last profile.
         """
         # Synchronize the exit signal so all replicas exit after
         # the same iteration. Do this asynchronously to prevent
@@ -326,14 +334,25 @@ class AdaptiveDataLoaderHelper(object):
             exit(143)  # Standard exit code response to SIGTERM.
         self.future_exit = adaptdl.collective.allreduce_async(
                     get_exit_flag(), lambda a, b: a or b)
+
+        current_epoch_val = current_epoch()
+        should_profile = (self._last_profiled_epoch != current_epoch_val or 
+                         self._last_profiled_batch_size != self.current_batch_size)
+        print("should_profile: %s, current_epoch_val: %s, current_batch_size: %s", should_profile, current_epoch_val, self.current_batch_size)
         profile_step_start(self.current_local_bsz)
+        
+
         yield
-        import datetime
-        LOG.info("at %s: commit %s", datetime.datetime.now(), commit)
-        if commit:
-            profile_step_commit(current_epoch(), self.is_accum_step())
-        self._accum_count = (0 if self.is_optim_step()
-                             else self._accum_count + 1)
+
+        # Don't profile the first batch since it may be slower.
+        if should_profile and self.training and self.current_index > self.current_batch_size and record:
+            print("profiling")
+            self._last_profiled_epoch = current_epoch_val
+            self._last_profiled_batch_size = self.current_batch_size
+            # Get gain from the current AdaptiveDataParallel instance if available
+            gain = getattr(self, '_current_adp_gain', None)
+            profile_step_commit(current_epoch_val, self.current_batch_size, not self.is_sync_step(), gain)
+        self._accum_count = 0 if self.is_sync_step() else self._accum_count + 1
 
     @contextmanager
     def context(self):
@@ -353,6 +372,9 @@ class AdaptiveDataLoaderHelper(object):
             self._state.end_index = 0
             self._state.last_position[epoch] = self._position[epoch]
             self._position[epoch] += 1
+            # Clear the gain reference
+            if hasattr(self, '_current_adp_gain'):
+                delattr(self, '_current_adp_gain')
             AdaptiveDataLoaderHelper._current = None
 
     @property
@@ -390,6 +412,8 @@ class AdaptiveDataLoaderHelper(object):
             global_step (int): Global step value to record.
             tag_prefix (str): Prefix added to each metric's tag.
         """
+        if adaptdl.env.replica_rank() > 0:
+            return
         if tag_prefix and not tag_prefix.endswith("/"):
             tag_prefix += "/"
         writer.add_scalar(tag_prefix + "Total_Batch_Size",
@@ -431,10 +455,6 @@ class AdaptiveDataLoaderMixin(object):
         step is taken.
         """
         return self._elastic.accumulation_steps
-
-    @property
-    def training(self):
-        return self._elastic.training
 
     @property
     def current_batch_size(self):
@@ -520,30 +540,67 @@ class AdaptiveDataLoader(DataLoader, AdaptiveDataLoaderMixin):
         restart, and continue where it left off.
         """
         epoch = current_epoch()
-        num_replicas = adaptdl.env.num_replicas()
         with self._elastic.context():
             if self._elastic.skipdone():
                 return
             done = False
+            efficiency_file = None
+            if "TRACE_EFFICIENCY" in os.environ and adaptdl.env.replica_rank() == 0:
+                efficiency_file = open(adaptdl.env.checkpoint_path() + "/efficiency.txt", "a")
+            if "TRACE_THROUGHPUT" in os.environ:
+                assert "TRACE_EFFICIENCY" not in os.environ
+                self._elastic._state.current_local_bsz = self.batch_sampler.batch_size = \
+                    int(self._elastic.local_bsz_bounds[0])
             while not done:
-                self.sampler.set_epoch(
-                    epoch, index=self._elastic.current_index)
-                self.batch_sampler.batch_size = self._elastic._sync_local_bsz()
+                self.sampler.set_epoch(epoch, index=self._elastic.current_index)  # noqa: E501
+                if "TRACE_THROUGHPUT" not in os.environ:
+                    self.batch_sampler.batch_size = self._elastic._sync_local_bsz()
                 for idx, batch in enumerate(super().__iter__()):
-                    with self._elastic.profile(self.training and idx >= 1):
+                    record = idx >= 5 if "TRACE_THROUGHPUT" in os.environ else True
+                    with self._elastic.profile(record):
                         yield batch
+                        if self._elastic.training and efficiency_file is not None:
+                            json.dump({
+                                "progress": get_progress(),
+                                "norm": _metrics_state().grad_params[0],
+                                "var": _metrics_state().grad_params[1],
+                                "initial_batch_size": self.batch_size,
+                                "current_batch_size": self.current_batch_size,
+                                "num_replicas": adaptdl.env.num_replicas(),
+                            }, efficiency_file)
+                            efficiency_file.write("\n")
                         # Increment by the number of data samples processed
-                        self._elastic.current_index += \
-                            num_replicas * self.batch_sampler.batch_size
-                        if self._elastic.max_batch_size is not None and \
-                                get_progress() >= len(self.dataset) * \
-                                (epoch + 1) / self.batch_size:
+                        self._elastic.current_index += adaptdl.env.num_replicas() * self.batch_sampler.batch_size
+                        if "TRACE_THROUGHPUT" in os.environ:
+                            if idx >= 20:
+                                LOG.info(self.batch_sampler.batch_size)
+                                break
+                        elif self._elastic.max_batch_size is not None and \
+                           get_progress() >= len(self.dataset) * \
+                           (epoch + 1) / self.batch_size:
                             done = True
                             break
-                if self._elastic.max_batch_size is None:
+                if "TRACE_THROUGHPUT" in os.environ:
+                    if idx <= 3:  # Batch size becoming too large, stop now.
+                        done = True
+                    elif self.batch_sampler.batch_size >= self._elastic.local_bsz_bounds[1]:
+                        done = True
+                    else:
+                        self._elastic._state.current_local_bsz = self.batch_sampler.batch_size = \
+                            min(round(self.batch_sampler.batch_size * 2 ** 0.5),
+                                self._elastic.local_bsz_bounds[1])
+                elif self._elastic.max_batch_size is None:
                     done = True
                 self._elastic.current_index -= \
                     self._elastic.current_index % -len(self.dataset)
+            if efficiency_file is not None:
+                efficiency_file.close()
+            elif "TRACE_THROUGHPUT" in os.environ:
+                if adaptdl.env.replica_rank() == 0:
+                    profile = [{"local_bsz": k[2], **v} for k, v in _metrics_state().profile.items()]
+                    with open(adaptdl.env.checkpoint_path() + "/throughput.txt", "w") as f:
+                        json.dump({"profile": profile}, f)
+                exit(0)
 
 
 class _AdaptiveDataLoaderState(adaptdl.checkpoint.State):

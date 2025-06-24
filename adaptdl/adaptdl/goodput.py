@@ -19,6 +19,7 @@ import collections
 import scipy.optimize
 import scipy.stats
 
+
 # Parameters for a performance model which predicts the per-step time of
 # distributed SGD using all-reduce. At a high level, models compute time and
 # network time separately, and combines them with some degree of overlap.
@@ -120,21 +121,15 @@ class GoodputFunction(object):
                 np.logical_and(num_replicas == 1,
                                local_bsz > self._init_batch_size + eps),
                 np.maximum(accum_steps, 1), accum_steps).astype(int)
-            atomic_bsz = np.ceil(
-                local_bsz / (accum_steps + 1) - eps).astype(int)
         else:
             accum_steps = np.zeros_like(local_bsz, dtype=np.int)
-            atomic_bsz = np.where(
-                num_replicas == 1,
-                self._init_batch_size, np.ceil(local_bsz - eps)).astype(int)
-
-        # Constrain the atomic_bsz before we evaluate the candidates
-        atomic_bsz = np.maximum(min_atomic_bsz, atomic_bsz)
-        atomic_bsz = np.minimum(max_atomic_bsz, atomic_bsz)
-
+        atomic_bsz = np.ceil(local_bsz / (accum_steps + 1) - eps).astype(int)
         # Evaluate the goodput of all candidate configurations.
         goodput = self.evaluate(num_nodes, num_replicas,
                                 atomic_bsz, accum_steps)
+        # Set the goodput of invalid configurations to 0.0.
+        goodput = np.where((min_atomic_bsz <= atomic_bsz) &
+                           (atomic_bsz <= max_atomic_bsz), goodput, 0.0)
         # Find the indices of the best configurations.
         indices = np.argmax(goodput, axis=0), np.arange(goodput.shape[1])
         # Restore the correct output shape and return results.
@@ -163,6 +158,7 @@ def fit_perf_params(num_nodes, num_replicas, atomic_bsz,
 
     num_nodes = np.array(num_nodes)
     num_replicas = np.array(num_replicas)
+    local_bsz = np.array(atomic_bsz)
     accum_step_time = np.array(accum_step_time)
     optim_step_time = np.array(optim_step_time)
 
