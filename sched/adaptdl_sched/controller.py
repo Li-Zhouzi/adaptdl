@@ -402,6 +402,10 @@ class AdaptDLController(object):
                 "value": config.get_supervisor_url(),
             })
             container["env"].append({
+                "name": "ADAPTDL_GLOBAL_PROFILER_URL",
+                "value": config.get_global_profiler_url(),
+            })
+            container["env"].append({
                 "name": "ADAPTDL_SCHED_VERSION",
                 "value": config.get_adaptdl_version(),
             })

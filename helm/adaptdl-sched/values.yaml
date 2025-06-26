@@ -69,6 +69,11 @@ supervisor:
     port: 8080
     targetPort: 8080
 
+globalProfiler:
+  service:
+    port: 8082
+    targetPort: 8082
+
 # Some services depend on the specific name of the registry service which is
 # enforced through fullnameOverride.
 docker-registry:

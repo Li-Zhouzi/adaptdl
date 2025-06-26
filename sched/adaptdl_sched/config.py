@@ -46,12 +46,24 @@ def get_supervisor_url():
     return os.environ["ADAPTDL_SUPERVISOR_URL"]
 
 
+def get_global_profiler_url():
+    return os.environ["ADAPTDL_GLOBAL_PROFILER_URL"]
+
+
 def get_supervisor_port():
     return os.getenv("ADAPTDL_SUPERVISOR_SERVICE_PORT", 8080)
 
 
+def get_global_profiler_port():
+    return os.getenv("ADAPTDL_GLOBAL_PROFILER_PORT", 8082)
+
+
 def get_storage_subpath():
     return os.environ["ADAPTDL_STORAGE_SUBPATH"]
+
+
+def get_checkpoint_path():
+    return os.getenv("ADAPTDL_CHECKPOINT_PATH", "/adaptdl/checkpoint")
 
 
 def get_adaptdl_version():

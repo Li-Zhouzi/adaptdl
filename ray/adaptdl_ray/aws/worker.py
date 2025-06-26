@@ -82,11 +82,13 @@ def run_adaptdl(job_key, job_uid, rank, replicas,
 
     controller = ray.get_actor("AdaptDLController")
     supervisor_url = ray.get(controller.get_url.remote())
+    global_profiler_url = ray.get(controller.get_global_profiler_url.remote())
 
     os.environ["ADAPTDL_MASTER_PORT"] = str(47000 + num_restarts + offset)
     os.environ["ADAPTDL_REPLICA_RANK"] = str(rank)
     os.environ["ADAPTDL_NUM_REPLICAS"] = str(replicas)
     os.environ["ADAPTDL_SUPERVISOR_URL"] = supervisor_url
+    os.environ["ADAPTDL_GLOBAL_PROFILER_URL"] = global_profiler_url
     os.environ["ADAPTDL_JOB_ID"] = job_key
     os.environ["ADAPTDL_NUM_RESTARTS"] = str(num_restarts)
     os.environ["ADAPTDL_SCHED_VERSION"] = str(

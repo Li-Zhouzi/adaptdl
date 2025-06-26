@@ -6,6 +6,7 @@ import sys
 import os
 import pickle
 from collections import defaultdict
+from global_profile_state import PartialMetricsState
 
 # Add adaptdl to path for importing checkpoint functionality
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'adaptdl'))
@@ -14,25 +15,7 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 
 
-class PartialMetricsState:
-    """
-    A partial metrics state that only contains profile and perf_params.
-    This is defined in the width_calculator to avoid modifying the original metrics code.
-    """
-    def __init__(self, name="width-calculator-partial-metrics"):
-        self.name = name
-        self.profile = defaultdict(lambda: defaultdict(float))
-        self.perf_params = None
 
-    def save(self, fileobj):
-        """Save only profile and perf_params to the checkpoint."""
-        pickle.dump(self.profile, fileobj)
-        pickle.dump(self.perf_params, fileobj)
-
-    def load(self, fileobj):
-        """Load profile and perf_params from the checkpoint."""
-        self.profile = pickle.load(fileobj)
-        self.perf_params = pickle.load(fileobj)
 
 
 class WidthCalculator:

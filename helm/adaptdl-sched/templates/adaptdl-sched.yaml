@@ -45,7 +45,7 @@ spec:
             name: adaptdl-config
         imagePullPolicy: Always
         resources:
-{{ toYaml .Values.sched.resources | indent 10 }}
+{{ toYaml .Values.sched.resources | indent 8 }}
       - name: supervisor
         image: {{ .Values.image.repository }}{{ empty .Values.image.digest | ternary ":" "@" }}{{ coalesce .Values.image.digest .Values.image.tag .Chart.AppVersion }}
         args: ["python", "-m", "adaptdl_sched.supervisor"]
@@ -57,22 +57,26 @@ spec:
           containerPort: {{ .Values.supervisor.service.targetPort }}
           protocol: TCP
         imagePullPolicy: Always
-{{/*
-      - name: width-calculator
+      - name: global-profiler
         image: {{ .Values.image.repository }}{{ empty .Values.image.digest | ternary ":" "@" }}{{ coalesce .Values.image.digest .Values.image.tag .Chart.AppVersion }}
-        args: ["python", "-m", "adaptdl_sched.width_calculator"]
+        args: ["python", "-m", "adaptdl_sched.global_profiler"]
         envFrom:
         - configMapRef:
             name: adaptdl-config
         ports:
-        - name: http
-          containerPort: 8081
+        - name: global-profiler
+          containerPort: {{ .Values.globalProfiler.service.targetPort }}
           protocol: TCP
         imagePullPolicy: Always
-        resources:
-{{ toYaml .Values.sched.resources | indent 10 }}
-*/}}
+        volumeMounts:
+        - name: pollux
+          mountPath: /pollux/checkpoint
+          subPath: pollux/checkpoint/global-profiler
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{ toYaml . | indent 8 }}
-      {{- end -}}
+      {{- end }}
+      volumes:
+      - name: pollux
+        persistentVolumeClaim:
+          claimName: pollux

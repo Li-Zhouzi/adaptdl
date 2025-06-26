@@ -151,3 +151,9 @@ def supervisor_url():
         str: URL of the supervisor, or ``None``.
     """
     return os.getenv("ADAPTDL_SUPERVISOR_URL")
+
+def global_profiler_url():
+    """
+    URL of the global profiler in an AdaptDL-scheduled cluster.
+    """
+    return os.getenv("ADAPTDL_GLOBAL_PROFILER_URL")

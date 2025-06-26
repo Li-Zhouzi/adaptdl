@@ -338,7 +338,7 @@ class AdaptiveDataLoaderHelper(object):
         current_epoch_val = current_epoch()
         should_profile = (self._last_profiled_epoch != current_epoch_val or 
                          self._last_profiled_batch_size != self.current_batch_size)
-        print("should_profile: %s, current_epoch_val: %s, current_batch_size: %s", should_profile, current_epoch_val, self.current_batch_size)
+        # print("should_profile: %s, current_epoch_val: %s, current_batch_size: %s", should_profile, current_epoch_val, self.current_batch_size)
         profile_step_start(self.current_local_bsz)
         
 
@@ -346,12 +346,11 @@ class AdaptiveDataLoaderHelper(object):
 
         # Don't profile the first batch since it may be slower.
         if should_profile and self.training and self.current_index > self.current_batch_size and record:
-            print("profiling")
+            # print("profiling")
             self._last_profiled_epoch = current_epoch_val
             self._last_profiled_batch_size = self.current_batch_size
-            # Get gain from the current AdaptiveDataParallel instance if available
-            gain = getattr(self, '_current_adp_gain', None)
-            profile_step_commit(current_epoch_val, self.current_batch_size, not self.is_sync_step(), gain)
+
+            profile_step_commit(current_epoch_val, self.current_batch_size, not self.is_sync_step())
         self._accum_count = 0 if self.is_sync_step() else self._accum_count + 1
 
     @contextmanager

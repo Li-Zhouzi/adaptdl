@@ -17,6 +17,8 @@ import collections
 import json
 import pickle
 import time
+import requests
+import logging
 
 import numpy as np
 
@@ -25,6 +27,10 @@ import adaptdl.collective
 import adaptdl.env
 from adaptdl.goodput import GoodputFunction, fit_perf_params
 from adaptdl.sched_hints import SCHED_HINTS, PERF_PARAMS, post_sched_hints
+
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
 
 
 def report_train_metrics(epoch, loss, **kwargs):
@@ -69,13 +75,29 @@ def profile_sync_time(sync_time):
 _PREV_REPORT = None
 
 
-def profile_step_commit(epoch, batch_size, accumulation_step=False, gain=None):
+def profile_step_commit(epoch, batch_size, accumulation_step=False):
     global _PREV_REPORT
     state = _metrics_state()
     step_time = time.time() - state.step_start
     num_nodes = adaptdl.env.num_nodes()
     num_replicas = adaptdl.env.num_replicas()
     key = (num_nodes, num_replicas, state.atomic_bsz)
+
+
+
+    # Don't update local profile, but report to global profiler
+    profile_data = {
+        "accumulation_step": accumulation_step,
+        "step_time": step_time,
+        "sync_time": state.sync_time,
+        "num_nodes": num_nodes,
+        "num_replicas": num_replicas,
+        "atomic_bsz": state.atomic_bsz,
+    }
+    if adaptdl.env.replica_rank() == 0:
+        _report_global_profile(profile_data)
+
+
     if accumulation_step:
         state.profile[key]["accum_step_time"] += step_time
         state.profile[key]["accum_count"] += 1
@@ -83,19 +105,6 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False, gain=None):
         state.profile[key]["optim_step_time"] += step_time
         state.profile[key]["optim_sync_time"] += state.sync_time
         state.profile[key]["optim_count"] += 1
-        
-        # Add to new_profile for reporting
-        if key not in state.new_profile:
-            state.new_profile[key] = {
-                "optim_step_time": step_time,
-                "optim_sync_time": state.sync_time,
-                "optim_count": 1
-            }
-        else:
-            state.new_profile[key]["optim_step_time"] += step_time
-            state.new_profile[key]["optim_sync_time"] += state.sync_time
-            state.new_profile[key]["optim_count"] += 1
-        
     
     del state.atomic_bsz
     del state.step_start
@@ -138,6 +147,7 @@ def set_batch_size(init_batch_size, max_batch_size, local_bsz_bounds,
 
 def get_goodput_fn():
     state = _metrics_state()
+    # print(state.grad_params, state.perf_params)
     if state.grad_params is None or state.perf_params is None:
         return None
     return GoodputFunction(state.perf_params, state.grad_params,
@@ -189,24 +199,19 @@ def _report_sched_hints(epoch, batch_size):
     sched_hints["epoch"] = epoch
     sched_hints["batchSize"] = batch_size
     
-    # Send new profile data
-    if state.new_profile:
-        sched_hints["new_profile"] = state.new_profile
-    
     post_sched_hints(sched_hints, adaptdl.env.job_id())
-    
-    # Clear new_profile every 20 seconds
-    current_time = time.time()
-    if current_time - state._last_clear_time > 20:
-        state.new_profile.clear()
-        state._last_clear_time = current_time
+
+
+def _report_global_profile(profile_data):
+    """Report profile data to the global profiler."""
+    application = adaptdl.env.job_id().split("-")[0].split("/")[-1]
+    post_global_profile(profile_data, application)
 
 
 class _MetricsState(adaptdl.checkpoint.State):
     def __init__(self):
         super().__init__("adaptdl-metrics")
         self.profile = collections.defaultdict(collections.Counter)
-        self.new_profile = {}
         self.perf_params = None
         self.grad_params = None
         self.init_batch_size = None
@@ -214,11 +219,9 @@ class _MetricsState(adaptdl.checkpoint.State):
         self.local_bsz_bounds = None
         self.gradient_accumulation = False
         self.progress = 0.0  # Progress in scale-invariant iterations.
-        self._last_clear_time = time.time()
 
     def save(self, fileobj):
         pickle.dump(self.profile, fileobj)
-        pickle.dump(self.new_profile, fileobj)
         pickle.dump(self.perf_params, fileobj)
         pickle.dump(self.grad_params, fileobj)
         pickle.dump(self.init_batch_size, fileobj)
@@ -226,14 +229,9 @@ class _MetricsState(adaptdl.checkpoint.State):
         pickle.dump(self.local_bsz_bounds, fileobj)
         pickle.dump(self.gradient_accumulation, fileobj)
         pickle.dump(self.progress, fileobj)
-        pickle.dump(self._last_clear_time, fileobj)
 
     def load(self, fileobj):
         self.profile = pickle.load(fileobj)
-        try:
-            self.new_profile = pickle.load(fileobj)
-        except EOFError:
-            self.new_profile = {}
         self.perf_params = pickle.load(fileobj)
         self.grad_params = pickle.load(fileobj)
         self.init_batch_size = pickle.load(fileobj)
@@ -241,10 +239,6 @@ class _MetricsState(adaptdl.checkpoint.State):
         self.local_bsz_bounds = pickle.load(fileobj)
         self.gradient_accumulation = pickle.load(fileobj)
         self.progress = pickle.load(fileobj)
-        try:
-            self._last_clear_time = pickle.load(fileobj)
-        except EOFError:
-            self._last_clear_time = time.time()
 
 
 def _metrics_state():
@@ -256,3 +250,33 @@ def _metrics_state():
 
 
 _METRICS_STATE = None
+
+
+def post_global_profile(profile_data, application="default"):
+    """
+    Post profile data to the global profiler.
+    
+    Args:
+        profile_data (dict): Profile data with keys as (num_nodes, num_replicas, atomic_bsz) tuples
+        application (str): Application identifier for the global profiler
+    """
+    url = adaptdl.env.global_profiler_url()
+    print("sent profile to global profiler, url: ", url, application, profile_data)
+    if not url or url == "":
+        return  # skip if global profiler URL is not set
+    
+    headers = {"Content-Type": "application/json"}
+    try:
+        # Prepare the data in the format expected by the global profiler
+        data = {
+            "application": application,
+            **profile_data
+        }
+        
+        response = requests.post(url=f"{url}/profile",
+                               data=json.dumps(data),
+                               headers=headers)
+        if response.status_code != 200:
+            LOG.warning(f"Global profiler returned {response.status_code}")
+    except Exception as e:
+        LOG.warning(f"Failed to post to global profiler: {e}")
