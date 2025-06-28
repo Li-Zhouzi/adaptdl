@@ -1,7 +1,6 @@
 import pickle
 import time
 import numpy as np
-from collections import defaultdict
 from adaptdl.checkpoint import State
 from adaptdl.goodput import fit_perf_params
 
@@ -13,11 +12,28 @@ class GlobalProfileState(State):
     """
     def __init__(self, name="global-profile-state"):
         super().__init__(name)
-        # global_profiles[application] contains the profile for that application type
-        self.global_profiles = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+        # global_profiles[application][key] contains the profile for that application and configuration
+        # Simple dictionary structure: {application: {key: profile_dict}}
+        self.global_profiles = {}
         # global_perf_params[application] contains the perf_params for that application type
         self.global_perf_params = {}
         self.last_fit_time = time.time()
+
+    def _get_or_create_profile(self, application, key):
+        """Get existing profile or create a new one with proper defaults."""
+        if application not in self.global_profiles:
+            self.global_profiles[application] = {}
+        
+        if key not in self.global_profiles[application]:
+            self.global_profiles[application][key] = {
+                "accum_step_time": 0.0,
+                "accum_count": 0,
+                "optim_step_time": 0.0,
+                "optim_sync_time": 0.0,
+                "optim_count": 0
+            }
+        
+        return self.global_profiles[application][key]
 
     def update_profile(self, application, profile_data):
         """
@@ -29,14 +45,15 @@ class GlobalProfileState(State):
             profile_data (dict): Profile data containing the profile information
         """
         key = (profile_data["num_nodes"], profile_data["num_replicas"], profile_data["atomic_bsz"])
+        profile = self._get_or_create_profile(application, key)
 
         if profile_data.get("accumulation_step", False):
-            self.global_profiles[application][key]["accum_step_time"] += profile_data.get("step_time", 0.0)
-            self.global_profiles[application][key]["accum_count"] += 1
+            profile["accum_step_time"] += profile_data.get("step_time", 0.0)
+            profile["accum_count"] += 1
         else:
-            self.global_profiles[application][key]["optim_step_time"] += profile_data.get("step_time", 0.0)
-            self.global_profiles[application][key]["optim_sync_time"] += profile_data.get("sync_time", 0.0)
-            self.global_profiles[application][key]["optim_count"] += 1
+            profile["optim_step_time"] += profile_data.get("step_time", 0.0)
+            profile["optim_sync_time"] += profile_data.get("sync_time", 0.0)
+            profile["optim_count"] += 1
 
 
     def fit_perf_params_for_application(self, application):
