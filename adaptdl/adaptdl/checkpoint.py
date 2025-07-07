@@ -110,6 +110,7 @@ def save_state(state, sync=True):
         state.sync()
     if replica_rank() == 0:
         name = _STATES_TO_NAMES[state]
+        print("Saving to ", os.path.join(checkpoint_path(), name))
         if checkpoint_path() is not None:
             with open(os.path.join(checkpoint_path(), name), "wb") as f:
                 state.save(f)
@@ -132,6 +133,7 @@ def load_state(state):
         return False
     try:
         name = _STATES_TO_NAMES[state]
+        print("Loading from ", os.path.join(checkpoint_path(), name))
         with open(os.path.join(checkpoint_path(), name), "rb") as f:
             state.load(f)
         return True

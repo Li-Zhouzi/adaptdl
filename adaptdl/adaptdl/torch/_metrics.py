@@ -19,6 +19,7 @@ import pickle
 import time
 import requests
 import logging
+import os
 
 import numpy as np
 
@@ -113,7 +114,7 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
         if _PREV_REPORT is None:
             _PREV_REPORT = time.time()
         if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 1:
-            _fit_perf_params()
+            # _fit_perf_params()
             _report_sched_hints(epoch, batch_size)
             _PREV_REPORT = time.time()
 
@@ -182,11 +183,16 @@ def _fit_perf_params():
 def _report_sched_hints(epoch, batch_size):
     assert adaptdl.env.replica_rank() == 0
     state = _metrics_state()
+    
     # Scheduling hints
     sched_hints = SCHED_HINTS.copy()
-    sched_hints["perfParams"] = {k: v for (k, v) in
-                                 zip(PERF_PARAMS.keys(),
-                                 state.perf_params)}
+    
+    # Only add perfParams if available, otherwise skip this entry
+    if state.perf_params is not None:
+        sched_hints["perfParams"] = {k: v for (k, v) in
+                                     zip(PERF_PARAMS.keys(),
+                                     state.perf_params)}
+    
     sched_hints["maxBatchSize"] = state.max_batch_size
     sched_hints["localBszBounds"] = state.local_bsz_bounds
     sched_hints["initBatchSize"] = state.init_batch_size
@@ -219,6 +225,7 @@ class _MetricsState(adaptdl.checkpoint.State):
         self.local_bsz_bounds = None
         self.gradient_accumulation = False
         self.progress = 0.0  # Progress in scale-invariant iterations.
+        self.last_fetch_global_time = 0.0  # Track when we last fetched global profiler state
 
     def save(self, fileobj):
         pickle.dump(self.profile, fileobj)
@@ -229,6 +236,7 @@ class _MetricsState(adaptdl.checkpoint.State):
         pickle.dump(self.local_bsz_bounds, fileobj)
         pickle.dump(self.gradient_accumulation, fileobj)
         pickle.dump(self.progress, fileobj)
+        pickle.dump(self.last_fetch_global_time, fileobj)
 
     def load(self, fileobj):
         self.profile = pickle.load(fileobj)
@@ -239,14 +247,93 @@ class _MetricsState(adaptdl.checkpoint.State):
         self.local_bsz_bounds = pickle.load(fileobj)
         self.gradient_accumulation = pickle.load(fileobj)
         self.progress = pickle.load(fileobj)
+        # Handle backward compatibility - if last_fetch_global_time doesn't exist in checkpoint
+        try:
+            self.last_fetch_global_time = pickle.load(fileobj)
+        except EOFError:
+            self.last_fetch_global_time = 0.0
 
 
 def _metrics_state():
     global _METRICS_STATE
     if _METRICS_STATE is None:
         _METRICS_STATE = _MetricsState()
+        print("loading state")
         adaptdl.checkpoint.load_state(_METRICS_STATE)
+
+    else:
+        # Check if we need to refresh global profiler state (every 60 seconds)
+        current_time = time.time()
+        if current_time - _METRICS_STATE.last_fetch_global_time > 60.0:
+            print("retrieving global profiler state")
+            _load_global_profiler_state(_METRICS_STATE)
+            _METRICS_STATE.last_fetch_global_time = current_time
+    
     return _METRICS_STATE
+
+
+def _load_global_profiler_state(metrics_state):
+    """Helper function to load global profiler state."""
+    print("Attempting to import GlobalProfileState...")
+    from adaptdl.global_profile_state import GlobalProfileState
+    print("Successfully imported GlobalProfileState")
+    
+    # Use a singleton pattern for GlobalProfileState to avoid registration conflicts
+    global _GLOBAL_PROFILE_STATE
+    if not hasattr(_load_global_profiler_state, '_GLOBAL_PROFILE_STATE'):
+        _load_global_profiler_state._GLOBAL_PROFILE_STATE = None
+    
+    if _load_global_profiler_state._GLOBAL_PROFILE_STATE is None:
+        _load_global_profiler_state._GLOBAL_PROFILE_STATE = GlobalProfileState()
+        print("Created GlobalProfileState instance")
+    
+    global_state = _load_global_profiler_state._GLOBAL_PROFILE_STATE
+    
+    # Try to load the state from the global checkpoint path
+    import os
+    global_checkpoint_path = "/pollux/global-checkpoint"
+    if os.path.exists(global_checkpoint_path):
+        try:
+            import pickle
+            # Get the state name from the global checkpoint dictionary
+            from adaptdl.checkpoint import _STATES_TO_NAMES
+            state_name = _STATES_TO_NAMES.get(global_state, "global-profile-state")
+            checkpoint_file = os.path.join(global_checkpoint_path, state_name)
+            print(f"Loading from global checkpoint: {checkpoint_file}")
+            with open(checkpoint_file, "rb") as f:
+                global_state.load(f)
+            print("Loaded global profiler state from global checkpoint")
+        except Exception as e:
+            print(f"Failed to load from global checkpoint: {e}")
+            return
+    else:
+        print("Global checkpoint path not found, trying default checkpoint path")
+        # Fallback to default checkpoint path
+        if adaptdl.checkpoint.load_state(global_state):
+            print("Loaded global profiler state from default checkpoint")
+        else:
+            print("No global profiler state found, using empty state")
+            return
+    
+    # Get application from job_id
+    application = adaptdl.env.job_id().split("-")[0].split("/")[-1]
+    print("application: ", application)
+    print("keys in global_profile_state: ", global_state.global_profiles.keys())
+    
+    # Overwrite perf_params if available for this application
+    if application in global_state.global_perf_params:
+        metrics_state.perf_params = global_state.global_perf_params[application]
+        print("Loaded global perf_params for application ", application)
+    
+    # Overwrite profile if available for this application
+    if application in global_state.global_profiles:
+        # Convert the global profile back to defaultdict structure
+        global_profile = global_state.global_profiles[application]
+        metrics_state.profile = collections.defaultdict(collections.Counter)
+        for key, profile_data in global_profile.items():
+            metrics_state.profile[key] = profile_data
+        print("Loaded global profile for application ", application)
+        print("length of profile: ", len(metrics_state.profile))
 
 
 _METRICS_STATE = None

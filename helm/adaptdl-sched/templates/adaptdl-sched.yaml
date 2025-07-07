@@ -71,7 +71,6 @@ spec:
         volumeMounts:
         - name: pollux
           mountPath: /pollux/checkpoint
-          subPath: pollux/checkpoint/global-profiler
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{ toYaml . | indent 8 }}

@@ -132,6 +132,14 @@ if __name__ == "__main__":
             "mountPath": "/pollux/tensorboard",
             "subPath": "pollux/tensorboard/" + row.name,
         })
+
+        # Add read-only volume mount for global profiler state
+        mounts.append({
+            "name": "pollux",
+            "mountPath": "/pollux/global-checkpoint",
+            "readOnly": True,
+        })
+
         # mounts.append({
         #     "name": "pollux",
         #     "mountPath": "/mnt"

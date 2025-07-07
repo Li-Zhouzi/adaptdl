@@ -5,7 +5,7 @@ import os
 import asyncio
 import time
 from adaptdl_sched.config import get_global_profiler_port, get_checkpoint_path
-from adaptdl_sched.global_profile_state import GlobalProfileState
+from adaptdl.global_profile_state import GlobalProfileState
 from adaptdl.checkpoint import save_state
 
 
@@ -26,6 +26,7 @@ class GlobalProfiler:
         self._port = port
         # Initialize the global profile state
         self._global_state = GlobalProfileState()
+        
         # Load existing state if available
         try:
             from adaptdl.checkpoint import load_state
@@ -62,11 +63,8 @@ class GlobalProfiler:
                 self._global_state.fit_all_perf_params()
                 
                 # Save the state to persistent storage
-                try:
-                    save_state(self._global_state, sync=False)
-                    LOG.info("Saved global profile state to persistent storage")
-                except Exception as e:
-                    LOG.error("Error saving global profile state: %s", e)
+                save_state(self._global_state, sync=False)
+                LOG.info("Saved global profile state to persistent storage")
             
             return web.json_response({"status": "success", "application": application})
         except Exception as e:

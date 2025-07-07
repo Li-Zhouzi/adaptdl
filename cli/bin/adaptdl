@@ -204,6 +204,7 @@ def submit(args, remaining):
                 "subPath": "adaptdl/share",
             }
         )
+
         env = container.setdefault("env", [])
         env.extend(
             [
@@ -217,6 +218,14 @@ def submit(args, remaining):
 
     volumes = pod_spec.setdefault("volumes", [])
     volumes.append(volume)
+    
+    # Add global profiler volume mount
+    volumes.append({
+        "name": "pollux",
+        "persistentVolumeClaim": {
+            "claimName": "pollux",
+        },
+    })
 
     storage_class = get_storageclass(name=args.checkpoint_storage_class)
     custom_object_api = kubernetes.client.CustomObjectsApi()

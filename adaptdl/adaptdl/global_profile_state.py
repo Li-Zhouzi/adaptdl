@@ -98,12 +98,9 @@ class GlobalProfileState(State):
         optim_step_time /= optim_count
         
         # Fit the performance parameters
-        try:
-            perf_params = fit_perf_params(num_nodes, num_replicas, atomic_bsz,
-                                        accum_step_time, optim_step_time)
-            self.global_perf_params[application] = perf_params
-        except Exception as e:
-            print(f"Error fitting perf_params for application {application}: {e}")
+        perf_params = fit_perf_params(num_nodes, num_replicas, atomic_bsz,
+                                    accum_step_time, optim_step_time)
+        self.global_perf_params[application] = perf_params
 
     def should_fit_perf_params(self):
         """
@@ -113,7 +110,7 @@ class GlobalProfileState(State):
             bool: True if it's time to fit perf_params
         """
         current_time = time.time()
-        return current_time - self.last_fit_time > 300
+        return current_time - self.last_fit_time > 60
 
     def fit_all_perf_params(self):
         """
@@ -136,4 +133,4 @@ class GlobalProfileState(State):
         try:
             self.last_fit_time = pickle.load(fileobj)
         except EOFError:
-            self.last_fit_time = time.time()
+            self.last_fit_time = time.time() 
