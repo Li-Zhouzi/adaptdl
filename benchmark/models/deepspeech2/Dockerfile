@@ -14,12 +14,18 @@ RUN apt-get update && \
     apt-get install -y sox libsox-dev libsox-fmt-all wget bzip2 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN pip install --no-cache-dir awscli
+
 # Set up your Python paths
 COPY adaptdl adaptdl
 ENV PYTHONPATH=/root/adaptdl:$PYTHONPATH
 
 COPY benchmark/models/deepspeech2 deepspeech2
 ENV PYTHONPATH=/root/deepspeech2:$PYTHONPATH
+
+COPY benchmark/dataset_map.json .
+COPY benchmark/download_dataset.sh .
+RUN chmod +x /root/download_dataset.sh
 
 # Working directory for training code
 WORKDIR /root/deepspeech2

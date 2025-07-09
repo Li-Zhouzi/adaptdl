@@ -17,20 +17,15 @@ spec:
         resources:
           limits:
             nvidia.com/gpu: 1
-            cpu: 10
-            memory: "40G"
+            cpu: 1
+            memory: "12G"
           requests:
             nvidia.com/gpu: 1
-            cpu: 10
-            memory: "40G"
+            cpu: 1
+            memory: "12G"
         volumeMounts:
-        - name: data
+        - name: pollux
           mountPath: /mnt
           readOnly: true
-      volumes:
-      - name: data
-        hostPath:
-          path: /mnt
-          type: Directory
       imagePullSecrets:
       - name: regcred

@@ -1,7 +1,7 @@
 # coding=utf-8
 # project
 DATA_PATH = "/mnt/VOC"
-PROJECT_PATH = "/home/ubuntu/YOLOV3"
+PROJECT_PATH = "/mnt/YOLOV3"
 
 
 DATA = {"CLASSES":['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus',
