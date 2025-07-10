@@ -59,17 +59,37 @@ class GoodputFunction(object):
         self._grad_params = GradParams(*grad_params)
         self._init_batch_size = init_batch_size
 
-    def __call__(self, num_nodes, num_replicas, atomic_bsz, accum_steps):
-        return self.evaluate(num_nodes, num_replicas, atomic_bsz, accum_steps)
+    def __call__(self, num_nodes, num_replicas, atomic_bsz, accum_steps, profile=None):
+        return self.evaluate(num_nodes, num_replicas, atomic_bsz, accum_steps, profile=profile)
 
-    def evaluate(self, num_nodes, num_replicas, atomic_bsz, accum_steps):
+    def evaluate(self, num_nodes, num_replicas, atomic_bsz, accum_steps, profile=None):
         batch_size = num_replicas * atomic_bsz * (accum_steps + 1)
         assert np.all(self._init_batch_size <= batch_size)
         return self.throughput(num_nodes, num_replicas, atomic_bsz,
-                               accum_steps) * self.efficiency(batch_size)
+                               accum_steps, profile=profile) * self.efficiency(batch_size)
 
-    def throughput(self, num_nodes, num_replicas, atomic_bsz, accum_steps):
-        accum_time = _predict_accum_time(self._perf_params, atomic_bsz)
+    def throughput(self, num_nodes, num_replicas, atomic_bsz, accum_steps, profile=None):
+        key = (num_nodes, num_replicas, atomic_bsz)
+        accum_time = None
+        # Combine all available profile data for accum_time: both accum and optim steps
+        if profile is not None and key in profile:
+            prof = profile[key]
+            accum_time_total = 0.0
+            accum_count_total = 0
+            # Add accumulation step data if available
+            if prof.get("accum_count", 0) > 0:
+                accum_time_total += prof.get("accum_step_time", 0.0)
+                accum_count_total += prof.get("accum_count", 0)
+            # Add optimization step data if available
+            if prof.get("optim_count", 0) > 0:
+                accum_time_total += prof.get("optim_step_time", 0.0) - prof.get("optim_sync_time", 0.0)
+                accum_count_total += prof.get("optim_count", 0)
+            if accum_count_total > 0:
+                accum_time = accum_time_total / accum_count_total
+            else:
+                accum_time = _predict_accum_time(self._perf_params, atomic_bsz)
+        else:
+            accum_time = _predict_accum_time(self._perf_params, atomic_bsz)
         network_time = _predict_network_time(self._perf_params,
                                              num_nodes, num_replicas)
         optim_time = np.exp(_predict_log_optim_time(self._perf_params,

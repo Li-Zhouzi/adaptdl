@@ -21,9 +21,10 @@ class GlobalProfiler:
     2. /profile for receiving profiling data from jobs.
     """
 
-    def __init__(self, port, host='0.0.0.0'):
+    def __init__(self, port, host='0.0.0.0', grad_params_alpha=0.1):
         self._host = host
         self._port = port
+        self._grad_params_alpha = grad_params_alpha
         # Initialize the global profile state
         self._global_state = GlobalProfileState()
         
@@ -55,7 +56,7 @@ class GlobalProfiler:
                                  if k != 'application'}
             
             # Update the global profile state
-            self._global_state.update_profile(application, actual_profile_data)
+            self._global_state.update_profile(application, actual_profile_data, alpha=self._grad_params_alpha)
             
             # Check if it's time to fit perf_params
             if self._global_state.should_fit_perf_params():

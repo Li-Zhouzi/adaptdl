@@ -71,6 +71,17 @@ spec:
         volumeMounts:
         - name: pollux
           mountPath: /pollux/checkpoint
+      - name: width-calculator
+        image: {{ .Values.image.repository }}{{ empty .Values.image.digest | ternary ":" "@" }}{{ coalesce .Values.image.digest .Values.image.tag .Chart.AppVersion }}
+        args: ["python", "-m", "adaptdl_sched.width_calculator"]
+        envFrom:
+        - configMapRef:
+            name: adaptdl-config
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: pollux
+          mountPath: /pollux/checkpoint
+          readOnly: true
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{ toYaml . | indent 8 }}

@@ -84,8 +84,6 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
     num_replicas = adaptdl.env.num_replicas()
     key = (num_nodes, num_replicas, state.atomic_bsz)
 
-
-
     # Don't update local profile, but report to global profiler
     profile_data = {
         "accumulation_step": accumulation_step,
@@ -94,22 +92,28 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
         "num_nodes": num_nodes,
         "num_replicas": num_replicas,
         "atomic_bsz": state.atomic_bsz,
+        "epoch": epoch,
     }
+    
+    # Include current grad_params if available
+    if state.grad_params is not None:
+        profile_data["grad_norm_sqr"] = state.grad_params[0]
+        profile_data["grad_variance"] = state.grad_params[1]
+    
     if adaptdl.env.replica_rank() == 0:
         _report_global_profile(profile_data)
 
-
-    if accumulation_step:
-        state.profile[key]["accum_step_time"] += step_time
-        state.profile[key]["accum_count"] += 1
-    else:
-        state.profile[key]["optim_step_time"] += step_time
-        state.profile[key]["optim_sync_time"] += state.sync_time
-        state.profile[key]["optim_count"] += 1
+    # if accumulation_step:
+    #     state.profile[key]["accum_step_time"] += step_time
+    #     state.profile[key]["accum_count"] += 1
+    # else:
+    #     state.profile[key]["optim_step_time"] += step_time
+    #     state.profile[key]["optim_sync_time"] += state.sync_time
+    #     state.profile[key]["optim_count"] += 1
     
-    del state.atomic_bsz
-    del state.step_start
-    del state.sync_time
+    # del state.atomic_bsz
+    # del state.step_start
+    # del state.sync_time
     if not accumulation_step:
         if _PREV_REPORT is None:
             _PREV_REPORT = time.time()
