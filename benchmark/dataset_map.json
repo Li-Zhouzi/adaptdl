@@ -1,0 +1,7 @@
+{
+  "bert": "squad",
+  "yolov3": "VOC",
+  "deepspeech2": "deepspeech2_data",
+  "ncf": "ncf",
+  "imagenet": "imagenet"
+}

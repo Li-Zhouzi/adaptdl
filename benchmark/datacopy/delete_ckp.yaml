@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: delete-checkpoint
+spec:
+  template:
+    spec:
+      containers:
+      - name: cleaner
+        image: alpine
+        command: ["sh", "-c", "rm -rf /mnt/efs/checkpoint && echo 'Deleted /mnt/efs/checkpoint'"]
+        volumeMounts:
+        - name: pollux
+          mountPath: /mnt
+      restartPolicy: Never
+  backoffLimit: 1

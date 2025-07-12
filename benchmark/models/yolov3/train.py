@@ -183,5 +183,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--weight_path', type=str, default='weight/darknet53_448.weights', help='weight file path')
     opt = parser.parse_args()
-
+    print(f"Loading weights from: {opt.weight_path}")
     Trainer(weight_path=opt.weight_path).train()
