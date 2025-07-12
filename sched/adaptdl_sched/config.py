@@ -58,6 +58,10 @@ def get_global_profiler_port():
     return os.getenv("ADAPTDL_GLOBAL_PROFILER_PORT", 8082)
 
 
+def get_width_calculator_port():
+    return os.getenv("ADAPTDL_WIDTH_CALCULATOR_PORT", 8083)
+
+
 def get_storage_subpath():
     return os.environ["ADAPTDL_STORAGE_SUBPATH"]
 

@@ -18,11 +18,14 @@ import dateutil.parser
 import kubernetes_asyncio as kubernetes
 import logging
 import time
+import os
+import aiohttp
 
 from adaptdl.goodput import GoodputFunction, PerfParams, GradParams
 from adaptdl.sched_hints import PERF_PARAMS
 from adaptdl_sched.policy.pollux import PolluxPolicy
 from adaptdl_sched.policy.dummy import DummyPolicy
+from adaptdl_sched.policy.fixed_width import FixedWidthPolicy
 from adaptdl_sched.policy.speedup import SpeedupFunction
 from adaptdl_sched.policy.utils import JobInfo, NodeInfo
 from adaptdl_sched.resources import (get_node_unrequested, get_pod_requests,
@@ -45,13 +48,22 @@ class AdaptDLAllocator(object):
         self._cluster_expander = expander
 
         # Select the policy to use
-        # Options: "pollux", "dummy"
+        # Options: "pollux", "dummy", "fixed-width"
         SELECTED_POLICY = "dummy"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+
+        # Width fetching configuration
+        self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
+        self._width_fetch_interval = int(os.environ.get("WIDTH_FETCH_INTERVAL", "500"))  # 500 seconds
+        self._current_width = None
 
         if SELECTED_POLICY == "pollux":
             self._policy = PolluxPolicy()
         elif SELECTED_POLICY == "dummy":
             self._policy = DummyPolicy(num_gpus_per_job=2) # Configure dummy as needed
+        elif SELECTED_POLICY == "fixed-width":
+            # Initialize with None width, will be fetched later
+            self._policy = None
+            self._policy_type = "fixed-width"
         else:
             raise ValueError(f"Unknown policy: {SELECTED_POLICY}")
 
@@ -59,12 +71,20 @@ class AdaptDLAllocator(object):
         self._lock = asyncio.Lock()
 
     async def run(self):
-        # two functionality: (1) watch for new job and start if possible.
+        # three functionality: (1) watch for new job and start if possible.
         # (2) periodically optimize existing jobs
-        await asyncio.gather(
-            self._allocate_one_loop(),
-            self._optimize_all_loop()
-        )
+        # (3) periodically fetch width for fixed-width policy
+        if self._policy_type == "fixed-width":
+            await asyncio.gather(
+                self._allocate_one_loop(),
+                self._optimize_all_loop(),
+                self._fetch_width_loop()
+            )
+        else:
+            await asyncio.gather(
+                self._allocate_one_loop(),
+                self._optimize_all_loop()
+            )
 
     async def _allocate_one_loop(self):
         async with kubernetes.watch.Watch() as watch:
@@ -111,7 +131,7 @@ class AdaptDLAllocator(object):
         node_infos, _ = await self._find_nodes()
 
         # get the node to allocate
-        new_allocation = self._policy.allocate_job(
+        new_allocation = self._get_policy().allocate_job(
                             job_info, node_infos)
         patch = {"status": {"allocation": new_allocation}}
         LOG.info("Patch AdaptdlJob %s/%s: %s ",
@@ -126,6 +146,48 @@ class AdaptDLAllocator(object):
 
             LOG.info("Sleep for 60 seconds")
             await asyncio.sleep(60)
+
+    async def _fetch_width_loop(self):
+        """Periodically fetch width from the width service."""
+        while True:
+            try:
+                await self._fetch_width()
+            except Exception as e:
+                LOG.error(f"Error fetching width: {e}")
+            
+            LOG.info(f"Sleep for {self._width_fetch_interval} seconds before next width fetch")
+            await asyncio.sleep(self._width_fetch_interval)
+
+    async def _fetch_width(self):
+        """Fetch width from the width calculator web service and update policy."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self._width_service_url}/width") as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        width = data.get("width")
+                        
+                        if width is not None:
+                            LOG.info(f"Fetched new width: {width}")
+                            self._current_width = width
+                            self._policy = FixedWidthPolicy(width)
+                        else:
+                            LOG.warning("Width calculator returned None width, falling back to Pollux policy")
+                            self._policy = PolluxPolicy()
+                    else:
+                        LOG.warning(f"Width calculator returned status {response.status}, falling back to Pollux policy")
+                        self._policy = PolluxPolicy()
+        except Exception as e:
+            LOG.warning(f"Failed to fetch width from calculator: {e}, falling back to Pollux policy")
+            self._policy = PolluxPolicy()
+
+    def _get_policy(self):
+        """Get the current policy, ensuring it's initialized for fixed-width."""
+        if self._policy_type == "fixed-width" and self._policy is None:
+            # If we haven't fetched width yet, use Pollux as fallback
+            LOG.warning("Fixed-width policy not initialized yet, using Pollux policy as fallback")
+            return PolluxPolicy()
+        return self._policy
 
     async def _optimize_all(self):
         LOG.info("Running allocator loop")
@@ -285,7 +347,7 @@ class AdaptDLAllocator(object):
             # There are no jobs, let the expander shrink the cluster.
             self._cluster_expander.fit([])
         elif jobs and nodes:
-            allocations, desired_nodes = self._policy.optimize(
+            allocations, desired_nodes = self._get_policy().optimize(
                 jobs, nodes, prev_allocations, node_template)
             if desired_nodes < len(nodes):
                 active_nodes = list(set.union(*map(set, allocations.values())))

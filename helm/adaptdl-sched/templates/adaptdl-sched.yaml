@@ -43,6 +43,11 @@ spec:
         envFrom:
         - configMapRef:
             name: adaptdl-config
+        env:
+        - name: WIDTH_SERVICE_URL
+          value: "http://localhost:8083"
+        - name: WIDTH_FETCH_INTERVAL
+          value: "500"
         imagePullPolicy: Always
         resources:
 {{ toYaml .Values.sched.resources | indent 8 }}
@@ -77,11 +82,16 @@ spec:
         envFrom:
         - configMapRef:
             name: adaptdl-config
+        ports:
+        - name: width-service
+          containerPort: 8083
+          protocol: TCP
         imagePullPolicy: Always
         volumeMounts:
         - name: pollux
           mountPath: /pollux/checkpoint
           readOnly: true
+
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets:
         {{ toYaml . | indent 8 }}

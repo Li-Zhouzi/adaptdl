@@ -103,22 +103,25 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
     if adaptdl.env.replica_rank() == 0:
         _report_global_profile(profile_data)
 
-    # if accumulation_step:
-    #     state.profile[key]["accum_step_time"] += step_time
-    #     state.profile[key]["accum_count"] += 1
-    # else:
-    #     state.profile[key]["optim_step_time"] += step_time
-    #     state.profile[key]["optim_sync_time"] += state.sync_time
-    #     state.profile[key]["optim_count"] += 1
+    # Start here for job wise profile
+    if accumulation_step:
+        state.profile[key]["accum_step_time"] += step_time
+        state.profile[key]["accum_count"] += 1
+    else:
+        state.profile[key]["optim_step_time"] += step_time
+        state.profile[key]["optim_sync_time"] += state.sync_time
+        state.profile[key]["optim_count"] += 1
+    del state.atomic_bsz
+    del state.step_start
+    del state.sync_time
+    # End here for job wise profile
+
     
-    # del state.atomic_bsz
-    # del state.step_start
-    # del state.sync_time
     if not accumulation_step:
         if _PREV_REPORT is None:
             _PREV_REPORT = time.time()
         if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 1:
-            # _fit_perf_params()
+            _fit_perf_params() # if type wise profile, comment this line
             _report_sched_hints(epoch, batch_size)
             _PREV_REPORT = time.time()
 
@@ -208,6 +211,7 @@ def _report_sched_hints(epoch, batch_size):
     sched_hints["gradientAccumulation"] = state.gradient_accumulation
     sched_hints["epoch"] = epoch
     sched_hints["batchSize"] = batch_size
+    sched_hints["progress"] = state.progress
     
     post_sched_hints(sched_hints, adaptdl.env.job_id())
 
@@ -265,13 +269,13 @@ def _metrics_state():
         print("loading state")
         adaptdl.checkpoint.load_state(_METRICS_STATE)
 
-    else:
-        # Check if we need to refresh global profiler state (every 60 seconds)
-        current_time = time.time()
-        if current_time - _METRICS_STATE.last_fetch_global_time > 60.0:
-            print("retrieving global profiler state")
-            _load_global_profiler_state(_METRICS_STATE)
-            _METRICS_STATE.last_fetch_global_time = current_time
+    # else:
+    #     # Check if we need to refresh global profiler state (every 60 seconds)
+    #     current_time = time.time()
+    #     if current_time - _METRICS_STATE.last_fetch_global_time > 60.0:
+    #         print("retrieving global profiler state")
+    #         _load_global_profiler_state(_METRICS_STATE)
+    #         _METRICS_STATE.last_fetch_global_time = current_time
     
     return _METRICS_STATE
 

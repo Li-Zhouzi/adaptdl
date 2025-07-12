@@ -5,12 +5,16 @@ import time
 import sys
 import os
 import pickle
+from _compute_width import get_width
+from aiohttp import web
 
 # Add adaptdl to path for importing checkpoint functionality
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'adaptdl'))
 
 # Import after adding to path
 from adaptdl.global_profile_state import GlobalProfileState
+from adaptdl_sched.config import get_width_calculator_port, get_checkpoint_path
+
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -19,18 +23,70 @@ LOG.setLevel(logging.INFO)
 class WidthCalculator:
     """
     WidthCalculator loads global profiler state and computes width based on aggregated profiles.
+    Also provides a web service to expose the current width.
     """
 
-    def __init__(self):
+    def __init__(self, budget):
         self._objs_api = kubernetes.client.CustomObjectsApi()
         self._custom_resource = ("adaptdl.petuum.com", "v1", "", "adaptdljobs")
         
         # Global profile state for loading checkpoint data
         self._global_state = GlobalProfileState()
+        
+        self.budget = budget
+        self.width = None
+
+    def get_width(self):
+        """
+        Get the current computed width.
+        
+        Returns:
+            dict or None: The current width dictionary or None if not computed yet
+        """
+        return self.width
+
+    async def _handle_healthz(self, request):
+        # Health check.
+        return web.Response()
+
+    async def _handle_width(self, request):
+        """
+        HTTP endpoint to get the current width.
+        
+        Returns:
+            JSON response with width data or error message
+        """
+        try:
+            if self.width is None:
+                return web.json_response({
+                    "error": "Width not available",
+                    "message": "Width calculator has not computed width yet or computation failed"
+                }, status=503)
+            
+            return web.json_response({
+                "width": self.width,
+            })
+        except Exception as e:
+            LOG.error(f"Error getting width: {e}")
+            return web.json_response({
+                "error": "Internal server error",
+                "message": str(e)
+            }, status=500)
 
     async def run(self):
-        """Main loop that periodically computes width."""
-        LOG.info("Starting WidthCalculator")
+        """Main loop that periodically computes width and serves web requests."""
+        LOG.info("Starting WidthCalculator with web service")
+        
+        # Start web service
+        app = web.Application()
+        app.router.add_get('/healthz', self._handle_healthz)
+        app.router.add_get('/width', self._handle_width)
+        
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", int(get_width_calculator_port()))
+        await site.start()
+        LOG.info("Width service started on port %s", get_width_calculator_port())
         
         # Main computation loop - call _compute_width every 5 minutes (300 seconds)
         while True:
@@ -47,14 +103,8 @@ class WidthCalculator:
         # Log the loaded state for debugging
         LOG.info(f"Loaded global profiles for applications: {list(self._global_state.global_profiles.keys())}")
         LOG.info(f"Loaded global perf_params for applications: {list(self._global_state.global_perf_params.keys())}")
-        
-        # TODO: Implement the remaining width computation logic here
-        # The global state is now loaded and available in self._global_state
-        # You can access:
-        # - self._global_state.global_profiles[application][key] for profile data
-        # - self._global_state.global_perf_params[application] for performance parameters
-        
-        return 1
+        width = get_width(self._global_state, self.budget)
+        self.width = width
     
     def _load_global_profiler_state(self):
         """Load the global profiler state from checkpoint."""
@@ -79,7 +129,9 @@ async def main():
     logging.basicConfig(level=logging.INFO)
     kubernetes.config.load_incluster_config()
     
-    calculator = WidthCalculator()
+    # Get budget from environment variable or use default
+    budget = int(os.environ.get("WIDTH_CALCULATOR_BUDGET", "100"))
+    calculator = WidthCalculator(budget)
     await calculator.run()
 
 
