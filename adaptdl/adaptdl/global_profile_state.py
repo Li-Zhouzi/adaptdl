@@ -19,7 +19,6 @@ class GlobalProfileState(State):
         self.global_perf_params = {}
         # global_grad_params[application][epoch] contains the grad_params for that application and epoch
         self.global_grad_params = {}
-        self.global_size = {}
         self.last_fit_time = time.time()
 
     def _get_or_create_profile(self, application, key):
@@ -151,14 +150,21 @@ class GlobalProfileState(State):
         pickle.dump(self.global_perf_params, fileobj)
         pickle.dump(self.global_grad_params, fileobj)
         pickle.dump(self.last_fit_time, fileobj)
-        pickle.dump(self.global_size, fileobj)
     
     def load(self, fileobj):
         """Load global_profiles and global_perf_params from the checkpoint."""
         self.global_profiles = pickle.load(fileobj)
+        if not isinstance(self.global_profiles, dict):
+            self.global_profiles = {}
+            
         self.global_perf_params = pickle.load(fileobj)
+        if not isinstance(self.global_perf_params, dict):
+            self.global_perf_params = {}
+            
         self.global_grad_params = pickle.load(fileobj)
-        self.global_size = pickle.load(fileobj)
+        if not isinstance(self.global_grad_params, dict):
+            self.global_grad_params = {}
+            
         try:
             self.last_fit_time = pickle.load(fileobj)
         except EOFError:

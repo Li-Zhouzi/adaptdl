@@ -1,1 +1,1 @@
-ssh -i ~/.ssh/new_data_copier root@3.81.69.64 "rm -rf /mnt/efs/pollux/checkpoint/*"
+ssh -i ~/.ssh/new_data_copier root@35.175.253.30 "rm -rf /mnt/efs/pollux/checkpoint/*"

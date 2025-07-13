@@ -1,6 +1,6 @@
 from adaptdl.goodput import GoodputFunction
 from adaptdl.global_profile_state import GlobalProfileState
-from sched.adaptdl_sched._configs import APPLICATIONS, NUM_GPU_PER_NODE, ARRIVAL_RATE
+from ._configs import APPLICATIONS, NUM_GPU_PER_NODE, ARRIVAL_RATE
 import numpy as np
 import cvxpy as cp
 import math
@@ -355,5 +355,16 @@ def _compute_width_iter(application_rates, size_data, speedup_dict, b):
 
 
 def get_width(global_profile_state: GlobalProfileState, b):
-    speedup_dict, size_dict = _get_speedup_and_size(global_profile_state)
-    return _get_width_with_rescale(speedup_dict, size_dict, ARRIVAL_RATE, b)
+    # speedup_dict, size_dict = _get_speedup_and_size(global_profile_state)
+    # return _get_width_with_rescale(speedup_dict, size_dict, ARRIVAL_RATE, b)
+    width = dict()
+    for app in ARRIVAL_RATE.keys():
+        width[app] = dict()
+        for epoch in APPLICATIONS[app].max_epochs:
+            width[app][epoch] = 4
+            if epoch > 15:
+                width[app][epoch] = 8
+            if epoch > 30:
+                width[app][epoch] = 12
+    return width
+

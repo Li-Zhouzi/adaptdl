@@ -46,8 +46,6 @@ spec:
         env:
         - name: WIDTH_SERVICE_URL
           value: "http://localhost:8083"
-        - name: WIDTH_FETCH_INTERVAL
-          value: "500"
         imagePullPolicy: Always
         resources:
 {{ toYaml .Values.sched.resources | indent 8 }}

@@ -42,35 +42,30 @@ class GlobalProfiler:
 
     async def _handle_profile(self, request):
         # Endpoint for receiving profile data from jobs.
-        try:
-            profile_data = await request.json()
-            LOG.info("Received profile data at %s: %s", datetime.now(), profile_data)
+        profile_data = await request.json()
+        LOG.info("Received profile data at %s: %s", datetime.now(), profile_data)
+        
+        # Extract application type from the profile data
+        # You can modify this to extract the application type as needed
+        application = profile_data.get('application')
+        
+        # Extract the actual profile data (excluding metadata like application)
+        actual_profile_data = {k: v for k, v in profile_data.items() 
+                                if k != 'application'}
+        
+        # Update the global profile state
+        self._global_state.update_profile(application, actual_profile_data, alpha=self._grad_params_alpha)
+        
+        # Check if it's time to fit perf_params
+        if self._global_state.should_fit_perf_params():
+            LOG.info("Fitting perf_params for all applications")
+            self._global_state.fit_all_perf_params()
             
-            # Extract application type from the profile data
-            # You can modify this to extract the application type as needed
-            application = profile_data.get('application')
-            LOG.info("Application: %s", application)
-            
-            # Extract the actual profile data (excluding metadata like application)
-            actual_profile_data = {k: v for k, v in profile_data.items() 
-                                 if k != 'application'}
-            
-            # Update the global profile state
-            self._global_state.update_profile(application, actual_profile_data, alpha=self._grad_params_alpha)
-            
-            # Check if it's time to fit perf_params
-            if self._global_state.should_fit_perf_params():
-                LOG.info("Fitting perf_params for all applications")
-                self._global_state.fit_all_perf_params()
-                
-                # Save the state to persistent storage
-                save_state(self._global_state, sync=False)
-                LOG.info("Saved global profile state to persistent storage")
-            
-            return web.json_response({"status": "success", "application": application})
-        except Exception as e:
-            LOG.error("Error processing profile data: %s", e)
-            return web.json_response({"status": "error", "message": str(e)}, status=400)
+            # Save the state to persistent storage
+            save_state(self._global_state, sync=False)
+            LOG.info("Saved global profile state to persistent storage")
+        
+        return web.json_response({"status": "success", "application": application})
 
     def run(self):
         self.app = web.Application()

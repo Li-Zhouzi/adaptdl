@@ -5,7 +5,7 @@ import time
 import sys
 import os
 import pickle
-from _compute_width import get_width
+from adaptdl_sched._compute_width import get_width
 from aiohttp import web
 
 # Add adaptdl to path for importing checkpoint functionality
@@ -35,15 +35,6 @@ class WidthCalculator:
         
         self.budget = budget
         self.width = None
-
-    def get_width(self):
-        """
-        Get the current computed width.
-        
-        Returns:
-            dict or None: The current width dictionary or None if not computed yet
-        """
-        return self.width
 
     async def _handle_healthz(self, request):
         # Health check.
@@ -103,7 +94,11 @@ class WidthCalculator:
         # Log the loaded state for debugging
         LOG.info(f"Loaded global profiles for applications: {list(self._global_state.global_profiles.keys())}")
         LOG.info(f"Loaded global perf_params for applications: {list(self._global_state.global_perf_params.keys())}")
-        width = get_width(self._global_state, self.budget)
+        try:
+            width = get_width(self._global_state, self.budget)
+        except Exception as e:
+            LOG.error(f"Error computing width: {e}")
+            width = None
         self.width = width
     
     def _load_global_profiler_state(self):
