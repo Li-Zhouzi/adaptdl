@@ -110,6 +110,13 @@ def train(args, train_dataset, model, tokenizer):
     )
     logger.info("  Total optimization steps = %d", t_total)
 
+    # Enhanced dataset size information
+    print("=" * 60)
+    print(f"DATASET SIZE INFORMATION:")
+    print(f"  Total training examples: {len(train_dataset):,}")
+    print(f"  Total epochs: {args.num_train_epochs}")
+    print("=" * 60)
+
     model.zero_grad()
     # Added here for reproductibility
     set_seed(args)
@@ -366,7 +373,7 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
                 examples = processor.get_dev_examples(args.data_dir, filename=args.predict_file)
             else:
                 examples = processor.get_train_examples(args.data_dir, filename=args.train_file)
-
+        logger.info("Here")
         features, dataset = squad_convert_examples_to_features(
             examples=examples,
             tokenizer=tokenizer,
@@ -377,7 +384,7 @@ def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=Fal
             return_dataset="pt",
             threads=args.threads,
         )
-
+        logger.info("Here2")
         if adaptdl.env.replica_rank() == 0:
             logger.info("Saving features into cached file %s", cached_features_file)
             torch.save({"features": features, "dataset": dataset, "examples": examples}, cached_features_file)

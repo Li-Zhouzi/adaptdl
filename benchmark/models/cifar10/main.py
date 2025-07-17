@@ -45,7 +45,8 @@ transform_test = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
-trainset = torchvision.datasets.CIFAR10(root="/mnt", train=True, download=True, transform=transform_train)
+trainset = torchvision.datasets.CIFAR10(root="/mnt", train=True, download=False, transform=transform_train)
+print("trainset length:", len(trainset))
 trainloader = adaptdl.torch.AdaptiveDataLoader(trainset, batch_size=args.bs, shuffle=True, num_workers=2, drop_last=True)
 trainloader.autoscale_batch_size(4096, local_bsz_bounds=(32, 1024),
                                  gradient_accumulation=True)

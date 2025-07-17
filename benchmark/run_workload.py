@@ -149,6 +149,7 @@ if __name__ == "__main__":
         env.append({"name": "ADAPTDL_CHECKPOINT_PATH", "value": "/pollux/checkpoint"})
         env.append({"name": "ADAPTDL_TENSORBOARD_LOGDIR", "value": "/pollux/tensorboard"})
         env.append({"name": "APPLICATION", "value": row.application})
+        # env.append({"name": "TRACE_THROUGHPUT", "value": "1"})
         if args.policy in ["tiresias"]:
             job["spec"]["minReplicas"] = job["spec"]["maxReplicas"] = row.num_replicas
             env.append({"name": "TARGET_NUM_REPLICAS", "value": str(row.num_replicas)})

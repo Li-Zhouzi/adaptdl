@@ -596,7 +596,7 @@ class AdaptiveDataLoader(DataLoader, AdaptiveDataLoaderMixin):
                 efficiency_file.close()
             elif "TRACE_THROUGHPUT" in os.environ:
                 if adaptdl.env.replica_rank() == 0:
-                    profile = [{"local_bsz": k[2], **v} for k, v in _metrics_state().profile.items()]
+                    profile = [{"num_nodes": k[0], "num_replicas": k[1], "local_bsz": k[2], **v} for k, v in _metrics_state().profile.items()]
                     with open(adaptdl.env.checkpoint_path() + "/throughput.txt", "w") as f:
                         json.dump({"profile": profile}, f)
                 exit(0)

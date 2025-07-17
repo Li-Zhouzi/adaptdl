@@ -19,12 +19,14 @@ spec:
           "--predict_file=/mnt/squad/dev-v1.1.json",
           "--per_gpu_train_batch_size=12",
           "--learning_rate=3e-5",
-          "--num_train_epochs=2.0",
+          "--num_train_epochs=1.0",
           "--max_seq_length=384",
           "--doc_stride=128",
           "--cache_dir=/mnt/squad",
           "--data_dir=/mnt/squad",
-          "--output_dir=/tmp/output"
+          "--output_dir=/tmp/output",
+          "--overwrite_output_dir",
+          "--threads=8"
         ]
         env:
         - name: PYTHONUNBUFFERED
@@ -32,19 +34,19 @@ spec:
         resources:
           limits:
             nvidia.com/gpu: 1
-            cpu: 1
-            memory: "12G"
+            cpu: 10
+            memory: "40G"
           requests:
             nvidia.com/gpu: 1
-            cpu: 1
-            memory: "12G"
+            cpu: 10
+            memory: "40G"
         volumeMounts:
         - name: data
           mountPath: /mnt
       volumes:
       - name: data
         hostPath:
-          path: /
+          path: /mnt
           type: Directory
       imagePullSecrets:
       - name: regcred

@@ -60,7 +60,8 @@ class FixedWidthPolicy(object):
                 
             # Calculate total GPUs this job had in its previous allocation
             gpus_in_prev_alloc = len(prev_alloc)
-            gpu_wanted = self.width[job_info.application][job_info.epoch]
+            print("Here: ", job_info.application, job_info.epoch)
+            gpu_wanted = self.width[job_info.application][str(job_info.epoch)]
             
             # only fulfill the job if it has the correct number of GPUs
             if gpus_in_prev_alloc == gpu_wanted:
@@ -78,7 +79,7 @@ class FixedWidthPolicy(object):
             gpus_per_replica = job_info.resources.get("nvidia.com/gpu", 1)
             assert gpus_per_replica == 1, f"Job {job_key} requests {gpus_per_replica} GPUs per replica, which is not 1."
                 
-            gpu_wanted = self.width[job_info.application][job_info.epoch]     
+            gpu_wanted = self.width[job_info.application][str(job_info.epoch)]     
             # Try to allocate the job
             current_alloc = []
             for node_name, gpus in available_gpus.items():

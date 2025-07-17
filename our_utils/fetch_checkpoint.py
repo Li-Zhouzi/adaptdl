@@ -139,7 +139,7 @@ delete_local_checkpoint()
 # Download checkpoint from scheduler pod
 print("\nStep 2: Downloading checkpoint from scheduler pod...")
 downloaded_file = download_checkpoint_via_kubectl()
-app_wanted = ["cifar10"]
+app_wanted = ["cifar10", "deepspeech2"]
 profiles = {}
 
 if downloaded_file and os.path.exists(downloaded_file):

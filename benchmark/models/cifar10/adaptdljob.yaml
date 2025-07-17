@@ -17,12 +17,12 @@ spec:
         resources:
           limits:
             nvidia.com/gpu: 1
-            cpu: 2 # Change here! original: 10
-            memory: "12G" # Change here! original: 40G
+            cpu: 10 # Change here! original: 10
+            memory: "40G" # Change here! original: 40G
           requests:
             nvidia.com/gpu: 1
-            cpu: 2 # Change here! original: 10
-            memory: "12G" # Change here! original: 40G
+            cpu: 10 # Change here! original: 10
+            memory: "40G" # Change here! original: 40G
         volumeMounts:
         - name: data
           mountPath: /mnt
@@ -30,7 +30,7 @@ spec:
       volumes:
       - name: data
         hostPath:
-          path: /mnt
+          path: /
           type: Directory
       imagePullSecrets:
       - name: regcred

@@ -74,10 +74,22 @@ def _load_goodput_function(global_profile_state: GlobalProfileState):
                 goodput_dict[application][epoch][num_replicas] = optimal_goodput
     return goodput_dict
 
+
+def _get_progress():
+    global_progress = dict()
+    for app in APPLICATIONS.keys():
+        global_progress[app] = dict()
+        application = APPLICATIONS[app]
+        for epoch in range(application.max_epochs):
+            global_progress[app][epoch] = application.dataset_size # The one in the code is dataset_size / init_batch_size. Here ignored because of Goodput's scale.
+    return global_progress
+
+
 def _get_speedup_and_size(global_profile_state: GlobalProfileState):
     goodput_dict = _load_goodput_function(global_profile_state)
     speedup_dict = dict()
     size_dict = dict()
+    global_progress = _get_progress()
     for app in goodput_dict.keys():
         speedup_dict[app] = dict()
         size_dict[app] = dict()
@@ -85,7 +97,7 @@ def _get_speedup_and_size(global_profile_state: GlobalProfileState):
             speedup_dict[app][epoch] = dict()
             for num_replicas, goodput in goodput_dict[app][epoch].items():
                 speedup_dict[app][epoch][num_replicas] = goodput / goodput_dict[app][epoch][1]
-            size_dict[app][epoch] = global_profile_state.global_size[app][epoch] / goodput_dict[app][epoch][1]
+            size_dict[app][epoch] = global_progress[app][epoch] / goodput_dict[app][epoch][1]
     return speedup_dict, size_dict
 
 def _feasible_speedup(speedup_dict):
@@ -360,11 +372,11 @@ def get_width(global_profile_state: GlobalProfileState, b):
     width = dict()
     for app in ARRIVAL_RATE.keys():
         width[app] = dict()
-        for epoch in APPLICATIONS[app].max_epochs:
-            width[app][epoch] = 4
+        for epoch in range(APPLICATIONS[app].max_epochs):
+            width[app][epoch] = 2
             if epoch > 15:
-                width[app][epoch] = 8
+                width[app][epoch] = 4
             if epoch > 30:
-                width[app][epoch] = 12
+                width[app][epoch] = 8
     return width
 

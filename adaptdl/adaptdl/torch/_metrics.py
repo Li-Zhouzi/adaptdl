@@ -121,7 +121,7 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
         if _PREV_REPORT is None:
             _PREV_REPORT = time.time()
         if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 1:
-            _fit_perf_params() # if type wise profile, comment this line
+            # _fit_perf_params() # if type wise profile, comment this line
             _report_sched_hints(epoch, batch_size)
             _PREV_REPORT = time.time()
 
@@ -269,13 +269,13 @@ def _metrics_state():
         print("loading state")
         adaptdl.checkpoint.load_state(_METRICS_STATE)
 
-    # else:
-    #     # Check if we need to refresh global profiler state (every 60 seconds)
-    #     current_time = time.time()
-    #     if current_time - _METRICS_STATE.last_fetch_global_time > 60.0:
-    #         print("retrieving global profiler state")
-    #         _load_global_profiler_state(_METRICS_STATE)
-    #         _METRICS_STATE.last_fetch_global_time = current_time
+    else:
+        # Check if we need to refresh global profiler state (every 60 seconds)
+        current_time = time.time()
+        if current_time - _METRICS_STATE.last_fetch_global_time > 60.0:
+            print("retrieving global profiler state")
+            _load_global_profiler_state(_METRICS_STATE)
+            _METRICS_STATE.last_fetch_global_time = current_time
     
     return _METRICS_STATE
 

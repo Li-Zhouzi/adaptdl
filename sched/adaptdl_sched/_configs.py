@@ -15,7 +15,7 @@ class Application(object):
                  init_batch_size=None, max_batch_size=None,
                  min_local_bsz=None, max_local_bsz=None,
                  max_epochs=None, gradient_accumulation=False,
-                 num_stages=1):
+                 num_stages=1, dataset_size=None):
         self.name = name
         self.init_batch_size = init_batch_size 
         self.max_batch_size = max_batch_size 
@@ -24,6 +24,7 @@ class Application(object):
         assert self.max_batch_size >= self.min_local_bsz
         self.max_epochs = max_epochs 
         self.gradient_accumulation = gradient_accumulation
+        self.dataset_size = dataset_size
         if self.name == "cifar10":
             self.rescale_time = 50
         elif self.name == "deepspeech2":
@@ -40,15 +41,15 @@ class Application(object):
             self.rescale_time = 30
 
 APPLICATIONS = {
-    "bert": Application("bert", init_batch_size=4, max_batch_size=384, min_local_bsz=4, max_local_bsz=12, max_epochs=1, gradient_accumulation=True),
-    "cifar10": Application("cifar10", init_batch_size=128, max_batch_size=4096, min_local_bsz=32, max_local_bsz=1024, max_epochs=50, gradient_accumulation=True),
-    "ncf": Application("ncf", init_batch_size=256, max_batch_size=32768, min_local_bsz=32, max_local_bsz=32768, max_epochs=10, gradient_accumulation=True),
-    "imagenet": Application("imagenet", init_batch_size=20, max_batch_size=12800, min_local_bsz=20, max_local_bsz=200, max_epochs=90, gradient_accumulation=True),
-    "deepspeech2": Application("deepspeech2", init_batch_size=20, max_batch_size=640, min_local_bsz=10, max_local_bsz=80, max_epochs=30, gradient_accumulation=True),
-    "yolov3": Application("yolov3", init_batch_size=4, max_batch_size=512, min_local_bsz=4, max_local_bsz=8, max_epochs=50, gradient_accumulation=True)
+    "bert": Application("bert", init_batch_size=4, max_batch_size=384, min_local_bsz=4, max_local_bsz=12, max_epochs=1, gradient_accumulation=True, dataset_size=87599),
+    "cifar10": Application("cifar10", init_batch_size=128, max_batch_size=4096, min_local_bsz=32, max_local_bsz=1024, max_epochs=50, gradient_accumulation=True, dataset_size=50000),
+    "ncf": Application("ncf", init_batch_size=256, max_batch_size=32768, min_local_bsz=32, max_local_bsz=32768, max_epochs=10, gradient_accumulation=True, dataset_size=1000000),
+    "imagenet": Application("imagenet", init_batch_size=20, max_batch_size=12800, min_local_bsz=20, max_local_bsz=200, max_epochs=90, gradient_accumulation=True, dataset_size=1281167),
+    "deepspeech2": Application("deepspeech2", init_batch_size=20, max_batch_size=640, min_local_bsz=10, max_local_bsz=80, max_epochs=30, gradient_accumulation=True, dataset_size=4074),
+    "yolov3": Application("yolov3", init_batch_size=4, max_batch_size=512, min_local_bsz=4, max_local_bsz=8, max_epochs=50, gradient_accumulation=True, dataset_size=14041)
 }
 
-NUM_GPU_PER_NODE = 1
+NUM_GPU_PER_NODE = 4
 ARRIVAL_RATE = {
     "bert": 1,
     "cifar10": 1,

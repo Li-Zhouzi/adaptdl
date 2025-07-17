@@ -152,6 +152,13 @@ if __name__ == '__main__':
 
     criterion = torch.nn.CTCLoss()
 
+    # Enhanced dataset size information for DeepSpeech2
+    print("=" * 60)
+    print("DATASET SIZE INFORMATION:")
+    print(f"  Total training examples: {len(train_dataset):,}")
+    print(f"  Total epochs: {args.epochs}")
+    print("=" * 60)
+
     logdir = "/tmp" if adaptdl.env.replica_rank() else os.getenv("ADAPTDL_TENSORBOARD_LOGDIR", "/tmp")
     with SummaryWriter(logdir) as writer:
         for epoch in adaptdl.torch.remaining_epochs_until(args.epochs):
