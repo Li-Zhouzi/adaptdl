@@ -41,7 +41,7 @@ class Application(object):
             self.rescale_time = 30
 
 APPLICATIONS = {
-    "bert": Application("bert", init_batch_size=4, max_batch_size=384, min_local_bsz=4, max_local_bsz=12, max_epochs=1, gradient_accumulation=True, dataset_size=87599),
+    "bert": Application("bert", init_batch_size=4, max_batch_size=384, min_local_bsz=4, max_local_bsz=12, max_epochs=1, gradient_accumulation=True, dataset_size=88641),
     "cifar10": Application("cifar10", init_batch_size=128, max_batch_size=4096, min_local_bsz=32, max_local_bsz=1024, max_epochs=50, gradient_accumulation=True, dataset_size=50000),
     "ncf": Application("ncf", init_batch_size=256, max_batch_size=32768, min_local_bsz=32, max_local_bsz=32768, max_epochs=10, gradient_accumulation=True, dataset_size=1000000),
     "imagenet": Application("imagenet", init_batch_size=20, max_batch_size=12800, min_local_bsz=20, max_local_bsz=200, max_epochs=90, gradient_accumulation=True, dataset_size=1281167),
