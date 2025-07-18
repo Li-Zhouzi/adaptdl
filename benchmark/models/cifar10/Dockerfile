@@ -6,11 +6,15 @@ COPY adaptdl/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY benchmark/models/cifar10/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir awscli
 
 COPY adaptdl adaptdl
 ENV PYTHONPATH=/root/adaptdl:$PYTHONPATH
 
 COPY benchmark/models/cifar10 cifar10
+COPY benchmark/dataset_map.json .
+COPY benchmark/download_dataset.sh .
+RUN chmod +x /root/download_dataset.sh
 ENV PYTHONPATH=/root/cifar10:$PYTHONPATH
 WORKDIR /root/cifar10
 

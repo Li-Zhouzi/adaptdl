@@ -3,5 +3,6 @@
   "yolov3": "VOC",
   "deepspeech2": "deepspeech2_data",
   "ncf": "ncf",
-  "imagenet": "imagenet"
+  "imagenet": "imagenet",
+  "cifar10": "cifar-10-batches-py"
 }

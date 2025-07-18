@@ -8,6 +8,8 @@ spec:
       containers:
       - name: main
         command:
+        - /root/download_dataset.sh
+        - cifar10
         - python3
         - /root/cifar10/main.py
         - --model=ResNet18
