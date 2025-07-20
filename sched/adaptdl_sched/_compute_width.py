@@ -126,7 +126,7 @@ def _compute_width(arrival_dict, mean_size, speedup_dict, b):
     #         print(name, i, rho_dict[name][i])
     fs_speed_dict = _feasible_speedup(speedup_dict)
     rho_array = np.array([rho_dict[name][i] for name, i in index_map])
-    # print("total rho: ", np.sum(rho_array))
+    print("total rho: ", np.sum(rho_array), b)
     
     # do the optimization problem
     z = cp.Variable(len(index_map))
@@ -153,6 +153,7 @@ def _compute_width(arrival_dict, mean_size, speedup_dict, b):
     # print(problem.status)
     # print("average jct by solver: ", problem.value)
     if problem.status == cp.OPTIMAL:
+        print("optimization successful")
         optimized_z = z.value
         k_dict = {}
         for idx, (name, i) in enumerate(index_map):
@@ -203,13 +204,16 @@ def _compute_things_with_rescale(speedup_dict, mean_size_dict, k_dict, applicati
         rescale_time += sum(l) * application_rates[k]
     rescale_time /= sum(application_rates.values())
     # print("average theory jct ", s)
+    for app in jct_dict.keys():
+        print(app, sum(jct_dict[app]), sum(rescale_dict[app]), k_dict[app])
+    # print("total budget: ", total_budget)
     return s, total_budget, rescale_time
 
 def _get_glue_list(arrival_dict, size_dict):
     num_epochs_dict = dict()
     for app_name in arrival_dict.keys():
         num_epochs_dict[app_name] = len(size_dict[app_name])
-    print("num_epochs_dict: ", num_epochs_dict)
+    # print("num_epochs_dict: ", num_epochs_dict)
     # Generate 30 random dictionaries
     glue_list = []
     for _ in range(30):
@@ -278,7 +282,7 @@ def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
                 k_glue_dict[name][epoch] = k_glue[name][int(epoch / glue)]  
         # print("glue param: ", glue, "k_glue: ", k_glue_dict)
         avg_jct, total_b, rt = _compute_things_with_rescale(speedup_dict, size_dict, k_glue_dict, application_rates)
-        print("jct: ", avg_jct, "rescaling time: ", rt, "budget: ", total_b)
+        # print("jct: ", avg_jct, "rescaling time: ", rt, "budget: ", total_b)
         # print("here2", len(k_glue_dict["deepspeech2"]))
         if not min_jct_over_glue or avg_jct < min_jct_over_glue:
             min_glue_ind = index

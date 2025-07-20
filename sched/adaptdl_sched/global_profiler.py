@@ -208,7 +208,7 @@ class GlobalProfiler:
                 goodput_dict[application][epoch] = {}
                 
                 # Calculate optimal goodput for replicas 1-64
-                for num_replicas in range(1, 65):
+                for num_replicas in range(1, 8):
                     num_nodes = max(1, (num_replicas + NUM_GPU_PER_NODE - 1) // NUM_GPU_PER_NODE)
                     # Optimize for the best goodput using application-specific config
                     optimal_goodput, _, _ = goodput_fn.optimize(

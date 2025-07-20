@@ -1,17 +1,16 @@
 import os
 import sys
 import pickle
+
+sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath("adaptdl"))
 
 import matplotlib.pyplot as plt
 
-from sched.adaptdl_sched._compute_width import get_width
-from sched.adaptdl_sched._configs import ARRIVAL_RATE, APPLICATIONS
+from sched.adaptdl_sched._configs import APPLICATIONS
 from adaptdl.global_profile_state import GlobalProfileState
 from adaptdl.goodput import GoodputFunction
-from adaptdl.checkpoint import load_state
 
-BUDGET = 11
 CKP_PATH = './checkpoint/global-profile-state'
 
 NUM_GPU_PER_NODE = 1 
@@ -25,6 +24,8 @@ def load_goodput_function(global_profile_state):
         
         perf_params = global_profile_state.global_perf_params[application]
         profile = global_profile_state.global_profiles[application]
+        # if application == "bert":
+        #     print(profile)
         
         goodput_dict[application] = {}
         app_config = APPLICATIONS[application]
@@ -89,7 +90,7 @@ def plot_goodput_curve(goodput_dict, application, epoch):
 
 
 if __name__ == '__main__':
-    goodput_cache_path = "goodput_dict.pkl"
+    goodput_cache_path = "./our_utils/goodput_dict.pkl"
     if os.path.exists(goodput_cache_path):
         print("Loading goodput dictionary from cache.")
         with open(goodput_cache_path, "rb") as f:
@@ -105,14 +106,6 @@ if __name__ == '__main__':
         print(f"Goodput dictionary saved to {goodput_cache_path}")
 
     if goodput_dict:
-        app_to_plot = "bert"
+        app_to_plot = "cifar10"
         epoch_to_plot = 0
         plot_goodput_curve(goodput_dict, app_to_plot, epoch_to_plot)
-
-    # # print(goodput_dict)
-    # width = get_width(goodput_dict, BUDGET)
-    # print(width)
-
-
-
-

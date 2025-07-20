@@ -49,7 +49,7 @@ class AdaptDLAllocator(object):
 
         # Select the policy to use
         # Options: "pollux", "dummy", "fixed-width"
-        SELECTED_POLICY = "pollux"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+        SELECTED_POLICY = "fixed-width"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
 
         # Width fetching configuration
         self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
@@ -60,7 +60,7 @@ class AdaptDLAllocator(object):
             self._policy = PolluxPolicy()
             self._policy_type = "pollux"
         elif SELECTED_POLICY == "dummy":
-            self._policy = DummyPolicy(num_gpus_per_job=4) # Configure dummy as needed
+            self._policy = DummyPolicy(num_gpus_per_job=2) # Configure dummy as needed
             self._policy_type = "dummy"
         elif SELECTED_POLICY == "fixed-width":
             # Initialize with None width, will be fetched later

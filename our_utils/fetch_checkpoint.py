@@ -61,7 +61,7 @@ def delete_checkpoint_file():
         return False
     
     namespace, pod_name = pod_info
-    container_name = "width-calculator"
+    container_name = "global-profiler"
     remote_path = "/pollux/checkpoint/global-profile-state"
     
     print(f"Deleting checkpoint file from pod {pod_name} container {container_name}...")
@@ -91,7 +91,7 @@ def download_checkpoint_via_kubectl():
         return None
     
     namespace, pod_name = pod_info
-    container_name = "width-calculator"
+    container_name = "global-profiler"
     remote_path = "/pollux/checkpoint/global-profile-state"
     local_path = "./checkpoint/global-profile-state"
     
