@@ -1,78 +1,10 @@
-from adaptdl.goodput import GoodputFunction
 from adaptdl.global_profile_state import GlobalProfileState
-from ._configs import APPLICATIONS, NUM_GPU_PER_NODE, ARRIVAL_RATE
+from ._configs import APPLICATIONS, ARRIVAL_RATE
 import numpy as np
 import cvxpy as cp
 import math
 import random
 
-def _load_goodput_function(global_profile_state: GlobalProfileState):
-    """
-    Load goodput functions and create a goodput dictionary using global profile state data.
-    
-    Args:
-        global_profile_state: The global profile state containing profiles, perf_params, and grad_params
-        
-    Returns:
-        dict: A dictionary where goodput_dict[app][epoch][num_replica] contains the optimized goodput
-    """
-    goodput_dict = {}
-    
-    # Validate that all applications have required data
-    for application in APPLICATIONS.keys():
-        # Assert that application has perf_params
-        assert application in global_profile_state.global_perf_params, \
-            f"Application {application} missing from global_perf_params"
-        # Assert that application has profile data
-        assert application in global_profile_state.global_profiles, \
-            f"Application {application} missing from global_profiles"
-        # Assert that application has grad_params
-        assert application in global_profile_state.global_grad_params, \
-            f"Application {application} missing from global_grad_params"
-        
-        # Get application configuration
-        app_config = APPLICATIONS[application]
-        
-        # Validate that all epochs for this application have grad_params
-        expected_epochs = range(app_config.max_epochs)
-        actual_epochs = set(global_profile_state.global_grad_params[application].keys())
-        missing_epochs = set(expected_epochs) - actual_epochs
-        assert len(missing_epochs) == 0, \
-            f"Application {application} missing grad_params for epochs: {missing_epochs}"
-        
-        perf_params = global_profile_state.global_perf_params[application]
-        profile = global_profile_state.global_profiles[application]
-        
-        goodput_dict[application] = {}
-        
-        # For each epoch that has grad_params
-        for epoch in global_profile_state.global_grad_params[application].keys():
-            grad_params = global_profile_state.global_grad_params[application][epoch]
-            
-            # Assert that grad_params is not None
-            assert grad_params is not None, \
-                f"Application {application} epoch {epoch} has None grad_params"
-            
-            # Create GoodputFunction with the global profile data
-            goodput_fn = GoodputFunction(perf_params, grad_params, app_config.init_batch_size)
-            
-            goodput_dict[application][epoch] = {}
-            
-            # Calculate optimal goodput for replicas 1-64
-            for num_replicas in range(1, 65):
-                num_nodes = max(1, (num_replicas + NUM_GPU_PER_NODE - 1) // NUM_GPU_PER_NODE)
-                
-                
-                # Optimize for the best goodput using application-specific config
-                optimal_goodput, _, _ = goodput_fn.optimize(
-                    num_nodes, num_replicas, 
-                    max_batch_size=app_config.max_batch_size,
-                    atomic_bsz_range=(app_config.min_local_bsz, app_config.max_local_bsz),
-                    accumulation=app_config.gradient_accumulation
-                )
-                
-                goodput_dict[application][epoch][num_replicas] = optimal_goodput
-    return goodput_dict
 
 
 def _get_progress():
@@ -85,20 +17,25 @@ def _get_progress():
     return global_progress
 
 
-def _get_speedup_and_size(global_profile_state: GlobalProfileState):
-    goodput_dict = _load_goodput_function(global_profile_state)
+def _get_speedup_and_size(goodput_dict):
     speedup_dict = dict()
     size_dict = dict()
     global_progress = _get_progress()
     for app in goodput_dict.keys():
         speedup_dict[app] = dict()
         size_dict[app] = dict()
-        for epoch in goodput_dict[app].keys():
+        for epoch_str, replica_goodputs in goodput_dict[app].items():
+            epoch = int(epoch_str)
+            if epoch >= APPLICATIONS[app].max_epochs:
+                continue
             speedup_dict[app][epoch] = dict()
-            for num_replicas, goodput in goodput_dict[app][epoch].items():
-                speedup_dict[app][epoch][num_replicas] = goodput / goodput_dict[app][epoch][1]
-            size_dict[app][epoch] = global_progress[app][epoch] / goodput_dict[app][epoch][1]
+            base_goodput = replica_goodputs.get(1) or replica_goodputs.get('1')
+            for replica_str, goodput in replica_goodputs.items():
+                replica = int(replica_str)
+                speedup_dict[app][epoch][replica] = goodput / base_goodput
+            size_dict[app][epoch] = global_progress[app][epoch] / base_goodput
     return speedup_dict, size_dict
+
 
 def _feasible_speedup(speedup_dict):
     # a speedup dictionary withonly feasible points. 
@@ -135,6 +72,10 @@ def _continuous_inv_speedup(speed_dict, application, epoch, k):
     data_dict = speed_dict[application][epoch]
     x_data = np.array(list(data_dict.keys()), dtype=float)
     y_data = np.array(list(data_dict.values()), dtype=float)
+
+    if len(x_data) < 2 or len(y_data) < 2:
+        assert k < 1 + 0.001
+        return 1
 
     def _pwl_function(x):
         slopes = (x_data[1:] - x_data[:-1]) / (y_data[1:] - y_data[:-1])
@@ -177,6 +118,8 @@ def _compute_width(arrival_dict, mean_size, speedup_dict, b):
     # preparation for optimization
     rho_dict = {name: [a * rate for i, a in enumerate(mean_size[name])]
     for name, rate in arrival_dict.items()}
+
+
     index_map = [(name, i) for name in rho_dict for i in range(len(rho_dict[name]))]
     # print("rho dict: ")
     # for idx, (name, i) in enumerate(index_map):
@@ -281,7 +224,11 @@ def _get_glue_list(arrival_dict, size_dict):
 
 def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
     glue_list = _get_glue_list(application_rates, size_dict)
-    
+    # for app in application_rates.keys():
+    #     print(app, speedup_dict[app][0][1])
+    # print("application_rates: ", application_rates)
+    # print("size_dict: ", size_dict)
+    # print("budget: ", b)
     min_jct_over_glue = None
     min_glue_ind = None
     final_k_dict = None
@@ -298,7 +245,7 @@ def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
             if name not in speed_glue:
                 speed_glue[name] = dict()
 
-            for epoch, size in enumerate(size_dict[name]):
+            for epoch, size in size_dict[name].items():
                 if epoch % glue == 0:
                     size_glue[name].append(0)
                 size_glue[name][int(epoch / glue)] += size 
@@ -316,6 +263,7 @@ def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
                 for k, sp in d1.items():
                     speed_glue[name][epoch][k] = size_glue[name][epoch] / sp
         print("--------FOR GLUE=",glue_list[index],"---------------------")
+        # print("size_glue: ", size_glue)
         k_glue = _compute_width_iter(application_rates, size_glue, speed_glue, b) # compute the glued optimization. 
         if k_glue is None:
             continue
@@ -366,17 +314,25 @@ def _compute_width_iter(application_rates, size_data, speedup_dict, b):
     return k_dict
 
 
-def get_width(global_profile_state: GlobalProfileState, b):
-    # speedup_dict, size_dict = _get_speedup_and_size(global_profile_state)
-    # return _get_width_with_rescale(speedup_dict, size_dict, ARRIVAL_RATE, b)
-    width = dict()
+def get_width(goodput_dict, b):
+    speedup_dict, size_dict = _get_speedup_and_size(goodput_dict)
+    # print("="*100)
+    # print(speedup_dict)
+    arrival_dict = dict()
     for app in ARRIVAL_RATE.keys():
-        width[app] = dict()
-        for epoch in range(APPLICATIONS[app].max_epochs):
-            width[app][epoch] = 2
-            if epoch > 15:
-                width[app][epoch] = 4
-            if epoch > 30:
-                width[app][epoch] = 8
-    return width
+        if ARRIVAL_RATE[app] > 0:
+            arrival_dict[app] = ARRIVAL_RATE[app]
+    return _get_width_with_rescale(speedup_dict, size_dict, arrival_dict, b)
+
+    # Below is only for testing
+    # width = dict()
+    # for app in ARRIVAL_RATE.keys():
+    #     width[app] = dict()
+    #     for epoch in range(APPLICATIONS[app].max_epochs):
+    #         width[app][epoch] = 2
+    #         if epoch > 15:
+    #             width[app][epoch] = 4
+    #         if epoch > 30:
+    #             width[app][epoch] = 8
+    # return width
 

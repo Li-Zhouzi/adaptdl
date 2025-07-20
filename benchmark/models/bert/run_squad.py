@@ -97,7 +97,7 @@ def train(args, train_dataset, model, tokenizer):
 
     model = adaptdl.torch.AdaptiveDataParallel(model, optimizer)
     train_dataloader = adaptdl.torch.AdaptiveDataLoader(train_dataset, batch_size=args.train_batch_size, drop_last=True)
-    train_dataloader.autoscale_batch_size(384, local_bsz_bounds=(4, 12), gradient_accumulation=True)
+    train_dataloader.autoscale_batch_size(384, local_bsz_bounds=(4, 4), gradient_accumulation=True) # previously (4, 12)
 
     # Train!
     logger.info("***** Running training *****")
@@ -154,7 +154,7 @@ def train(args, train_dataset, model, tokenizer):
             loss = outputs[0]
             accum["loss_sum"] += loss.item()
             accum["loss_cnt"] += batch[0].shape[0]
-            print(batch[0].shape)
+            # print(batch[0].shape)
 
             loss.backward()
 
@@ -178,7 +178,7 @@ def train(args, train_dataset, model, tokenizer):
             model.to_tensorboard(tb_writer, current_step, "AdaptDL/Model")
             tb_writer.add_scalar("loss", loss.item(), current_step)
 
-            print(current_step, loss.item())
+            # print(current_step, loss.item())
 
         with accum.synchronized():
             accum["loss_avg"] = accum["loss_sum"] / accum["loss_cnt"]

@@ -63,6 +63,10 @@ if __name__ == "__main__":
     # obj_args = ("esper.petuum.com", "v1", namespace, "esperjobs")
     namespace = "adaptdl"
     obj_args = ("adaptdl.petuum.com", "v1", namespace, "adaptdljobs")
+    
+    # Track jobs that have been logged as completed
+    logged_completed_jobs = set()
+    
     while True:
         obj_list = objs_api.list_namespaced_custom_object(*obj_args)
         # Get node information
@@ -100,9 +104,13 @@ if __name__ == "__main__":
             job_name = obj["metadata"]["name"]
             completion_time = obj.get("status", {}).get("completionTimestamp", None)
             
-            # Skip completed jobs
-            if completion_time is not None:
+            # Skip jobs that have already been logged as completed
+            if completion_time is not None and job_name in logged_completed_jobs:
                 continue
+            
+            # If job is newly completed, mark it for logging once and add to logged set
+            if completion_time is not None and job_name not in logged_completed_jobs:
+                logged_completed_jobs.add(job_name)
             
             # Find pods associated with this job
             job_pods = {name: status for name, status in pod_status.items() 

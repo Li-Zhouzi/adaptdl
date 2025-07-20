@@ -59,6 +59,31 @@ class GoodputFunction(object):
         self._grad_params = GradParams(*grad_params)
         self._init_batch_size = init_batch_size
 
+    def _convert_profile_keys(self, profile):
+        """
+        Convert profile keys to ensure they are hashable and compatible with lookup.
+        Converts numpy arrays in tuple keys to regular Python types.
+        
+        Args:
+            profile (dict): Profile dictionary that may contain numpy arrays in keys
+            
+        Returns:
+            dict: Profile dictionary with converted keys
+        """
+        if profile is None:
+            return None
+            
+        converted_profile = {}
+        for key, value in profile.items():
+            # Convert key if it's a tuple containing numpy arrays
+            if isinstance(key, tuple):
+                # Convert numpy arrays to regular Python types
+                converted_key = tuple(int(x) if hasattr(x, 'item') else x for x in key)
+            else:
+                converted_key = key
+            converted_profile[converted_key] = value
+        return converted_profile
+
     def __call__(self, num_nodes, num_replicas, atomic_bsz, accum_steps, profile=None):
         return self.evaluate(num_nodes, num_replicas, atomic_bsz, accum_steps, profile=profile)
 
@@ -69,6 +94,22 @@ class GoodputFunction(object):
                                accum_steps, profile=profile) * self.efficiency(batch_size)
 
     def throughput(self, num_nodes, num_replicas, atomic_bsz, accum_steps, profile=None):
+        # profile is history data
+        # Convert profile keys to ensure compatibility with lookup
+        profile = self._convert_profile_keys(profile)
+
+        # Throughput function is not vectorized, so we can't operate on arrays.
+        # This is inefficient, but should be acceptable for now.
+        if isinstance(num_nodes, np.ndarray) or \
+                isinstance(num_replicas, np.ndarray) or \
+                isinstance(atomic_bsz, np.ndarray) or \
+                isinstance(accum_steps, np.ndarray):
+            bcast = np.broadcast(num_nodes, num_replicas,
+                                 atomic_bsz, accum_steps)
+            result = np.array([self.throughput(n, r, b, a, profile)
+                               for n, r, b, a in bcast])
+            return result.reshape(bcast.shape)
+        
         key = (num_nodes, num_replicas, atomic_bsz)
         accum_time = None
         # Combine all available profile data for accum_time: both accum and optim steps
@@ -107,7 +148,7 @@ class GoodputFunction(object):
         return gain / scale
 
     def optimize(self, num_nodes, num_replicas, max_batch_size=None,
-                 atomic_bsz_range=None, accumulation=False):
+                 atomic_bsz_range=None, accumulation=False, profile=None):
         assert np.all(np.less_equal(1, num_nodes))
         assert np.all(np.less_equal(num_nodes, num_replicas))
         if max_batch_size is None:
@@ -146,7 +187,7 @@ class GoodputFunction(object):
         atomic_bsz = np.ceil(local_bsz / (accum_steps + 1) - eps).astype(int)
         # Evaluate the goodput of all candidate configurations.
         goodput = self.evaluate(num_nodes, num_replicas,
-                                atomic_bsz, accum_steps)
+                                atomic_bsz, accum_steps, profile=profile)
         # Set the goodput of invalid configurations to 0.0.
         goodput = np.where((min_atomic_bsz <= atomic_bsz) &
                            (atomic_bsz <= max_atomic_bsz), goodput, 0.0)

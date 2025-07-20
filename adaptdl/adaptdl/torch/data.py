@@ -23,6 +23,7 @@ import numpy as np
 import os
 import pickle
 import random
+import time
 import torch
 from torch.utils.data import DataLoader, Sampler
 
@@ -157,6 +158,7 @@ class AdaptiveDataLoaderHelper(object):
         self._accum_count = 0
         self._last_profiled_epoch = None
         self._last_profiled_batch_size = None
+        self._last_profile_time = 0.0
 
     @property
     def current_index(self):
@@ -345,10 +347,16 @@ class AdaptiveDataLoaderHelper(object):
         yield
 
         # Don't profile the first batch since it may be slower.
-        if should_profile and self.training and self.current_index > self.current_batch_size and record:
+        # Allow profiling during epoch 0 even if training flag isn't set yet
+        # Also force profiling if it's been more than 1 minute since last profile
+        current_time = time.time()
+        time_since_last_profile = current_time - self._last_profile_time
+        
+        if (should_profile or time_since_last_profile > 60.0) and (self.training or current_epoch_val == 0) and self.current_index > self.current_batch_size and record:
             # print("profiling")
             self._last_profiled_epoch = current_epoch_val
             self._last_profiled_batch_size = self.current_batch_size
+            self._last_profile_time = current_time
 
             profile_step_commit(current_epoch_val, self.current_batch_size, not self.is_sync_step())
         self._accum_count = 0 if self.is_sync_step() else self._accum_count + 1

@@ -41,7 +41,7 @@ class Application(object):
             self.rescale_time = 30
 
 APPLICATIONS = {
-    "bert": Application("bert", init_batch_size=4, max_batch_size=384, min_local_bsz=4, max_local_bsz=12, max_epochs=1, gradient_accumulation=True, dataset_size=88641),
+    "bert": Application("bert", init_batch_size=4, max_batch_size=384, min_local_bsz=4, max_local_bsz=12, max_epochs=1, gradient_accumulation=True, dataset_size=97077),
     "cifar10": Application("cifar10", init_batch_size=128, max_batch_size=4096, min_local_bsz=32, max_local_bsz=1024, max_epochs=50, gradient_accumulation=True, dataset_size=50000),
     "ncf": Application("ncf", init_batch_size=256, max_batch_size=32768, min_local_bsz=32, max_local_bsz=32768, max_epochs=10, gradient_accumulation=True, dataset_size=1000000),
     "imagenet": Application("imagenet", init_batch_size=20, max_batch_size=12800, min_local_bsz=20, max_local_bsz=200, max_epochs=90, gradient_accumulation=True, dataset_size=1281167),
@@ -49,14 +49,14 @@ APPLICATIONS = {
     "yolov3": Application("yolov3", init_batch_size=4, max_batch_size=512, min_local_bsz=4, max_local_bsz=8, max_epochs=50, gradient_accumulation=True, dataset_size=14041)
 }
 
-NUM_GPU_PER_NODE = 4
+NUM_GPU_PER_NODE = 1
 ARRIVAL_RATE = {
-    "bert": 1,
-    "cifar10": 1,
+    "deepspeech2": 0.00022130417656590493,
+    "cifar10": 0.0007130912356012491,
+    "bert": 0.0002458935295176721,
+    "yolov3": 0.0,
     "ncf": 0.0,
     "imagenet": 0.0,
-    "deepspeech2": 1,
-    "yolov3": 0.0
 }
 
 # need perf_params and grad_params, size for each app and epoch

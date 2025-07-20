@@ -9,10 +9,19 @@ image:
     - name: null
 
 sched:
- resources:
-   requests:
-     memory: 1Gi
-     cpu: 1
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 1
+
+widthCalculator:
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 1
+    limits:
+      memory: 1Gi
+      cpu: 1
 
 tolerations:
   - key: "petuum.com/nodegroup"

@@ -54,6 +54,61 @@ def analyze_workload(workload_file):
     
     return arrival_rates
 
+def scale_workload_arrival_times(source_file, target_file, arrival_scale):
+    """
+    Scale all arrival times in a workload file by a given factor and write to a target file.
+    First normalizes times to start from 0, then applies the scaling factor.
+    
+    Args:
+        source_file (str): Path to the source workload CSV file
+        target_file (str): Path to the target workload CSV file to write scaled data
+        arrival_scale (float): Scale factor to multiply all arrival times
+    """
+    if not os.path.exists(source_file):
+        print(f"Source workload file {source_file} does not exist!")
+        return
+    
+    if arrival_scale <= 0:
+        print(f"Invalid arrival_scale: {arrival_scale}. Must be positive.")
+        return
+    
+    print(f"Scaling workload from {source_file} to {target_file} with scale factor {arrival_scale}")
+    
+    # First pass: read all data and find the first (minimum) arrival time
+    rows_data = []
+    min_time = float('inf')
+    
+    with open(source_file, 'r') as infile:
+        reader = csv.DictReader(infile)
+        fieldnames = reader.fieldnames
+        
+        for row in reader:
+            time_val = float(row['time'])
+            rows_data.append(row)
+            min_time = min(min_time, time_val)
+    
+    print(f"First arrival time: {min_time}")
+    
+    # Second pass: normalize and scale times, then write to target file
+    with open(target_file, 'w', newline='') as outfile:
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        
+        # Write header
+        writer.writeheader()
+        
+        # Process each row
+        for row in rows_data:
+            # Normalize by subtracting first arrival time, then scale
+            original_time = float(row['time'])
+            normalized_time = original_time - min_time + 1
+            scaled_time = normalized_time * arrival_scale
+            row['time'] = str(scaled_time)
+            
+            # Write the modified row
+            writer.writerow(row)
+    
+    print(f"Successfully normalized and scaled workload. Saved to {target_file}")
+
 def update_configs_file(arrival_rates, configs_file):
     """
     Update the ARRIVAL_RATE dictionary in the _configs.py file.
@@ -109,7 +164,7 @@ def main():
     Main function to analyze workload and update configs.
     """
     # Default paths
-    workload_file = "./benchmark/workloads/workload-test.csv"
+    workload_file = "./benchmark/workloads/workload-test4.csv"
     configs_file = "./sched/adaptdl_sched/_configs.py"
     
     # Analyze the workload file
@@ -129,3 +184,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # scale_workload_arrival_times("benchmark/workloads/workload-test.csv", 
+    #                             "benchmark/workloads/workload-test4.csv", 4)

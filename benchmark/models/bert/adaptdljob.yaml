@@ -17,16 +17,16 @@ spec:
           "--do_lower_case",
           "--train_file=/mnt/squad/train-v1.1.json",
           "--predict_file=/mnt/squad/dev-v1.1.json",
-          "--per_gpu_train_batch_size=12",
+          "--per_gpu_train_batch_size=4", # previously 12
           "--learning_rate=3e-5",
           "--num_train_epochs=1.0",
-          "--max_seq_length=384",
+          "--max_seq_length=256", # previously 384
           "--doc_stride=128",
           "--cache_dir=/mnt/squad",
           "--data_dir=/mnt/squad",
           "--output_dir=/tmp/output",
           "--overwrite_output_dir",
-          "--threads=8"
+          "--threads=2" # previously 8
         ]
         env:
         - name: PYTHONUNBUFFERED
@@ -34,12 +34,12 @@ spec:
         resources:
           limits:
             nvidia.com/gpu: 1
-            cpu: 10
-            memory: "40G"
+            cpu: 2 # previously 10
+            memory: "10G"
           requests:
             nvidia.com/gpu: 1
-            cpu: 10
-            memory: "40G"
+            cpu: 2 # previously 10
+            memory: "10G" # previously 40G
         volumeMounts:
         - name: data
           mountPath: /mnt

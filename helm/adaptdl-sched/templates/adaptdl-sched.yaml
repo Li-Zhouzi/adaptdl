@@ -85,6 +85,8 @@ spec:
           containerPort: 8083
           protocol: TCP
         imagePullPolicy: Always
+        resources:
+{{ toYaml .Values.widthCalculator.resources | indent 8 }}
         volumeMounts:
         - name: pollux
           mountPath: /pollux/checkpoint

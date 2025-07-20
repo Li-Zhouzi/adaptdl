@@ -2,19 +2,12 @@ import asyncio
 import kubernetes_asyncio as kubernetes
 import logging
 import time
-import sys
 import os
-import pickle
+import aiohttp
 from adaptdl_sched._compute_width import get_width
 from aiohttp import web
-
-# Add adaptdl to path for importing checkpoint functionality
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'adaptdl'))
-
-# Import after adding to path
-from adaptdl.global_profile_state import GlobalProfileState
-from adaptdl_sched.config import get_width_calculator_port, get_checkpoint_path
-
+from adaptdl_sched.config import get_width_calculator_port, get_global_profiler_url
+from ._configs import APPLICATIONS, ARRIVAL_RATE
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -22,7 +15,7 @@ LOG.setLevel(logging.INFO)
 
 class WidthCalculator:
     """
-    WidthCalculator loads global profiler state and computes width based on aggregated profiles.
+    WidthCalculator fetches goodput data from the global profiler and computes width based on that data.
     Also provides a web service to expose the current width.
     """
 
@@ -30,11 +23,12 @@ class WidthCalculator:
         self._objs_api = kubernetes.client.CustomObjectsApi()
         self._custom_resource = ("adaptdl.petuum.com", "v1", "", "adaptdljobs")
         
-        # Global profile state for loading checkpoint data
-        self._global_state = GlobalProfileState()
-        
         self.budget = budget
         self.width = None
+        
+        # Global profiler URL configuration
+        self._global_profiler_url = get_global_profiler_url()
+        LOG.info(f"Global profiler URL: {self._global_profiler_url}")
 
     async def _handle_healthz(self, request):
         # Health check.
@@ -82,42 +76,125 @@ class WidthCalculator:
         # Main computation loop - call _compute_width every 5 minutes (300 seconds)
         while True:
             await self._compute_width()
-            await asyncio.sleep(300)  # Sleep for 5 minutes
+            await asyncio.sleep(60)  # Sleep for 1 minutes
 
     async def _compute_width(self):
         """Compute the width of the job."""
-        LOG.info("Computing width based on global profiler state")
+        LOG.info("Computing width based on goodput data from global profiler")
+        time_start = time.time()
         
-        # Load global profiler state from checkpoint
-        self._load_global_profiler_state()
+        # Fetch goodput data from global profiler
+        goodput_dict = await self._fetch_goodput_from_global_profiler()
+        time_fetch = time.time() - time_start
+        LOG.info(f"Time taken to fetch goodput data: {time_fetch} seconds")
+        time_start = time.time()
         
-        # Log the loaded state for debugging
-        LOG.info(f"Loaded global profiles for applications: {list(self._global_state.global_profiles.keys())}")
-        LOG.info(f"Loaded global perf_params for applications: {list(self._global_state.global_perf_params.keys())}")
+        if goodput_dict is None:
+            LOG.error("Failed to fetch goodput data from global profiler")
+            self.width = None
+            return
+        
+        # Validate the goodput dictionary has all required applications and epochs
+        if not self._check_goodput_dict(goodput_dict):
+            LOG.error("Goodput data validation failed - cannot compute width")
+            self.width = None
+            return
+        
+        # Log the fetched goodput data for debugging
+        LOG.info(f"Fetched goodput data for applications: {list(goodput_dict.keys())}")
+        for app in goodput_dict.keys():
+            LOG.info(f"  Application {app} has {len(goodput_dict[app])} epochs")
+        
         try:
-            width = get_width(self._global_state, self.budget)
+            width = get_width(goodput_dict, self.budget)
+            LOG.info(f"Computed width: {width}")
         except Exception as e:
             LOG.error(f"Error computing width: {e}")
             width = None
+        time_compute = time.time() - time_start
+        LOG.info(f"Time taken to compute width: {time_compute} seconds")
         self.width = width
-    
-    def _load_global_profiler_state(self):
-        """Load the global profiler state from checkpoint."""
-        # Try to load from the pollux checkpoint path
-        checkpoint_path = "/pollux/checkpoint"
-        state_name = "global-profile-state"
-        checkpoint_file = os.path.join(checkpoint_path, state_name)
-        
-        if not os.path.exists(checkpoint_file):
-            LOG.warning(f"Global profile state file not found: {checkpoint_file}")
-            LOG.info("Starting with empty global profiler state")
-            return
-        
-        LOG.info(f"Loading global profiler state from: {checkpoint_file}")
-        with open(checkpoint_file, "rb") as f:
-            self._global_state.load(f)
-        LOG.info("Successfully loaded global profiler state from checkpoint")
 
+    async def _fetch_goodput_from_global_profiler(self):
+        """
+        Fetch goodput dictionary from the global profiler.
+        
+        Returns:
+            dict: Goodput dictionary or None if fetch failed
+        """
+        try:
+            LOG.info(f"Fetching goodput data from: {self._global_profiler_url}/get_goodput")
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self._global_profiler_url}/get_goodput") as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get("status") == "success":
+                            goodput_dict = data.get("goodput", {})
+                            LOG.info(f"Successfully fetched goodput data for {len(goodput_dict)} applications")
+                            return goodput_dict
+                        else:
+                            LOG.error(f"Global profiler returned error: {data.get('message', 'Unknown error')}")
+                            return None
+                    else:
+                        LOG.error(f"Global profiler returned status {response.status}")
+                        return None
+                        
+        except Exception as e:
+            LOG.error(f"Error fetching goodput data from global profiler: {e}")
+            return None
+
+    def _check_goodput_dict(self, goodput_dict):
+        """
+        Check whether the goodput dictionary contains all required applications and epochs.
+        
+        For all applications in ARRIVAL_RATE with arrival_rate > 0, validates that
+        goodput_dict[app][epoch] exists for all epoch in range(max_epochs).
+        
+        Args:
+            goodput_dict (dict): The goodput dictionary from global profiler
+            
+        Returns:
+            bool: True if all required data is present, False otherwise
+        """
+        if not goodput_dict:
+            LOG.error("Goodput dictionary is empty")
+            return False
+        
+        missing_data = []
+        
+        # Check each application with positive arrival rate
+        for app_name, arrival_rate in ARRIVAL_RATE.items():
+            if arrival_rate <= 0:
+                continue  # Skip applications with zero arrival rate
+                
+            # Check if application exists in goodput dictionary
+            if app_name not in goodput_dict:
+                missing_data.append(f"Application '{app_name}' not found in goodput dictionary")
+                continue
+                
+            # Get expected number of epochs for this application
+            app_config = APPLICATIONS[app_name]
+            max_epochs = app_config.max_epochs
+            
+            # Check if all epochs exist
+            missing_epochs = []
+            for epoch in range(max_epochs):
+                if str(epoch) not in goodput_dict[app_name] and epoch not in goodput_dict[app_name]:
+                    # Check both string and integer keys since JSON might convert to strings
+                    missing_epochs.append(epoch)
+            
+            if missing_epochs:
+                missing_data.append(f"Application '{app_name}' missing epochs: {missing_epochs}")
+        
+        if missing_data:
+            LOG.error("Goodput dictionary validation failed:")
+            for issue in missing_data:
+                LOG.error(f"  - {issue}")
+            return False
+        
+        LOG.info("Goodput dictionary validation passed - all required applications and epochs present")
+        return True
 
 async def main():
     """Main entry point for the width calculator."""
