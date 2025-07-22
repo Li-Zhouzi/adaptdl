@@ -106,6 +106,6 @@ if __name__ == '__main__':
         print(f"Goodput dictionary saved to {goodput_cache_path}")
 
     if goodput_dict:
-        app_to_plot = "cifar10"
-        epoch_to_plot = 0
+        app_to_plot = "deepspeech2"
+        epoch_to_plot = 10
         plot_goodput_curve(goodput_dict, app_to_plot, epoch_to_plot)
