@@ -332,14 +332,16 @@ class AdaptiveDataLoaderHelper(object):
         # the same iteration. Do this asynchronously to prevent
         # unnecessary blocking on the network.
         if self.future_exit is not None and self.future_exit.result():
+            LOG.info(f"Saving checkpoint at epoch {current_epoch()}")
             adaptdl.checkpoint.save_all_states()
             exit(143)  # Standard exit code response to SIGTERM.
         self.future_exit = adaptdl.collective.allreduce_async(
                     get_exit_flag(), lambda a, b: a or b)
 
         current_epoch_val = current_epoch()
-        should_profile = (self._last_profiled_epoch != current_epoch_val or 
-                         self._last_profiled_batch_size != self.current_batch_size)
+        # should_profile = (self._last_profiled_epoch != current_epoch_val or 
+        #                  self._last_profiled_batch_size != self.current_batch_size)
+        should_profile = True # Change this to true to profile more; it may increase the communication overhead.
         # print("should_profile: %s, current_epoch_val: %s, current_batch_size: %s", should_profile, current_epoch_val, self.current_batch_size)
         profile_step_start(self.current_local_bsz)
         
@@ -639,3 +641,4 @@ class _AdaptiveDataLoaderState(adaptdl.checkpoint.State):
     def load(self, fileobj):
         self.current_index, self.end_index, self.last_position = \
            pickle.load(fileobj)
+        LOG.info(f"Loaded checkpoint for dataloader. Last position: {self.last_position}")

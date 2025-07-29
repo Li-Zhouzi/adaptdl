@@ -80,6 +80,7 @@ class WidthCalculator:
 
     async def _compute_width(self):
         """Compute the width of the job."""
+        LOG.info(f"[TIMESTAMP: {time.time()}] Starting width calculation")
         LOG.info("Computing width based on goodput data from global profiler")
         time_start = time.time()
         

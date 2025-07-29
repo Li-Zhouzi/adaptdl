@@ -31,6 +31,7 @@ def process_log_file(log_file_path):
             allocation = job.get('allocation', [])
             pod_status = job.get('pod_status', '')
             completion_time = job.get('completion_time')
+            progress = job.get('progress', 0)  # Add progress tracking
             
             # Track this job as seen in current log entry
             current_jobs.add(job_name)
@@ -50,7 +51,8 @@ def process_log_file(log_file_path):
                     'response_time': None,
                     'last_seen_timestamp': timestamp,
                     'last_seen_epoch': epoch,
-                    'last_allocation': allocation.copy()
+                    'last_allocation': allocation.copy(),
+                    'last_seen_progress': progress  # Track progress
                 }
             
             job_info = jobs[job_name]
@@ -66,7 +68,10 @@ def process_log_file(log_file_path):
                     'first_seen': timestamp,
                     'last_allocation': allocation.copy(),
                     'wasted_time_in_epoch': 0,
-                    'epoch_duration': 0
+                    'epoch_duration': 0,
+                    'last_seen_progress': progress,  # Track progress per epoch
+                    'stuck_count': 0,  # Count how many times progress hasn't changed
+                    'stuck_start_time': None  # When progress started being stuck
                 }
             
             epoch_info = job_info['epochs'][epoch]
@@ -81,31 +86,29 @@ def process_log_file(log_file_path):
                 prev_log = json.loads(lines[i-1].strip())
                 time_diff = timestamp - prev_log['timestamp']
             
-            # Check for non-normal pod status first
-            if pod_status != "pod status normal" and time_diff > 0:
-                epoch_info['wasted_time_in_epoch'] += time_diff
-            
-            # Check for allocation changes within the same epoch (replica changes)
-            if set(allocation) != set(epoch_info['last_allocation']):
-                # Allocation changed - ALL previous work on this epoch is wasted
-                new_wasted = timestamp - epoch_info['first_seen']
-                epoch_info['wasted_time_in_epoch'] = new_wasted
-                
-                # Debug: Check if wasted time exceeds epoch duration
-                # epoch_duration = timestamp - epoch_info['first_seen']
-                # if new_wasted > epoch_duration + 1:  # +1 for floating point tolerance
-                #     print(f"DEBUG: {job_name} epoch {epoch} has impossible wasted time!")
-                #     print(f"  Epoch first seen: {epoch_info['first_seen']}")
-                #     print(f"  Current timestamp: {timestamp}")
-                #     print(f"  Epoch duration: {epoch_duration}")
-                #     print(f"  Wasted time: {new_wasted}")
-                #     print(f"  Old wasted: {old_wasted}")
+            # Wasted time calculation: if progress hasn't changed for 3+ lines
+            if progress == epoch_info['last_seen_progress']:
+                epoch_info['stuck_count'] += 1
+                if epoch_info['stuck_count'] == 1:
+                    # First time stuck, record when it started
+                    epoch_info['stuck_start_time'] = job_info['last_seen_timestamp']
+            else:
+                # Progress changed, check if we need to add wasted time
+                if epoch_info['stuck_count'] >= 3 and epoch_info['stuck_start_time'] is not None:
+                    # Progress was stuck for 3+ lines, add the stuck duration as wasted
+                    wasted_duration = job_info['last_seen_timestamp'] - epoch_info['stuck_start_time']
+                    epoch_info['wasted_time_in_epoch'] += wasted_duration
+                # Reset stuck tracking
+                epoch_info['stuck_count'] = 0
+                epoch_info['stuck_start_time'] = None
             
             # Update tracking info
             epoch_info['last_allocation'] = allocation.copy()
+            epoch_info['last_seen_progress'] = progress
             job_info['last_seen_timestamp'] = timestamp
             job_info['last_seen_epoch'] = epoch
             job_info['last_allocation'] = allocation.copy()
+            job_info['last_seen_progress'] = progress
         
         # Check for jobs that disappeared (completed without explicit completion_time)
         # if i > 0:  # Skip first iteration since there's no previous_jobs yet
@@ -124,6 +127,14 @@ def process_log_file(log_file_path):
     
     # add up wasted time for each job
     for job_name, job_info in jobs.items():
+        # First, handle any epochs that ended while still stuck
+        for epoch, epoch_info in job_info['epochs'].items():
+            if epoch_info['stuck_count'] >= 3 and epoch_info['stuck_start_time'] is not None:
+                # This epoch ended while progress was stuck, add the remaining wasted time
+                final_timestamp = epoch_info['first_seen'] + epoch_info['epoch_duration']
+                wasted_duration = final_timestamp - epoch_info['stuck_start_time']
+                epoch_info['wasted_time_in_epoch'] += wasted_duration
+        
         job_info['wasted_time'] = sum(epoch_info['wasted_time_in_epoch'] for epoch_info in job_info['epochs'].values())
         
         # Debug: Check if total wasted time exceeds response time
@@ -219,9 +230,9 @@ def main():
     jobs, node_usage_history = process_log_file(log_file_path)
     metrics = calculate_metrics(jobs, node_usage_history)
     print_summary(metrics)
-    # job_info = jobs['cifar10-21']
-    # for epoch, epoch_info in job_info['epochs'].items():
-    #     print(epoch, epoch_info['wasted_time_in_epoch'], epoch_info['epoch_duration'])
+    job_info = jobs['cifar10-2']
+    for epoch, epoch_info in job_info['epochs'].items():
+        print(epoch, epoch_info['wasted_time_in_epoch'], epoch_info['epoch_duration'])
 
 if __name__ == "__main__":
     main()

@@ -66,12 +66,13 @@ class GlobalProfiler:
         actual_profile_data = {k: v for k, v in profile_data.items() 
                                 if k != 'application'}
         
-        # Update the global profile state
+        # Always update the global profile state (for perf params fitting)
         self._global_state.update_profile(application, actual_profile_data, alpha=self._grad_params_alpha)
         
         # Check if it's time to fit perf_params
         if self._global_state.should_fit_perf_params():
-            LOG.info("Fitting perf_params for all applications")
+            LOG.info(f"[TIMESTAMP: {time.time()}] Starting perf_params fitting for all applications")
+            fit_start_time = time.time()
             self._global_state.fit_all_perf_params()
             
             # Save the state to persistent storage
@@ -81,6 +82,9 @@ class GlobalProfiler:
             # Also save a copy to width-calculator-init directory
             self._save_to_width_calculator_init()
             LOG.info("Saved copy of global profile state to width-calculator-init directory")
+            
+            fit_duration = time.time() - fit_start_time
+            LOG.info(f"[TIMESTAMP: {time.time()}] Completed perf_params fitting in {fit_duration:.3f} seconds")
         else:
             LOG.info("Not fitting perf_params yet (time condition not met)")
         
@@ -200,7 +204,7 @@ class GlobalProfiler:
             # For each epoch that has grad_params
             for epoch in global_profile_state.global_grad_params[application].keys():
                 grad_params = global_profile_state.global_grad_params[application][epoch]
-                
+            
 
                 # Create GoodputFunction with the global profile data
                 goodput_fn = GoodputFunction(perf_params, grad_params, app_config.init_batch_size)
@@ -208,16 +212,26 @@ class GlobalProfiler:
                 goodput_dict[application][epoch] = {}
                 
                 # Calculate optimal goodput for replicas 1-64
-                for num_replicas in range(1, 8):
-                    num_nodes = max(1, (num_replicas + NUM_GPU_PER_NODE - 1) // NUM_GPU_PER_NODE)
-                    # Optimize for the best goodput using application-specific config
-                    optimal_goodput, _, _ = goodput_fn.optimize(
-                        num_nodes, num_replicas, 
-                        max_batch_size=app_config.max_batch_size,
-                        atomic_bsz_range=(app_config.min_local_bsz, app_config.max_local_bsz),
-                        accumulation=app_config.gradient_accumulation,
-                        profile=profile
-                    )
+                for num_replicas in range(1, 65):
+                    # Check if we have profiled goodput for this configuration
+                    if (application in global_profile_state.global_goodput_profile and
+                        epoch in global_profile_state.global_goodput_profile[application] and
+                        num_replicas in global_profile_state.global_goodput_profile[application][epoch]):
+                        # Use profiled goodput
+                        # NOTE: The goodput we store is already gain/second (actual goodput).
+                        # The progress in the original implementation was incorrectly scaled by init_batch_size.
+                        # This is fixed in _compute_width, where init_batch_size is not divided.
+                        optimal_goodput = global_profile_state.global_goodput_profile[application][epoch][num_replicas]
+                    else:
+                        # Use prediction
+                        num_nodes = max(1, (num_replicas + NUM_GPU_PER_NODE - 1) // NUM_GPU_PER_NODE)
+                        # Optimize for the best goodput using application-specific config
+                        optimal_goodput, _, _ = goodput_fn.optimize(
+                            num_nodes, num_replicas, 
+                            max_batch_size=app_config.max_batch_size,
+                            atomic_bsz_range=(app_config.min_local_bsz, app_config.max_local_bsz),
+                            accumulation=app_config.gradient_accumulation
+                        )
                     
                     goodput_dict[application][epoch][num_replicas] = optimal_goodput
         return goodput_dict

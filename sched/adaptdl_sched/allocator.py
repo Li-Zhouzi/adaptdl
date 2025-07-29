@@ -49,7 +49,7 @@ class AdaptDLAllocator(object):
 
         # Select the policy to use
         # Options: "pollux", "dummy", "fixed-width"
-        SELECTED_POLICY = "fixed-width"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+        SELECTED_POLICY = "dummy"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
 
         # Width fetching configuration
         self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
@@ -60,7 +60,7 @@ class AdaptDLAllocator(object):
             self._policy = PolluxPolicy()
             self._policy_type = "pollux"
         elif SELECTED_POLICY == "dummy":
-            self._policy = DummyPolicy(num_gpus_per_job=2) # Configure dummy as needed
+            self._policy = DummyPolicy(num_gpus_per_job=1) # Configure dummy as needed
             self._policy_type = "dummy"
         elif SELECTED_POLICY == "fixed-width":
             # Initialize with None width, will be fetched later
@@ -144,6 +144,7 @@ class AdaptDLAllocator(object):
         while True:
             # try to gain lock
             async with self._lock:
+                LOG.info(f"[TIMESTAMP: {time.time()}] Starting allocator optimization cycle")
                 await self._optimize_all()
 
             LOG.info("Sleep for 60 seconds")
@@ -153,6 +154,7 @@ class AdaptDLAllocator(object):
         """Periodically fetch width from the width service."""
         while True:
             try:
+                LOG.info(f"[TIMESTAMP: {time.time()}] Starting width fetch from calculator service")
                 await self._fetch_width()
             except Exception as e:
                 LOG.error(f"Error fetching width: {e}")
@@ -169,19 +171,48 @@ class AdaptDLAllocator(object):
                         data = await response.json()
                         width = data.get("width")
                         
-                        if width is not None:
+                        # Check if width is valid (not None and no None values in dictionaries)
+                        if width is not None and self._is_valid_width(width):
                             LOG.info(f"Fetched new width: {width}")
                             self._current_width = width
                             self._policy = FixedWidthPolicy(width)
                         else:
-                            LOG.warning("Width calculator returned None width, falling back to Pollux policy")
-                            self._policy = PolluxPolicy()
+                            if width is None:
+                                LOG.warning("Width calculator returned None width, keeping current width")
+                            else:
+                                LOG.warning(f"Width calculator returned invalid width (contains None): {width}, keeping current width")
+                            # Keep current width/policy if we have one
+                            if self._current_width is not None:
+                                LOG.info(f"Keeping current width: {self._current_width}")
+                            else:
+                                LOG.warning("No current width available, using Pollux policy as fallback")
+                                self._policy = PolluxPolicy()
                     else:
-                        LOG.warning(f"Width calculator returned status {response.status}, falling back to Pollux policy")
-                        self._policy = PolluxPolicy()
+                        LOG.warning(f"Width calculator returned status {response.status}, keeping current width")
+                        if self._current_width is None:
+                            LOG.warning("No current width available, using Pollux policy as fallback")
+                            self._policy = PolluxPolicy()
         except Exception as e:
-            LOG.warning(f"Failed to fetch width from calculator: {e}, falling back to Pollux policy")
-            self._policy = PolluxPolicy()
+            LOG.warning(f"Failed to fetch width from calculator: {e}, keeping current width")
+            if self._current_width is None:
+                LOG.warning("No current width available, using Pollux policy as fallback")
+                self._policy = PolluxPolicy()
+        
+        # Always print current width after fetch attempt
+        LOG.info(f"Current width after fetch: {self._current_width}")
+    
+    def _is_valid_width(self, width):
+        """Check if width dictionary is valid (no None values)."""
+        if not isinstance(width, dict):
+            return False
+        
+        for app, epochs in width.items():
+            if epochs is None or not isinstance(epochs, dict):
+                return False
+            for epoch, value in epochs.items():
+                if value is None:
+                    return False
+        return True
 
     def _get_policy(self):
         """Get the current policy, ensuring it's initialized for fixed-width."""

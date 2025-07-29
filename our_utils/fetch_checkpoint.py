@@ -158,6 +158,8 @@ if downloaded_file and os.path.exists(downloaded_file):
             print(f"\nGlobal profiles: {profiles}")
         if hasattr(global_state, 'global_perf_params'):
             print(f"Global perf params: {list(global_state.global_perf_params.keys())}")
+        if hasattr(global_state, 'global_goodput_profile'):
+            print(f"Global goodput profile: {global_state.global_goodput_profile}")
 else:
     print("Unable to download checkpoint from scheduler pod.")
     print("Make sure:")

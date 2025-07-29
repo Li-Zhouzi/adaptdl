@@ -96,6 +96,9 @@ class GoodputFunction(object):
     def throughput(self, num_nodes, num_replicas, atomic_bsz, accum_steps, profile=None):
         # profile is history data
         # Convert profile keys to ensure compatibility with lookup
+        if profile is not None:
+            raise "Discarded change: Goodput function takes profile as input"
+
         profile = self._convert_profile_keys(profile)
 
         # Throughput function is not vectorized, so we can't operate on arrays.

@@ -19,6 +19,7 @@ import copy
 import jsonpatch
 import kubernetes_asyncio as kubernetes
 import logging
+import time
 
 import adaptdl_sched.k8s_templates as templates
 import adaptdl_sched.config as config
@@ -72,18 +73,21 @@ class AdaptDLController(object):
         # Perform a full reconcile after every timeout.
         async with kubernetes.watch.Watch() as watch:
             while True:
+                LOG.info(f"[TIMESTAMP: {time.time()}] Starting controller job watch cycle")
                 async for event in watch.stream(
                         self._objs_api.list_namespaced_custom_object,
                         *self._custom_resource, timeout_seconds=60):
                     job_name = event["object"]["metadata"]["name"]
                     namespace = event["object"]["metadata"]["namespace"]
                     await self._queue.put((namespace, job_name))
+                LOG.info(f"[TIMESTAMP: {time.time()}] Controller job watch timeout - performing full reconciliation")
 
     async def _watch_pods(self):
         # Watch for changes to pods and enqueue their AdaptDLJobs to be synced.
         # Perform a full reconcile after every timeout.
         async with kubernetes.watch.Watch() as watch:
             while True:
+                LOG.info(f"[TIMESTAMP: {time.time()}] Starting controller pod watch cycle")
                 async for event in watch.stream(
                         self._core_api.list_namespaced_pod, "",
                         label_selector="adaptdl/job", timeout_seconds=60):
@@ -91,6 +95,7 @@ class AdaptDLController(object):
                     job_name = pod.metadata.labels["adaptdl/job"]
                     namespace = pod.metadata.namespace
                     await self._queue.put((namespace, job_name))
+                LOG.info(f"[TIMESTAMP: {time.time()}] Controller pod watch timeout - performing full reconciliation")
 
     async def _sync_worker(self):
         while True:

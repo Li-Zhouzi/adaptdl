@@ -4,6 +4,10 @@ import numpy as np
 import cvxpy as cp
 import math
 import random
+import logging
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
 
 
 
@@ -21,7 +25,13 @@ def _get_speedup_and_size(goodput_dict):
     speedup_dict = dict()
     size_dict = dict()
     global_progress = _get_progress()
+    # Only process applications with positive arrival rates
+    active_apps = {app for app in ARRIVAL_RATE.keys() if ARRIVAL_RATE[app] > 0}
+    
     for app in goodput_dict.keys():
+        # Skip applications with zero arrival rate
+        if app not in active_apps:
+            continue
         speedup_dict[app] = dict()
         size_dict[app] = dict()
         for epoch_str, replica_goodputs in goodput_dict[app].items():
@@ -126,7 +136,7 @@ def _compute_width(arrival_dict, mean_size, speedup_dict, b):
     #         print(name, i, rho_dict[name][i])
     fs_speed_dict = _feasible_speedup(speedup_dict)
     rho_array = np.array([rho_dict[name][i] for name, i in index_map])
-    print("total rho: ", np.sum(rho_array), b)
+    # print("total rho: ", np.sum(rho_array), b)
     
     # do the optimization problem
     z = cp.Variable(len(index_map))
@@ -153,7 +163,7 @@ def _compute_width(arrival_dict, mean_size, speedup_dict, b):
     # print(problem.status)
     # print("average jct by solver: ", problem.value)
     if problem.status == cp.OPTIMAL:
-        print("optimization successful")
+        # LOG.info("Optimization successful")
         optimized_z = z.value
         k_dict = {}
         for idx, (name, i) in enumerate(index_map):
@@ -170,6 +180,7 @@ def _compute_width(arrival_dict, mean_size, speedup_dict, b):
 
         return k_dict
     else:
+        LOG.warning(f"Optimization failed with status: {problem.status}")
         return None
     
 
@@ -204,8 +215,8 @@ def _compute_things_with_rescale(speedup_dict, mean_size_dict, k_dict, applicati
         rescale_time += sum(l) * application_rates[k]
     rescale_time /= sum(application_rates.values())
     # print("average theory jct ", s)
-    for app in jct_dict.keys():
-        print(app, sum(jct_dict[app]), sum(rescale_dict[app]), k_dict[app])
+    # for app in jct_dict.keys():
+    #     print(app, sum(jct_dict[app]), sum(rescale_dict[app]), k_dict[app])
     # print("total budget: ", total_budget)
     return s, total_budget, rescale_time
 
@@ -232,12 +243,19 @@ def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
     #     print(app, speedup_dict[app][0][1])
     # print("application_rates: ", application_rates)
     # print("size_dict: ", size_dict)
-    # print("budget: ", b)
+    LOG.info(f"Start computing width with budget: {b}")
+    total_rho = 0
+    for name, rate in application_rates.items():
+        # LOG.info(f"Name: {name}, Rate: {rate}, Size: {size_dict[name]}")  
+        total_rho += rate * sum(size_dict[name].values())
+    LOG.info(f"Total rho: {total_rho}")
+
+    
     min_jct_over_glue = None
     min_glue_ind = None
     final_k_dict = None
 
-    print("--------------------OPTIMIZING OVER GLUE-----------------------------------")
+    LOG.info("--------------------OPTIMIZING OVER GLUE-----------------------------------")
     for index in range(len(glue_list)):
         # construct the new speedup dictionary and size data
         size_glue = dict()
@@ -266,10 +284,11 @@ def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
             for epoch, d1 in speed_glue[name].items():
                 for k, sp in d1.items():
                     speed_glue[name][epoch][k] = size_glue[name][epoch] / sp
-        print("--------FOR GLUE=",glue_list[index],"---------------------")
+        # print("--------FOR GLUE=",glue_list[index],"---------------------")
         # print("size_glue: ", size_glue)
         k_glue = _compute_width_iter(application_rates, size_glue, speed_glue, b) # compute the glued optimization. 
         if k_glue is None:
+            LOG.info(f"No solution found for glue config {glue_list[index]}")
             continue
         # regenerate the full k dictionary
         k_glue_dict = dict()
@@ -289,10 +308,10 @@ def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
             min_jct_over_glue = avg_jct
             final_k_dict = k_glue_dict
     if final_k_dict is None:
-        print("No valid glue found")
+        LOG.warning("No valid glue found - returning None")
         return None, None, None
 
-    print("--------------------OPTIMAL GLUE: ", glue_list[min_glue_ind], "----------------------------")
+    LOG.info(f"--------------------OPTIMAL GLUE: {glue_list[min_glue_ind]} ----------------------------")
 
 
     return final_k_dict
@@ -307,25 +326,28 @@ def _compute_width_iter(application_rates, size_data, speedup_dict, b):
             application_rates, size_data, speedup_dict, running_b
         )
         if k_dict is None:
-            running_b -= 1
+            running_b *= 0.99
             continue
         s, total_budget, rescale_time = _compute_things_with_rescale(speedup_dict, size_data, k_dict, application_rates)
-        running_b -= 1
+        running_b *= 0.99
         # print(f"Total budget: {total_budget}, b: {b}")
     if total_budget is None or total_budget > b:
+        LOG.info(f"No valid solution within budget constraint. Total budget: {total_budget}, limit: {b}")
         return None 
-    print("Total budget in compute_width_iter", total_budget) 
+    LOG.info(f"Found solution with total budget: {total_budget}")
     return k_dict
 
 
 def get_width(goodput_dict, b):
     speedup_dict, size_dict = _get_speedup_and_size(goodput_dict)
-    # print("="*100)
+    LOG.info("="*100)
     # print(speedup_dict)
     arrival_dict = dict()
     for app in ARRIVAL_RATE.keys():
         if ARRIVAL_RATE[app] > 0:
             arrival_dict[app] = ARRIVAL_RATE[app]
+    LOG.info(f"Arrival dict: {arrival_dict}")
+    LOG.info(f"Budget: {b}")
     return _get_width_with_rescale(speedup_dict, size_dict, arrival_dict, b)
 
     # Below is only for testing
