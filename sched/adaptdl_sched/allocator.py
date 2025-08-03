@@ -60,7 +60,7 @@ class AdaptDLAllocator(object):
             self._policy = PolluxPolicy()
             self._policy_type = "pollux"
         elif SELECTED_POLICY == "dummy":
-            self._policy = DummyPolicy(num_gpus_per_job=1) # Configure dummy as needed
+            self._policy = DummyPolicy(num_gpus_per_job=8) # Configure dummy as needed
             self._policy_type = "dummy"
         elif SELECTED_POLICY == "fixed-width":
             # Initialize with None width, will be fetched later

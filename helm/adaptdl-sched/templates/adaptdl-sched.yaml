@@ -71,6 +71,8 @@ spec:
           containerPort: {{ .Values.globalProfiler.service.targetPort }}
           protocol: TCP
         imagePullPolicy: Always
+        resources:
+{{ toYaml .Values.globalProfiler.resources | indent 8 }}
         volumeMounts:
         - name: pollux
           mountPath: /pollux/checkpoint

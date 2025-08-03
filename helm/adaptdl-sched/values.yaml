@@ -13,6 +13,9 @@ sched:
     requests:
       memory: 1Gi
       cpu: 1
+    limits:
+      memory: 1Gi
+      cpu: 1
 
 widthCalculator:
   resources:
@@ -82,6 +85,13 @@ globalProfiler:
   service:
     port: 8082
     targetPort: 8082
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 1
+    limits:
+      memory: 2Gi
+      cpu: 2
 
 # Some services depend on the specific name of the registry service which is
 # enforced through fullnameOverride.

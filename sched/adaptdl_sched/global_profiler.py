@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import asyncio
 import time
+from concurrent.futures import ThreadPoolExecutor
 from adaptdl_sched.config import get_global_profiler_port, get_checkpoint_path
 from adaptdl.global_profile_state import GlobalProfileState
 from adaptdl.checkpoint import save_state
@@ -29,6 +30,10 @@ class GlobalProfiler:
         # Initialize the global profile state
         self._global_state = GlobalProfileState()
         
+        # Initialize thread pool executor for heavy computations
+        self._executor = ThreadPoolExecutor(max_workers=2)
+        LOG.info("Initialized ThreadPoolExecutor with 2 worker threads")
+        
         # Load existing state if available - try multiple sources
         state_loaded = False
         
@@ -48,6 +53,12 @@ class GlobalProfiler:
         # If both failed, start fresh
         if not state_loaded:
             LOG.info("Starting with fresh global profile state")
+    
+    def __del__(self):
+        """Cleanup executor on shutdown."""
+        if hasattr(self, '_executor'):
+            LOG.info("Shutting down ThreadPoolExecutor")
+            self._executor.shutdown(wait=True)
 
     async def _handle_healthz(self, request):
         # Health check.
@@ -69,24 +80,8 @@ class GlobalProfiler:
         # Always update the global profile state (for perf params fitting)
         self._global_state.update_profile(application, actual_profile_data, alpha=self._grad_params_alpha)
         
-        # Check if it's time to fit perf_params
-        if self._global_state.should_fit_perf_params():
-            LOG.info(f"[TIMESTAMP: {time.time()}] Starting perf_params fitting for all applications")
-            fit_start_time = time.time()
-            self._global_state.fit_all_perf_params()
-            
-            # Save the state to persistent storage
-            save_state(self._global_state, sync=False)
-            LOG.info("Saved global profile state to persistent storage")
-            
-            # Also save a copy to width-calculator-init directory
-            self._save_to_width_calculator_init()
-            LOG.info("Saved copy of global profile state to width-calculator-init directory")
-            
-            fit_duration = time.time() - fit_start_time
-            LOG.info(f"[TIMESTAMP: {time.time()}] Completed perf_params fitting in {fit_duration:.3f} seconds")
-        else:
-            LOG.info("Not fitting perf_params yet (time condition not met)")
+        # Note: perf_params fitting has been moved to _compute_goodput_with_fitting()
+        # to avoid blocking profile reports
         
         return web.json_response({"status": "success", "application": application})
 
@@ -100,8 +95,14 @@ class GlobalProfiler:
         try:
             LOG.info("Received goodput request at %s", datetime.now())
             
-            # Call the load goodput function to get the goodput dictionary
-            goodput_dict = self._load_goodput_function()
+            # Run the heavy computation in executor to avoid blocking event loop
+            loop = asyncio.get_event_loop()
+            LOG.info("Dispatching goodput computation to executor thread pool")
+            
+            goodput_dict = await loop.run_in_executor(
+                self._executor,
+                self._compute_goodput_with_fitting
+            )
             
             LOG.info("Successfully generated goodput dictionary for %d applications", len(goodput_dict))
             
@@ -178,6 +179,31 @@ class GlobalProfiler:
             LOG.error(f"Failed to load global profile state from width-calculator-init {checkpoint_file}: {e}")
             return False
 
+    def _compute_goodput_with_fitting(self):
+        """
+        Compute goodput with perf_params fitting if needed.
+        This runs in the executor thread pool to avoid blocking the main event loop.
+        """
+        # Check if it's time to fit perf_params (every 60 seconds)
+        if self._global_state.should_fit_perf_params():
+            LOG.info(f"[TIMESTAMP: {time.time()}] Starting perf_params fitting in executor thread")
+            fit_start_time = time.time()
+            self._global_state.fit_all_perf_params()
+            
+            # Save the state to persistent storage
+            save_state(self._global_state, sync=False)
+            LOG.info("Saved global profile state to persistent storage")
+            
+            # Also save a copy to width-calculator-init directory
+            self._save_to_width_calculator_init()
+            LOG.info("Saved copy of global profile state to width-calculator-init directory")
+            
+            fit_duration = time.time() - fit_start_time
+            LOG.info(f"[TIMESTAMP: {time.time()}] Completed perf_params fitting in {fit_duration:.3f} seconds")
+        
+        # Now compute and return goodput
+        return self._load_goodput_function()
+    
     def _load_goodput_function(self):
         """
         Load goodput functions and create a goodput dictionary using global profile state data.

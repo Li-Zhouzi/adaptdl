@@ -7,8 +7,10 @@ import signal
 import sys
 from datetime import datetime
 
-# Configuration constant
-NUM_GPU = 1
+
+"""Should make sure that 1. the schedulers are running 2. Docker login is done 3. make sure the workload-test3 consists of only one job called cifar10-0 4. experiment_results/dummy directory exists"""
+# Configuration - list of GPU counts to test
+NUM_GPU_LIST = [2, 4, 5, 6, 7, 8]
 
 # Setup logging
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log.txt")
@@ -21,7 +23,7 @@ def log(message):
     with open(LOG_FILE, 'a') as f:
         f.write(log_message + '\n')
 
-def verify_and_update_policy():
+def verify_and_update_policy(num_gpu):
     """Verify policy is 'dummy' and update the GPU count in allocator.py"""
     allocator_path = "./sched/adaptdl_sched/allocator.py"
     
@@ -39,7 +41,7 @@ def verify_and_update_policy():
     
     # Update the GPU number
     old_pattern = r'self\._policy = DummyPolicy\(num_gpus_per_job=\d+\) # Configure dummy as needed'
-    new_line = f'self._policy = DummyPolicy(num_gpus_per_job={NUM_GPU}) # Configure dummy as needed'
+    new_line = f'self._policy = DummyPolicy(num_gpus_per_job={num_gpu}) # Configure dummy as needed'
     
     content = re.sub(old_pattern, new_line, content)
     
@@ -47,7 +49,7 @@ def verify_and_update_policy():
     with open(allocator_path, 'w') as f:
         f.write(content)
     
-    log(f"✓ Updated DummyPolicy to use {NUM_GPU} GPU(s)")
+    log(f"✓ Updated DummyPolicy to use {num_gpu} GPU(s)")
 
 def run_command(cmd, shell=False, capture_output=True):
     """Run a command and return the result"""
@@ -114,33 +116,40 @@ def check_job_completion(log_file):
     
     return False
 
-def main():
-    # Initialize log file
-    with open(LOG_FILE, 'w') as f:
-        f.write(f"=== Experiment Log Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n")
-    
-    log(f"Starting experiment with NUM_GPU={NUM_GPU}")
+def run_single_experiment(num_gpu):
+    """Run a single experiment with the specified number of GPUs"""
+    log(f"\n{'='*60}")
+    log(f"Starting experiment with NUM_GPU={num_gpu}")
+    log(f"{'='*60}\n")
     
     # Step 1: Verify and update policy
-    verify_and_update_policy()
+    verify_and_update_policy(num_gpu)
     
-    # Step 2: Run helm update
+    # Step 2: Scale up the cluster
+    log(f"\n✓ Scaling up cluster to {num_gpu} nodes...")
+    run_command([
+        "aws", "autoscaling", "update-auto-scaling-group",
+        "--auto-scaling-group-name", "eksctl-adaptdl-eks-cluster-nodegroup-ng-1-NodeGroup-Ld2yZvkxjom7",
+        "--desired-capacity", str(num_gpu)
+    ])
+    
+    # Step 3: Run helm update
     log("\n✓ Running helm update...")
     run_command(["./helm/update_adaptdl.sh"], shell=True, capture_output=False)
-    time.sleep(420)  # Give it time to update
+    time.sleep(120)  # Give it time to update
     
-    # Step 3: Delete existing job
+    # Step 4: Delete existing job
     log("\n✓ Deleting existing job...")
     run_command(["kubectl", "delete", "adaptdljob", "cifar10-0", "-n", "adaptdl", "--ignore-not-found=true"])
     time.sleep(10)
     
-    # Step 4: Run workload
+    # Step 5: Run workload
     log("\n✓ Running workload...")
     run_command(["./benchmark/run_workload.sh"], shell=True, capture_output=False)
     time.sleep(5)  # Give it time to start
     
-    # Step 5: Start monitor in subprocess
-    log_file = f"./experiment_results/dummy/{NUM_GPU}gpu.txt"
+    # Step 6: Start monitor in subprocess
+    log_file = f"./experiment_results/dummy/{num_gpu}gpu.txt"
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     
     log(f"\n✓ Starting monitor, output to: {log_file}")
@@ -150,7 +159,7 @@ def main():
         stderr=subprocess.PIPE
     )
     
-    # Step 6: Check for completion every 60 seconds
+    # Step 7: Check for completion every 60 seconds
     print("\n✓ Monitoring job completion...")
     try:
         while True:
@@ -168,18 +177,46 @@ def main():
                     monitor_proc.kill()
                 
                 print("Monitor stopped.")
-                log(f"\n=== Experiment Completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
+                log(f"\n=== Experiment with {num_gpu} GPU(s) Completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
                 break
             else:
                 print(f"Job still running... (checked at {time.strftime('%Y-%m-%d %H:%M:%S')})")
                 
     except KeyboardInterrupt:
-        log("\n\nInterrupted by user. Cleaning up...")
+        log("\n\nInterrupted by user during single experiment. Cleaning up monitor...")
         monitor_proc.terminate()
         time.sleep(2)
         if monitor_proc.poll() is None:
             monitor_proc.kill()
-        sys.exit(0)
+        raise  # Re-raise to be caught by main function
+
+def main():
+    # Initialize log file
+    with open(LOG_FILE, 'w') as f:
+        f.write(f"=== Experiment Log Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+    
+    log(f"Starting experiments with GPU configurations: {NUM_GPU_LIST}")
+    
+    try:
+        # Run experiments for each GPU configuration
+        for num_gpu in NUM_GPU_LIST:
+            run_single_experiment(num_gpu)
+        
+        log("\n\n✅ All experiments completed successfully!")
+        
+    except KeyboardInterrupt:
+        log("\n\nInterrupted by user. Cleaning up...")
+    
+    finally:
+        # Always scale down the cluster at the end
+        log("\n✓ Scaling down cluster to 0 nodes...")
+        run_command([
+            "aws", "autoscaling", "update-auto-scaling-group",
+            "--auto-scaling-group-name", "eksctl-adaptdl-eks-cluster-nodegroup-ng-1-NodeGroup-Ld2yZvkxjom7",
+            "--desired-capacity", "0"
+        ])
+        
+        log(f"\n=== All Experiments Completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===")
 
 if __name__ == "__main__":
     main()
