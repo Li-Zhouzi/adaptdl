@@ -37,6 +37,10 @@ def process_single_log(log_file_path):
     with open(log_file_path, 'r') as f:
         lines = f.readlines()
     
+    # Define threshold for monitor gap detection (e.g., 100 seconds)
+    MONITOR_GAP_THRESHOLD = 100  # seconds
+    monitor_gaps = []  # List of (start_time, end_time) tuples
+    
     # Process each log entry
     for i, line in enumerate(lines):
         log_entry = json.loads(line.strip())
@@ -45,6 +49,16 @@ def process_single_log(log_file_path):
         # Track first timestamp
         if startup_metrics['first_timestamp'] is None:
             startup_metrics['first_timestamp'] = timestamp
+            
+        # Check for monitor gaps
+        if i > 0:
+            prev_entry = json.loads(lines[i-1].strip())
+            prev_timestamp = prev_entry['timestamp']
+            time_diff = timestamp - prev_timestamp
+            
+            if time_diff > MONITOR_GAP_THRESHOLD:
+                monitor_gaps.append((prev_timestamp, timestamp))
+                print(f"WARNING: Monitor gap detected between lines {i-1} and {i}: {time_diff:.2f} seconds")
         
         # Check cluster nodes
         cluster_nodes = log_entry.get('cluster_nodes', {})
@@ -101,7 +115,8 @@ def process_single_log(log_file_path):
                     'is_starting': False,  # Mark if epoch didn't run with full GPUs
                     'idle_time_at_end': 0,
                     'duration': 0,
-                    'max_allocation': 0
+                    'max_allocation': 0,
+                    'has_monitor_gap': False  # Mark if epoch was affected by monitor gap
                 }
             
             epoch_info = epochs[epoch]
@@ -113,6 +128,14 @@ def process_single_log(log_file_path):
             # Check if this epoch ever ran with less than expected GPUs
             if len(allocation) < expected_gpus:
                 epoch_info['is_starting'] = True
+                
+    # Mark epochs that were affected by monitor gaps
+    for epoch_num, epoch_info in epochs.items():
+        for gap_start, gap_end in monitor_gaps:
+            # If the epoch was active during a monitor gap
+            if epoch_info['first_seen'] <= gap_end and epoch_info['last_seen'] >= gap_start:
+                epoch_info['has_monitor_gap'] = True
+                break
     
     # Calculate startup timing metrics
     if startup_metrics['total_nodes_timestamp'] and startup_metrics['ready_nodes_timestamp']:
@@ -160,17 +183,22 @@ def print_single_log_summary(epochs, startup_metrics, expected_gpus):
     
     print("\nEpoch Analysis:")
     print("-" * 40)
-    print(f"{'Epoch':<10} {'Status':<15} {'Duration':<12} {'Idle Time':<12} {'Max GPUs':<10}")
-    print("-" * 60)
+    print(f"{'Epoch':<10} {'Status':<20} {'Duration':<12} {'Idle Time':<12} {'Max GPUs':<10}")
+    print("-" * 70)
     
     for epoch_num in sorted(epochs.keys()):
         epoch_info = epochs[epoch_num]
-        status = "Starting" if epoch_info['is_starting'] else "Normal"
-        print(f"{epoch_num:<10} {status:<15} {epoch_info['duration']:<12.2f} "
+        if epoch_info['has_monitor_gap']:
+            status = "Anomaly: monitor off"
+        elif epoch_info['is_starting']:
+            status = "Starting"
+        else:
+            status = "Normal"
+        print(f"{epoch_num:<10} {status:<20} {epoch_info['duration']:<12.2f} "
               f"{epoch_info['idle_time_at_end']:<12.2f} {epoch_info['max_allocation']:<10}")
     
-    # Calculate summary statistics
-    normal_epochs = [e for e in epochs.values() if not e['is_starting']]
+    # Calculate summary statistics (exclude epochs with monitor gaps)
+    normal_epochs = [e for e in epochs.values() if not e['is_starting'] and not e['has_monitor_gap']]
     if normal_epochs:
         avg_duration = np.mean([e['duration'] for e in normal_epochs])
         avg_idle = np.mean([e['idle_time_at_end'] for e in normal_epochs])
@@ -264,7 +292,7 @@ def main():
         print(f"{expected_gpus:<6} {node_prep:<18} {job_alloc:<18} {image_build:<18} {rescaling:<18}")
     else:
         # Process all files in default directory
-        directory = "./experiment_results/dummy/cifar10"
+        directory = "./experiment_results/dummy/deepspeech2"
         if not os.path.exists(directory):
             print(f"Error: Directory {directory} not found")
             sys.exit(1)

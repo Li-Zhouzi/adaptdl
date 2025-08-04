@@ -8,9 +8,10 @@ import sys
 from datetime import datetime
 
 
-"""Should make sure that 1. the schedulers are running 2. Docker login is done 3. make sure the workload-test3 consists of only one job called cifar10-0 4. experiment_results/dummy directory exists"""
+"""Should make sure that 1. the schedulers are running 2. Docker login is done 3. make sure the workload-test3 consists of only one job called {JOB_TYPE}-0 4. experiment_results/dummy directory exists"""
 # Configuration - list of GPU counts to test
-NUM_GPU_LIST = [2, 4, 5, 6, 7, 8]
+NUM_GPU_LIST = [4, 5, 6, 7, 8]
+JOB_TYPE = "deepspeech2"  # Job type (e.g., "cifar10", "imagenet", "bert", etc.)
 
 # Setup logging
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log.txt")
@@ -127,11 +128,14 @@ def run_single_experiment(num_gpu):
     
     # Step 2: Scale up the cluster
     log(f"\n✓ Scaling up cluster to {num_gpu} nodes...")
-    run_command([
-        "aws", "autoscaling", "update-auto-scaling-group",
-        "--auto-scaling-group-name", "eksctl-adaptdl-eks-cluster-nodegroup-ng-1-NodeGroup-Ld2yZvkxjom7",
-        "--desired-capacity", str(num_gpu)
-    ])
+    if num_gpu == 4 or num_gpu == 6:
+        log(f"Skipping scaling up for {num_gpu} GPUs")
+    else:
+        run_command([
+            "aws", "autoscaling", "update-auto-scaling-group",
+            "--auto-scaling-group-name", "eksctl-adaptdl-eks-cluster-nodegroup-ng-1-NodeGroup-Ld2yZvkxjom7",
+            "--desired-capacity", str(num_gpu)
+        ])
     
     # Step 3: Run helm update
     log("\n✓ Running helm update...")
@@ -139,17 +143,17 @@ def run_single_experiment(num_gpu):
     time.sleep(120)  # Give it time to update
     
     # Step 4: Delete existing job
-    log("\n✓ Deleting existing job...")
-    run_command(["kubectl", "delete", "adaptdljob", "cifar10-0", "-n", "adaptdl", "--ignore-not-found=true"])
+    log(f"\n✓ Deleting existing job {JOB_TYPE}-0...")
+    run_command(["kubectl", "delete", "adaptdljob", f"{JOB_TYPE}-0", "-n", "adaptdl", "--ignore-not-found=true"])
     time.sleep(10)
     
     # Step 5: Run workload
     log("\n✓ Running workload...")
     run_command(["./benchmark/run_workload.sh"], shell=True, capture_output=False)
-    time.sleep(5)  # Give it time to start
+    time.sleep(1)  # Give it time to start
     
     # Step 6: Start monitor in subprocess
-    log_file = f"./experiment_results/dummy/{num_gpu}gpu.txt"
+    log_file = f"./experiment_results/dummy/{JOB_TYPE}/{num_gpu}gpu.txt"
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     
     log(f"\n✓ Starting monitor, output to: {log_file}")
@@ -195,7 +199,7 @@ def main():
     with open(LOG_FILE, 'w') as f:
         f.write(f"=== Experiment Log Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n")
     
-    log(f"Starting experiments with GPU configurations: {NUM_GPU_LIST}")
+    log(f"Starting experiments for job type '{JOB_TYPE}' with GPU configurations: {NUM_GPU_LIST}")
     
     try:
         # Run experiments for each GPU configuration

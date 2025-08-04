@@ -45,7 +45,7 @@ APPLICATIONS = {
     "cifar10": Application("cifar10", init_batch_size=128, max_batch_size=4096, min_local_bsz=32, max_local_bsz=1024, max_epochs=30, gradient_accumulation=True, dataset_size=50000),
     "ncf": Application("ncf", init_batch_size=256, max_batch_size=32768, min_local_bsz=32, max_local_bsz=32768, max_epochs=10, gradient_accumulation=True, dataset_size=1000000),
     "imagenet": Application("imagenet", init_batch_size=20, max_batch_size=12800, min_local_bsz=20, max_local_bsz=200, max_epochs=90, gradient_accumulation=True, dataset_size=1281167),
-    "deepspeech2": Application("deepspeech2", init_batch_size=20, max_batch_size=640, min_local_bsz=10, max_local_bsz=80, max_epochs=30, gradient_accumulation=True, dataset_size=4074),
+    "deepspeech2": Application("deepspeech2", init_batch_size=20, max_batch_size=640, min_local_bsz=10, max_local_bsz=80, max_epochs=15, gradient_accumulation=True, dataset_size=4074),
     "yolov3": Application("yolov3", init_batch_size=4, max_batch_size=512, min_local_bsz=4, max_local_bsz=8, max_epochs=50, gradient_accumulation=True, dataset_size=14041)
 }
 

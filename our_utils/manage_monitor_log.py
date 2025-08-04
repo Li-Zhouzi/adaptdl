@@ -230,7 +230,7 @@ def main():
     jobs, node_usage_history = process_log_file(log_file_path)
     metrics = calculate_metrics(jobs, node_usage_history)
     print_summary(metrics)
-    job_info = jobs['cifar10-2']
+    job_info = jobs['cifar10-0']
     for epoch, epoch_info in job_info['epochs'].items():
         print(epoch, epoch_info['wasted_time_in_epoch'], epoch_info['epoch_duration'])
 

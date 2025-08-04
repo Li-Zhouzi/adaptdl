@@ -1,118 +1,39 @@
-import os
-import sys
-import pickle
-sys.path.insert(0, os.path.abspath("adaptdl"))
+allocation = {'cifar10': {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 8, 7: 8, 8: 8, 9: 8, 10: 8, 11: 8, 12: 8, 13: 8, 14: 8, 15: 8, 16: 6, 17: 6, 18: 6, 19: 6, 20: 8, 21: 8, 22: 8, 23: 8, 24: 8, 25: 8, 26: 8, 27: 8, 28: 8, 29: 8}}
+goodput_functions = {
+            'cifar10': {
+                0: {1: 606.0008063358736, 2: 186.88520021985624, 3: 351.1132594344109, 4: 367.7791910383172, 5: 318.4340136659969, 6: 456.6696986291643, 7: 311.3429736035821, 8: 381.46796331999354},
+                1: {1: 729.1047357163081, 2: 186.88520021985624, 3: 351.1132594344109, 4: 367.7791910383172, 5: 318.4340136659969, 6: 456.6696986291643, 7: 311.3429736035821, 8: 381.46796331999354},
+                2: {1: 734.9579846528204, 2: 188.23088009107408, 3: 351.1132594344109, 4: 367.7791910383172, 5: 318.4340136659969, 6: 456.6696986291643, 7: 311.3429736035821, 8: 381.46796331999354},
+                3: {1: 751.4321179270066, 2: 187.4174197668994, 3: 418.5777320451601, 4: 389.56530898513495, 5: 459.9237560895073, 6: 550.1700513497855, 7: 346.6576323358691, 8: 435.7500996599619},
+                4: {1: 846.1445408213605, 2: 185.96185423272541, 3: 452.65928523609705, 4: 549.7668109074722, 5: 527.6273216611542, 6: 619.7059611711701, 7: 404.97561743612107, 8: 506.64725811179926},
+                5: {1: 718.4789604386947, 2: 266.2245055257905, 3: 475.00418322194093, 4: 640.1365564745199, 5: 593.2462432893918, 6: 742.4918002468796, 7: 560.8088629852422, 8: 673.415528771637},
+                6: {1: 716.2216216642287, 2: 338.2997880117455, 3: 669.2680659529565, 4: 608.2234857504582, 5: 642.0379473378638, 6: 763.3213664841116, 7: 653.8663934308108, 8: 784.4979448560063},
+                7: {1: 737.6377021322435, 2: 351.83899076631525, 3: 697.4370576916697, 4: 801.5545407666929, 5: 612.4382776610245, 6: 820.3622064970364, 7: 718.2420044421812, 8: 833.1965101600533},
+                8: {1: 822.337719511986, 2: 366.12837458188073, 3: 721.790719369953, 4: 865.6714588105335, 5: 888.9275273293082, 6: 793.8057749609351, 7: 716.4435689746092, 8: 870.2518818974108},
+                9: {1: 743.3016196927889, 2: 524.4476300585181, 3: 742.2027712104691, 4: 948.2893771718271, 5: 950.3940849511695, 6: 1127.7113752514085, 7: 995.2797261340583, 8: 1186.8846202385132},
+                10: {1: 726.6261508917949, 2: 532.7593180103959, 3: 774.1740179473607, 4: 964.9427608638123, 5: 1042.84464575407, 6: 1151.3862676893464, 7: 1093.744754467171, 8: 1274.2767985535668},
+                11: {1: 721.0311944755754, 2: 555.0897615669741, 3: 721.4202716670451, 4: 814.4975081814073, 5: 1069.959842934953, 6: 1228.9049609647325, 7: 1132.8863724560258, 8: 1378.973463713967},
+                12: {1: 794.248560473908, 2: 555.194039330865, 3: 971.7059234203423, 4: 1206.7125618827638, 5: 1057.866010041624, 6: 1382.6941931699118, 7: 1275.4212889507219, 8: 1446.013655847175},
+                13: {1: 787.1660441436546, 2: 537.8572840843669, 3: 983.3762009578544, 4: 1243.0052386650761, 5: 1179.3290357206763, 6: 1351.7626919705522, 7: 1261.4304563824153, 8: 1382.8838216218926},
+                14: {1: 714.0577056613532, 2: 752.586134731454, 3: 1080.0135918382268, 4: 1265.943063722478, 5: 908.683423637007, 6: 1380.4111800067233, 7: 1305.68794394842, 8: 1490.2819165279338},
+                15: {1: 731.9552590868024, 2: 804.6848618575948, 3: 1003.4719142922352, 4: 1365.5698898673802, 5: 1510.295453521347, 6: 1096.0264025696147, 7: 1304.638517245757, 8: 1555.653421177294},
+                16: {1: 730.7968980355743, 2: 787.3294010037494, 3: 1158.4737939463243, 4: 1392.3736927582768, 5: 1454.7443554651384, 6: 1611.221673643268, 7: 1418.3854365193263, 8: 1703.8832275416619},
+                17: {1: 835.9563532462811, 2: 835.287709810648, 3: 1061.3016327445707, 4: 1395.752542345041, 5: 1569.5918992355219, 6: 1668.1713191975937, 7: 1425.94812285802, 8: 1486.5510409894855},
+                18: {1: 748.7643783938757, 2: 804.5801470077383, 3: 1189.9151171429364, 4: 1389.7215624615712, 5: 1565.069511699599, 6: 1676.4484245968367, 7: 1532.7624882949872, 8: 1749.3021336727807},
+                19: {1: 713.2688878397231, 2: 802.7881410563815, 3: 1126.5041856857006, 4: 1016.648760741416, 5: 1660.7595190120653, 6: 1810.9719763115781, 7: 1583.4262248399673, 8: 1432.5267171288917},
+                20: {1: 717.3187745346842, 2: 816.1315938721358, 3: 905.5295589584092, 4: 1721.769434607384, 5: 1615.5644882015756, 6: 1768.7074187352605, 7: 1606.0763581650021, 8: 2008.678374985677},
+                21: {1: 824.6316521987725, 2: 819.0668696388841, 3: 1439.4095567739507, 4: 1787.846036198266, 5: 1615.049985832179, 6: 1915.003196325988, 7: 1662.156343569271, 8: 2006.7450069162137},
+                22: {1: 758.1643081464002, 2: 826.9543183401728, 3: 1490.6956554609876, 4: 1853.3047605147053, 5: 1756.8196206159544, 6: 1937.1904726548112, 7: 1673.5526731837283, 8: 2081.482475038958},
+                23: {1: 737.5936550750026, 2: 645.4942080266087, 3: 1521.9713664128546, 4: 1910.1353644964981, 5: 1761.7911740743623, 6: 2084.1182578741764, 7: 1739.1256465935528, 8: 2192.854072426697},
+                24: {1: 713.719408602619, 2: 1147.6272801932494, 3: 1597.4654227885899, 4: 1925.9673601856846, 5: 1724.5736015058967, 6: 1984.4325969798897, 7: 1813.9846749558633, 8: 2336.453950014428},
+                25: {1: 761.1000289824901, 2: 1086.8199383536357, 3: 1545.2714172358385, 4: 2058.7151095291056, 5: 1910.0219887070052, 6: 2236.128361567926, 7: 1421.5631527820042, 8: 2203.015069295717},
+                26: {1: 833.3690976550367, 2: 1116.451821698776, 3: 1638.276374128924, 4: 1874.0940971190444, 5: 1895.4625409544337, 6: 2234.819638563678, 7: 1818.1615942059832, 8: 2096.035630462859},
+                27: {1: 719.5422983161985, 2: 1093.6377694518765, 3: 1649.3802723894478, 4: 2169.287086560694, 5: 1901.9076564971317, 6: 2093.327950366829, 7: 2137.438025796997, 8: 2315.4497548876047},
+                28: {1: 734.3143381640093, 2: 1156.0768460081752, 3: 1656.2318460491103, 4: 2142.391400964092, 5: 2210.9628842504394, 6: 2092.823246253913, 7: 2107.978302524587, 8: 2342.69758350553},
+                29: {1: 734.3143381640093, 2: 1156.0768460081752, 3: 1656.2318460491103, 4: 2142.391400964092, 5: 2210.9628842504394, 6: 2092.823246253913, 7: 2107.978302524587, 8: 2342.69758350553},
+            }}
 
-import matplotlib.pyplot as plt
+dataset_size = 50000
 
-from sched.adaptdl_sched._compute_width import get_width
-from sched.adaptdl_sched._configs import ARRIVAL_RATE, APPLICATIONS
-from adaptdl.global_profile_state import GlobalProfileState
-from adaptdl.goodput import GoodputFunction
-from adaptdl.checkpoint import load_state
-
-BUDGET = 11
-CKP_PATH = './checkpoint/global-profile-state'
-
-NUM_GPU_PER_NODE = 1 
-
-def load_goodput_function(global_profile_state):
-    goodput_dict = {}
-    
-    # Validate that all applications have required data
-    for application in global_profile_state.global_perf_params.keys():            
-        # Get application configuration
-        
-        perf_params = global_profile_state.global_perf_params[application]
-        profile = global_profile_state.global_profiles[application]
-        
-        goodput_dict[application] = {}
-        app_config = APPLICATIONS[application]
-
-        # For each epoch that has grad_params
-        for epoch_str in global_profile_state.global_grad_params[application].keys():
-            epoch = int(epoch_str)
-            grad_params = global_profile_state.global_grad_params[application][epoch_str]
-            
-
-            # Create GoodputFunction with the global profile data
-            goodput_fn = GoodputFunction(perf_params, grad_params, app_config.init_batch_size)
-            
-            goodput_dict[application][epoch] = {}
-            
-            # Calculate optimal goodput for replicas 1-64
-            for num_replicas in range(1, 65):
-                num_nodes = max(1, (num_replicas + NUM_GPU_PER_NODE - 1) // NUM_GPU_PER_NODE)
-                # Optimize for the best goodput using application-specific config
-                optimal_goodput, _, _ = goodput_fn.optimize(
-                    num_nodes, num_replicas, 
-                    max_batch_size=app_config.max_batch_size,
-                    atomic_bsz_range=(app_config.min_local_bsz, app_config.max_local_bsz),
-                    accumulation=app_config.gradient_accumulation,
-                    profile=profile
-                )
-                
-                goodput_dict[application][epoch][num_replicas] = optimal_goodput
-    return goodput_dict
-
-
-def plot_goodput_curve(goodput_dict, application, epoch):
-    """
-    Plots the goodput curve for a given application and epoch.
-    Args:
-        goodput_dict (dict): A dictionary containing goodput values.
-        application (str): The name of the application to plot.
-        epoch (int): The epoch number to plot.
-    """
-    if application not in goodput_dict or epoch not in goodput_dict[application]:
-        print(f"No data found for application '{application}' and epoch {epoch}.")
-        return
-
-    goodputs_for_epoch = goodput_dict[application][epoch]
-    
-    replicas = sorted(goodputs_for_epoch.keys())
-    goodputs = [goodputs_for_epoch[r] for r in replicas]
-
-    plt.figure()
-    plt.plot(replicas, goodputs, marker='o', linestyle='-')
-    plt.xlabel("Number of Replicas")
-    plt.ylabel("Optimal Goodput")
-    plt.title(f"Goodput Curve for {application} (Epoch {epoch})")
-    plt.grid(True)
-    plt.ylim(bottom=0)
-    plt.show()
-    
-    # plot_filename = f"{application}_epoch_{epoch}_goodput.png"
-    # plt.savefig(plot_filename)
-    # print(f"Plot saved to {plot_filename}")
-    # plt.close()
-
-
-if __name__ == '__main__':
-    goodput_cache_path = "goodput_dict.pkl"
-    if os.path.exists(goodput_cache_path):
-        print("Loading goodput dictionary from cache.")
-        with open(goodput_cache_path, "rb") as f:
-            goodput_dict = pickle.load(f)
-    else:
-        print("Generating goodput dictionary...")
-        global_profile_state = GlobalProfileState()
-        with open(CKP_PATH, "rb") as f:
-            global_profile_state.load(f)
-        goodput_dict = load_goodput_function(global_profile_state)
-        with open(goodput_cache_path, "wb") as f:
-            pickle.dump(goodput_dict, f)
-        print(f"Goodput dictionary saved to {goodput_cache_path}")
-
-    if goodput_dict:
-        app_to_plot = "bert"
-        epoch_to_plot = 0
-        plot_goodput_curve(goodput_dict, app_to_plot, epoch_to_plot)
-
-    # # print(goodput_dict)
-    # width = get_width(goodput_dict, BUDGET)
-    # print(width)
-
-
-
-
+for i in range(30):
+    print("epoch", i, "duration", 50000 / goodput_functions['cifar10'][i][allocation['cifar10'][i]])

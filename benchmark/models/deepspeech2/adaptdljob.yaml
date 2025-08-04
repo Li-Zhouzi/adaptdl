@@ -20,7 +20,7 @@ spec:
         - --lr=0.12
         - --learning-anneal=1.02
         - --momentum=0.95
-        - --epochs=30
+        - --epochs=15
         env:
         - name: PYTHONUNBUFFERED
           value: "true"
