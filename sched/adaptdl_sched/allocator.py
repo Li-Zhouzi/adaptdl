@@ -49,7 +49,7 @@ class AdaptDLAllocator(object):
 
         # Select the policy to use
         # Options: "pollux", "dummy", "fixed-width"
-        SELECTED_POLICY = "fixed-width"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+        SELECTED_POLICY = "dummy"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
 
         # Width fetching configuration
         self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
@@ -60,7 +60,7 @@ class AdaptDLAllocator(object):
             self._policy = PolluxPolicy()
             self._policy_type = "pollux"
         elif SELECTED_POLICY == "dummy":
-            self._policy = DummyPolicy(num_gpus_per_job=8) # Configure dummy as needed
+            self._policy = DummyPolicy(num_gpus_per_job=16) # Configure dummy as needed
             self._policy_type = "dummy"
         elif SELECTED_POLICY == "fixed-width":
             # Initialize with None width, will be fetched later
@@ -363,6 +363,7 @@ class AdaptDLAllocator(object):
         return job_infos, allocations
 
     def _allocate(self, jobs, nodes, prev_allocations, node_template):
+        unschedulable_jobs = []
         for job_key in list(jobs):
             job_resources = jobs[job_key].resources
             for node in nodes.values():
@@ -374,9 +375,10 @@ class AdaptDLAllocator(object):
                 # No node can fit a replica of this job.
                 # TODO: propagate this to the controller so the job is Failed.
                 LOG.warning("Job %s cannot be scheduled!", job_key)
+                unschedulable_jobs.append(job_key)
                 jobs.pop(job_key)
         allocations = {}
-        if not jobs:
+        if not jobs and not unschedulable_jobs:
             # There are no jobs, let the expander shrink the cluster.
             self._cluster_expander.fit([])
         elif jobs and nodes:
@@ -390,7 +392,7 @@ class AdaptDLAllocator(object):
                     active_nodes.append(f"~{desired_nodes-len(active_nodes)}")
             self._cluster_expander.fit(active_nodes)
             LOG.info("Active nodes: %s", active_nodes)
-        elif jobs:
+        elif jobs or unschedulable_jobs:
             # Expand job ASG from zero nodes.
             # Assumption is AdaptDL is running on a different ASG
             self._cluster_expander.fit(['~1'])

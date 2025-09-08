@@ -26,7 +26,7 @@ class Application(object):
         self.gradient_accumulation = gradient_accumulation
         self.dataset_size = dataset_size
         if self.name == "cifar10":
-            self.rescale_time = 50
+            self.rescale_time = 60
         elif self.name == "deepspeech2":
             self.rescale_time = 25
         elif self.name == "bert":
@@ -42,7 +42,7 @@ class Application(object):
 
 APPLICATIONS = {
     "bert": Application("bert", init_batch_size=4, max_batch_size=384, min_local_bsz=4, max_local_bsz=12, max_epochs=1, gradient_accumulation=True, dataset_size=97077),
-    "cifar10": Application("cifar10", init_batch_size=128, max_batch_size=4096, min_local_bsz=32, max_local_bsz=1024, max_epochs=30, gradient_accumulation=True, dataset_size=50000),
+    "cifar10": Application("cifar10", init_batch_size=128, max_batch_size=4096, min_local_bsz=32, max_local_bsz=1024, max_epochs=100, gradient_accumulation=True, dataset_size=50000),
     "ncf": Application("ncf", init_batch_size=256, max_batch_size=32768, min_local_bsz=32, max_local_bsz=32768, max_epochs=10, gradient_accumulation=True, dataset_size=1000000),
     "imagenet": Application("imagenet", init_batch_size=20, max_batch_size=12800, min_local_bsz=20, max_local_bsz=200, max_epochs=90, gradient_accumulation=True, dataset_size=1281167),
     "deepspeech2": Application("deepspeech2", init_batch_size=20, max_batch_size=640, min_local_bsz=10, max_local_bsz=80, max_epochs=15, gradient_accumulation=True, dataset_size=4074),
@@ -51,12 +51,12 @@ APPLICATIONS = {
 
 NUM_GPU_PER_NODE = 1
 ARRIVAL_RATE = {
-    "cifar10": 1.0,
-    "deepspeech2": 0.0,
-    "ncf": 0.0,
-    "imagenet": 0.0,
+    "cifar10": 0.0023151887148010553,
     "yolov3": 0.0,
+    "deepspeech2": 0.0,
+    "imagenet": 0.0,
     "bert": 0.0,
+    "ncf": 0.0,
 }
 
 # need perf_params and grad_params, size for each app and epoch

@@ -164,7 +164,7 @@ def main():
     Main function to analyze workload and update configs.
     """
     # Default paths
-    workload_file = "./benchmark/workloads/workload-test3.csv"
+    workload_file = "./benchmark/workloads/workload-test.csv"
     configs_file = "./sched/adaptdl_sched/_configs.py"
     
     # Analyze the workload file

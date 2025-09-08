@@ -8,8 +8,13 @@ LOG.setLevel(logging.INFO)
 
 class DummyPolicy(object):
     def __init__(self, num_gpus_per_job=1):
-        self._num_gpus_per_job = num_gpus_per_job
-        LOG.info(f"DummyPolicy initialized with {self._num_gpus_per_job} GPUs per job.")
+        # Support both single integer and list of integers
+        if isinstance(num_gpus_per_job, int):
+            self._num_gpus_per_job = [num_gpus_per_job]
+        else:
+            self._num_gpus_per_job = num_gpus_per_job
+        self._job_gpu_assignments = {}  # Track which job uses which GPU count
+        LOG.info(f"DummyPolicy initialized with GPU options: {self._num_gpus_per_job}")
 
     def allocate_job(self, job_info, nodes):
         """
@@ -36,14 +41,42 @@ class DummyPolicy(object):
 
     def optimize(self, jobs, nodes, prev_allocations, node_template):
         """
-        Optimizes allocations for all jobs by assigning a fixed number of GPUs per job.
-        First preserves existing allocations that already have the correct number of GPUs,
-        then assigns remaining jobs if resources are available.
+        Optimizes allocations for all jobs. Each job gets a fixed number of GPUs assigned
+        when it first enters the system (using the first available number from the options list).
+        This assignment stays fixed for the lifetime of the job.
         """
         new_allocations = {}
         # Track available GPUs on each node
         available_gpus = {node_name: node.resources.get("nvidia.com/gpu", 0) 
                          for node_name, node in nodes.items()}
+        
+        # Clean up assignments for jobs that no longer exist
+        jobs_to_remove = [job_key for job_key in self._job_gpu_assignments if job_key not in jobs]
+        for job_key in jobs_to_remove:
+            del self._job_gpu_assignments[job_key]
+        
+        # Assign GPU counts to new jobs
+        for job_key in jobs:
+            if job_key not in self._job_gpu_assignments:
+                # This is a new job, assign it a GPU count
+                # Find which GPU counts are currently in use
+                gpu_counts_in_use = set(self._job_gpu_assignments.values())
+                
+                # Find the first available GPU count from the options
+                assigned_gpu_count = None
+                for gpu_count in self._num_gpus_per_job:
+                    if gpu_count not in gpu_counts_in_use:
+                        assigned_gpu_count = gpu_count
+                        break
+                
+                if assigned_gpu_count is None:
+                    # All options are in use, default to the first option
+                    raise ValueError(f"Job {job_key}: All GPU counts in use, assigning {self._num_gpus_per_job[0]} GPUs (may share with other jobs)")
+                    assigned_gpu_count = self._num_gpus_per_job[0]
+                    LOG.warning(f"Job {job_key}: All GPU counts in use, assigning {assigned_gpu_count} GPUs (may share with other jobs)")
+                
+                self._job_gpu_assignments[job_key] = assigned_gpu_count
+                LOG.info(f"Job {job_key}: Assigned {assigned_gpu_count} GPUs")
         
         # First pass: preserve existing allocations that already have the correct number of GPUs
         for job_key, prev_alloc in prev_allocations.items():
@@ -57,10 +90,13 @@ class DummyPolicy(object):
                 raise ValueError(f"Job {job_key} requests 0 GPUs per replica.")
             assert gpus_per_replica == 1, f"Job {job_key} requests {gpus_per_replica} GPUs per replica, which is not 1."
                 
+            # Get the fixed GPU assignment for this job
+            target_gpu_count = self._job_gpu_assignments[job_key]
+            
             # Calculate total GPUs this job had in its previous allocation
             gpus_in_prev_alloc = len(prev_alloc) * gpus_per_replica
                 
-            if gpus_in_prev_alloc == self._num_gpus_per_job:
+            if gpus_in_prev_alloc == target_gpu_count:
                 # Check if this previous allocation can be preserved
                 can_preserve = True
                 # Count how many replicas were on each node in the previous allocation for this job
@@ -85,12 +121,15 @@ class DummyPolicy(object):
         # Second pass: assign remaining jobs
         for job_key, job_info in jobs.items():
             if job_key in new_allocations:
-                continue  # Already allocated or handled (e.g. 0-GPU job)
+                continue  # Already allocated
                 
             gpus_per_replica = job_info.resources.get("nvidia.com/gpu", 1)
             assert gpus_per_replica == 1, f"Job {job_key} requests {gpus_per_replica} GPUs per replica, which is not 1."
-                
-            num_replicas = self._num_gpus_per_job // gpus_per_replica        
+            
+            # Get the fixed GPU assignment for this job
+            target_gpu_count = self._job_gpu_assignments[job_key]
+            num_replicas = target_gpu_count // gpus_per_replica
+            
             # Try to allocate the job
             current_alloc = []
             for node_name, gpus in available_gpus.items():
@@ -104,8 +143,9 @@ class DummyPolicy(object):
                 LOG.warning(f"Job {job_key}: wanted {num_replicas} replicas, got {len(current_alloc)}")
         
         # Calculate desired number of nodes based on total GPUs needed
-        total_gpus_needed = len(jobs) * self._num_gpus_per_job
+        total_gpus_needed = sum(self._job_gpu_assignments.values())
         gpus_per_node = node_template.resources.get("nvidia.com/gpu", 1)
         desired_nodes = math.ceil(total_gpus_needed / gpus_per_node)        
-        LOG.info(f"DummyPolicy optimize results: {new_allocations}, desired_nodes: {desired_nodes}")
+        LOG.info(f"DummyPolicy optimize results: allocations={new_allocations}, "
+                f"gpu_assignments={self._job_gpu_assignments}, desired_nodes={desired_nodes}")
         return new_allocations, desired_nodes 

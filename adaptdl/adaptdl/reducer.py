@@ -74,6 +74,7 @@ class Reducer(object):
         # Keep retrying connection, because (1) the root pod might not have
         # a registered domain name yet, and (2) the root server socket might
         # not be bound yet.
+        from datetime import datetime
         exception_cnt = 0
         while True:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -85,9 +86,11 @@ class Reducer(object):
                 if (self._root_port == 0):
                     # waiting for server to get a valid port in local mode
                     raise ConnectionRefusedError
+                logger.info(f"[TIMING] rank {rank} attempting connection at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
                 logger.info(f"rank {rank} connecting to {root_host} "
                             f"on port {self._root_port}")
                 sock.connect((root_host, self._root_port))
+                logger.info(f"[TIMING] rank {rank} connected successfully at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
             except ConnectionRefusedError:
                 logger.warning("Could not connect to root, trying again...")
                 exception_cnt += 1
@@ -122,19 +125,25 @@ class Reducer(object):
         return Future(self, key)
 
     def _run_server(self, port, replicas):
+        from datetime import datetime
         try:
             listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            logger.info(f"[TIMING] Master binding socket at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
             listener.bind(("0.0.0.0", port))
             if port == 0:
                 # local mode
                 self._root_port = listener.getsockname()[1]
             listener.listen(replicas)
             # wait for connections from all clients
+            logger.info(f"[TIMING] Master ready for connections at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
             logger.info(f"Master waiting for connections on {port}")
             clients = [None] * replicas
             while None in clients:
+                logger.info(f"[TIMING] Master waiting for client connection at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
                 client = listener.accept()[0].makefile("rwb")
+                logger.info(f"[TIMING] Master accepted a client connection at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
                 rank = pickle.load(client)
+                logger.info(f"[TIMING] Client identified as rank {rank} at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
                 assert clients[rank] is None
                 clients[rank] = client
             # main server loop

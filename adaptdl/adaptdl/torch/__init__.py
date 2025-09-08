@@ -38,22 +38,35 @@ LOG.setLevel(logging.INFO)
 
 
 def init_process_group(backend):
+    import time
+    from datetime import datetime
+    
     url = adaptdl.env.supervisor_url()
     if url:
         key = adaptdl.env.job_id()
         group = adaptdl.env.num_restarts()
+        LOG.info(f"[TIMING] Querying supervisor for master address at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
+        LOG.info(f"[DEBUG] Supervisor URL: {url}, Job ID: {key}, Group: {group}")
         while True:
+            LOG.info(f"[DEBUG] Sending request to: {url}/discover/{key}/{group}")
             response = requests.get(url=f"{url}/discover/{key}/{group}")
             if response.status_code != 408:  # Timeout.
                 break
+            LOG.info(f"[DEBUG] Got timeout response, retrying...")
         response.raise_for_status()
         master_addr = response.json()[0]
+        LOG.info(f"[TIMING] Got master address from supervisor at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
+        LOG.info(f"[DEBUG] Master address discovered: {master_addr}")
     else:
         master_addr = adaptdl.env.master_addr()
+        LOG.info(f"[DEBUG] Using ADAPTDL_MASTER_ADDR: {master_addr}")
     master_port = adaptdl.env.master_port()
+    LOG.info(f"[DEBUG] Master port: {master_port}")
 
     # Initialize collective module.
+    LOG.info(f"[TIMING] Initializing collective module at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
     adaptdl.collective.initialize(master_addr, master_port)
+    LOG.info(f"[TIMING] Collective module initialized at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})")
 
     # Initialize torch.distributed.
     torch_port = adaptdl.collective.broadcast(portpicker.pick_unused_port())

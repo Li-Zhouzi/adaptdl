@@ -70,10 +70,13 @@ if __name__ == "__main__":
     while True:
         obj_list = objs_api.list_namespaced_custom_object(*obj_args)
         # Get node information
-        nodes = core_api.list_node()
-        total_nodes = len(nodes.items)
-        ready_nodes = sum(1 for node in nodes.items if any(condition.type == "Ready" and condition.status == "True" 
-                          for condition in node.status.conditions))
+        nodes = core_api.list_node().items
+        total_everything = len(nodes)
+        total_nodes = len(nodes)
+        ready_nodes = sum(
+            1 for n in nodes
+            if any(c.type == "Ready" and c.status == "True" for c in n.status.conditions)
+        )
         
         # Get pod information for all pods in the namespace
         pods = core_api.list_namespaced_pod(namespace)
@@ -97,7 +100,8 @@ if __name__ == "__main__":
             "submitted_jobs": [],
             "cluster_nodes": {
                 "total": total_nodes,
-                "ready": ready_nodes
+                "ready": ready_nodes,
+                "total_including_terminating": total_everything
             }
         }
         for obj in obj_list["items"]:

@@ -2,9 +2,12 @@ import json
 import sys
 import os
 import glob
+import math
 from datetime import datetime
 from collections import defaultdict
 import numpy as np
+
+NUM_GPU_PER_NODE = 4
 
 def process_single_log(log_file_path):
     """Process a single log file to extract metrics for dummy policy experiment."""
@@ -65,12 +68,15 @@ def process_single_log(log_file_path):
         total_nodes = cluster_nodes.get('total', 0)
         ready_nodes = cluster_nodes.get('ready', 0)
         
+        # Calculate expected nodes based on GPUs per node
+        expected_nodes = math.ceil(expected_gpus / NUM_GPU_PER_NODE)
+        
         # Track when total nodes reach expected count
-        if total_nodes >= expected_gpus and startup_metrics['total_nodes_timestamp'] is None:
+        if total_nodes >= expected_nodes and startup_metrics['total_nodes_timestamp'] is None:
             startup_metrics['total_nodes_timestamp'] = timestamp
             
         # Track when ready nodes reach expected count  
-        if ready_nodes >= expected_gpus and startup_metrics['ready_nodes_timestamp'] is None:
+        if ready_nodes >= expected_nodes and startup_metrics['ready_nodes_timestamp'] is None:
             startup_metrics['ready_nodes_timestamp'] = timestamp
         
         # Process job information
@@ -292,7 +298,7 @@ def main():
         print(f"{expected_gpus:<6} {node_prep:<18} {job_alloc:<18} {image_build:<18} {rescaling:<18}")
     else:
         # Process all files in default directory
-        directory = "./experiment_results/dummy/deepspeech2"
+        directory = "./experiment_results/dummy-12xlarge/cifar10"
         if not os.path.exists(directory):
             print(f"Error: Directory {directory} not found")
             sys.exit(1)

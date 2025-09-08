@@ -8,6 +8,6 @@ if [ -z "$POD_NAME" ]; then
     exit 1
 fi
 
-echo "Deleting global-profile-state file from pod: $POD_NAME"
+echo "Deleting job checkpoints file from pod: $POD_NAME"
 
 kubectl exec $POD_NAME -c global-profiler -- sh -c "rm -rf /pollux/checkpoint/pollux/checkpoint/*"

@@ -274,12 +274,12 @@ def _metrics_state():
         adaptdl.checkpoint.load_state(_METRICS_STATE)
 
     # else:
-    #     # Check if we need to refresh global profiler state (every 60 seconds)
-    #     current_time = time.time()
-    #     if current_time - _METRICS_STATE.last_fetch_global_time > 60.0:
-    #         print("retrieving global profiler state")
-    #         _load_global_profiler_state(_METRICS_STATE)
-    #         _METRICS_STATE.last_fetch_global_time = current_time
+        # Check if we need to refresh global profiler state (every 60 seconds)
+        # current_time = time.time()
+        # if current_time - _METRICS_STATE.last_fetch_global_time > 60.0:
+        #     print("retrieving global profiler state")
+        #     _load_global_profiler_state(_METRICS_STATE)
+        #     _METRICS_STATE.last_fetch_global_time = current_time
     
     return _METRICS_STATE
 
@@ -360,7 +360,7 @@ def post_global_profile(profile_data, application="default"):
         application (str): Application identifier for the global profiler
     """
     url = adaptdl.env.global_profiler_url()
-    print("sent profile to global profiler, url: ", url, application, profile_data)
+    # print("sent profile to global profiler, url: ", url, application, profile_data)
     if not url or url == "":
         return  # skip if global profiler URL is not set
     

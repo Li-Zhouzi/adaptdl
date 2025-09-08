@@ -1,0 +1,41 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: adaptdl-eks-cluster
+  region: us-east-1
+
+nodeGroups:
+  - name: 12xlarge-cifar-self
+    instanceType: g4dn.12xlarge
+    desiredCapacity: 0
+    minSize: 0
+    maxSize: 4
+
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        efs: true
+    ssh:
+      allow: true
+    tags:
+      Owner: "example-owner"
+      Team: "example-team"
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/adaptdl-eks-cluster: "owned"
+
+    # <-- your snapshot AMI here
+    amiFamily: AmazonLinux2
+    ami: ami-0c9cffa5d7ae29949
+
+    # required when you set a custom AMI for AL2
+    overrideBootstrapCommand: |
+      #!/bin/bash
+      /etc/eks/bootstrap.sh adaptdl-eks-cluster
+
+
+cloudWatch:
+    clusterLogging:
+        # enable specific types of cluster control plane logs
+        enableTypes: ["*"]
+        # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
+        # supported special values: "*" and "all"

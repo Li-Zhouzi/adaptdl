@@ -1,4 +1,10 @@
 '''Train CIFAR10 with PyTorch.'''
+import time
+from datetime import datetime
+
+# Log Python script start time
+print(f"[TIMING] Python main.py started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -25,7 +31,7 @@ from adaptdl.torch._metrics import report_train_metrics, report_valid_metrics
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--bs', default=128, type=int, help='batch size')
 parser.add_argument('--lr', default=0.08, type=float, help='learning rate')
-parser.add_argument('--epochs', default=30, type=int, help='number of epochs')
+parser.add_argument('--epochs', default=100, type=int, help='number of epochs')
 parser.add_argument('--model', default='ResNet18', type=str, help='model')
 args = parser.parse_args()
 
@@ -45,16 +51,20 @@ transform_test = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
+print(f"[TIMING] Loading training dataset at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 trainset = torchvision.datasets.CIFAR10(root="/mnt", train=True, download=False, transform=transform_train)
 print("trainset length:", len(trainset))
+print(f"[TIMING] Creating AdaptiveDataLoader at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 trainloader = adaptdl.torch.AdaptiveDataLoader(trainset, batch_size=args.bs, shuffle=True, num_workers=2, drop_last=True)
 trainloader.autoscale_batch_size(4096, local_bsz_bounds=(32, 1024),
                                  gradient_accumulation=True)
 
+print(f"[TIMING] Loading validation dataset at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 validset = torchvision.datasets.CIFAR10(root="/mnt", train=False, download=False, transform=transform_test)
 validloader = adaptdl.torch.AdaptiveDataLoader(validset, batch_size=100, shuffle=False, num_workers=2)
 
 # Model
+print(f"[TIMING] Building model at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 print('==> Building model..')
 net = eval(args.model)()
 # net = VGG('VGG19')
@@ -69,18 +79,35 @@ net = eval(args.model)()
 # net = ShuffleNetG2()
 # net = SENet18()
 # net = ShuffleNetV2(1)
+print(f"[TIMING] Moving model to device at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 net = net.to(device)
 if device == 'cuda':
     cudnn.benchmark = True
 
+print(f"[TIMING] Creating optimizer and scheduler at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 criterion = nn.CrossEntropyLoss()
 #optimizer = optim.SGD([{"params": [param]} for param in net.parameters()],
 optimizer = optim.SGD(net.parameters(),
                       lr=args.lr, momentum=0.9, weight_decay=5e-4)
 lr_scheduler = ExponentialLR(optimizer, 0.0133 ** (1.0 / args.epochs))
 
+# Log environment variables to debug master address
+print(f"[DEBUG] Environment variables at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}", flush=True)
+print(f"[DEBUG] ADAPTDL_MASTER_ADDR: {os.getenv('ADAPTDL_MASTER_ADDR', 'NOT SET')}", flush=True)
+print(f"[DEBUG] ADAPTDL_MASTER_PORT: {os.getenv('ADAPTDL_MASTER_PORT', 'NOT SET')}", flush=True)
+print(f"[DEBUG] ADAPTDL_SUPERVISOR_URL: {os.getenv('ADAPTDL_SUPERVISOR_URL', 'NOT SET')}", flush=True)
+print(f"[DEBUG] ADAPTDL_REPLICA_RANK: {os.getenv('ADAPTDL_REPLICA_RANK', 'NOT SET')}", flush=True)
+print(f"[DEBUG] ADAPTDL_NUM_REPLICAS: {os.getenv('ADAPTDL_NUM_REPLICAS', 'NOT SET')}", flush=True)
+print(f"[DEBUG] ADAPTDL_JOB_ID: {os.getenv('ADAPTDL_JOB_ID', 'NOT SET')}", flush=True)
+print(f"[DEBUG] ADAPTDL_NUM_RESTARTS: {os.getenv('ADAPTDL_NUM_RESTARTS', 'NOT SET')}", flush=True)
+
+print(f"[TIMING] Calling init_process_group at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 adaptdl.torch.init_process_group("nccl")
+print(f"[TIMING] init_process_group completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+
+print(f"[TIMING] Creating AdaptiveDataParallel at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 net = adaptdl.torch.AdaptiveDataParallel(net, optimizer, lr_scheduler)
+print(f"[TIMING] AdaptiveDataParallel created at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 
 # Training
 def train(epoch):
@@ -133,6 +160,8 @@ def valid(epoch):
         report_valid_metrics(epoch, stats["loss_avg"], accuracy=stats["accuracy"])
         print("Valid:", stats)
 
+
+print(f"[TIMING] Initialization complete, starting training loop at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 
 with SummaryWriter(os.getenv("ADAPTDL_TENSORBOARD_LOGDIR", "/tmp")) as writer:
     for epoch in adaptdl.torch.remaining_epochs_until(args.epochs):

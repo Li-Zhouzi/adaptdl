@@ -28,22 +28,53 @@ def _get_speedup_and_size(goodput_dict):
     # Only process applications with positive arrival rates
     active_apps = {app for app in ARRIVAL_RATE.keys() if ARRIVAL_RATE[app] > 0}
     
+    # Determine the maximum GPU count across all applications and epochs
+    max_gpu_count = 1
+    for app in goodput_dict.keys():
+        if app not in active_apps:
+            continue
+        for epoch_str, replica_goodputs in goodput_dict[app].items():
+            epoch = int(epoch_str)
+            if epoch >= APPLICATIONS[app].max_epochs:
+                continue
+            for replica_str in replica_goodputs.keys():
+                replica = int(replica_str)
+                max_gpu_count = max(max_gpu_count, replica)
+    
+    LOG.info(f"Maximum GPU count found in goodput data: {max_gpu_count}")
+    
     for app in goodput_dict.keys():
         # Skip applications with zero arrival rate
         if app not in active_apps:
             continue
         speedup_dict[app] = dict()
         size_dict[app] = dict()
+        
         for epoch_str, replica_goodputs in goodput_dict[app].items():
             epoch = int(epoch_str)
             if epoch >= APPLICATIONS[app].max_epochs:
                 continue
             speedup_dict[app][epoch] = dict()
+            
+            # Get base goodput (1 GPU)
             base_goodput = replica_goodputs.get(1) or replica_goodputs.get('1')
-            for replica_str, goodput in replica_goodputs.items():
-                replica = int(replica_str)
-                speedup_dict[app][epoch][replica] = goodput / base_goodput
+            if base_goodput is None or base_goodput == 0:
+                LOG.warning(f"No valid base goodput (1 GPU) for {app} epoch {epoch}, skipping")
+                continue
+            
+            # Fill in all GPU counts from 1 to max_gpu_count
+            for replica in range(1, max_gpu_count + 1):
+                if replica in replica_goodputs or str(replica) in replica_goodputs:
+                    # Use actual goodput if available
+                    goodput = replica_goodputs.get(replica) or replica_goodputs.get(str(replica))
+                    speedup_dict[app][epoch][replica] = goodput / base_goodput
+                else:
+                    # Use 0.3 goodput for missing GPU counts (makes them infeasible)
+                    speedup_dict[app][epoch][replica] = 0.3
+                    LOG.debug(f"Missing {replica} GPU data for {app} epoch {epoch}, using 0 goodput")
+            
             size_dict[app][epoch] = global_progress[app][epoch] / base_goodput
+    
     return speedup_dict, size_dict
 
 
