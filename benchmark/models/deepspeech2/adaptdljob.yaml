@@ -33,9 +33,9 @@ spec:
             nvidia.com/gpu: 1
             cpu: 10
             memory: "40G"
-          volumeMounts:
-          - name: data
-            mountPath: /mnt
+        volumeMounts:
+        - name: data
+          mountPath: /mnt
       volumes:
       - name: data
         hostPath:
