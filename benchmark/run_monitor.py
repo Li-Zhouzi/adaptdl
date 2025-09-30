@@ -76,6 +76,7 @@ if __name__ == "__main__":
         ready_nodes = sum(
             1 for n in nodes
             if any(c.type == "Ready" and c.status == "True" for c in n.status.conditions)
+            and not n.spec.unschedulable  # Exclude nodes with scheduling disabled
         )
         
         # Get pod information for all pods in the namespace

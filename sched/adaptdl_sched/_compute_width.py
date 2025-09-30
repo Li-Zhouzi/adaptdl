@@ -71,7 +71,7 @@ def _get_speedup_and_size(goodput_dict):
                 else:
                     # Use 0.3 goodput for missing GPU counts (makes them infeasible)
                     speedup_dict[app][epoch][replica] = 0.3
-                    LOG.debug(f"Missing {replica} GPU data for {app} epoch {epoch}, using 0 goodput")
+                    # LOG.debug(f"Missing {replica} GPU data for {app} epoch {epoch}, using 0 goodput")
             
             size_dict[app][epoch] = global_progress[app][epoch] / base_goodput
     
@@ -82,19 +82,24 @@ def _feasible_speedup(speedup_dict):
     # a speedup dictionary withonly feasible points. 
     # speedup_dict[application][epoch][replicas]=speedup
     feasible_sp_dict = dict()
+    # LOG.info(f"DEBUG: feasible")
     for app, list1 in speedup_dict.items():
         feasible_sp_dict[app] = dict()
         for epoch, list2 in list1.items():
             cleaned = dict()
             current = speedup_dict[app][epoch]
             
-            cleaned[1] = 1
-            idx = 1 # 1-idx has been cleaned
-            while idx < len(current.keys()):
+            cleaned[0] = 0
+            current[0] = 0 # just for filling the 0 point
+            idx = 0 # 1-idx has been cleaned
+            while idx < len(current.keys()) - 1: # here -1 because we artificially added the 0 point
                 highest_slope = 0
                 highest_slope_idx = None
                 # find the next point with highest slope
-                for j in range(idx + 1, len(current.keys()) + 1):
+                sorted_keys = sorted(current.keys())
+                for j in sorted_keys:
+                    if j <= idx:
+                        continue
                     slope = (current[j] - current[idx]) / (j - idx)
                     if slope > highest_slope:
                         highest_slope = slope
@@ -106,7 +111,7 @@ def _feasible_speedup(speedup_dict):
                 idx = highest_slope_idx
                 
             feasible_sp_dict[app][epoch] = cleaned
-            
+    # LOG.info(f"DEBUG: feasible_sp_dict: {feasible_sp_dict}")
     return feasible_sp_dict
 
 def _continuous_inv_speedup(speed_dict, application, epoch, k):
@@ -114,9 +119,9 @@ def _continuous_inv_speedup(speed_dict, application, epoch, k):
     x_data = np.array(list(data_dict.keys()), dtype=float)
     y_data = np.array(list(data_dict.values()), dtype=float)
 
-    if len(x_data) < 2 or len(y_data) < 2:
-        assert k < 1 + 0.001
-        return 1
+    # if len(x_data) < 2 or len(y_data) < 2:
+    #     assert y_data[0] < k < y_data[0] + 0.001
+    #     return x_data[0]
 
     def _pwl_function(x):
         slopes = (x_data[1:] - x_data[:-1]) / (y_data[1:] - y_data[:-1])
@@ -135,8 +140,8 @@ def _cons_term(speed_dict, application, epoch, z):
     x_data = np.array(list(data_dict.keys()), dtype=float)
     y_data = np.array(list(data_dict.values()), dtype=float)
     
-    if len(x_data) < 2 or len(y_data) < 2:
-        return 1
+    # if len(x_data) < 2 or len(y_data) < 2:
+    #     return 1
         # raise ValueError(f"Insufficient data points for application {application} at epoch {epoch}")
         
     sort_indices = np.argsort(x_data)
@@ -258,10 +263,10 @@ def _get_glue_list(arrival_dict, size_dict):
     # print("num_epochs_dict: ", num_epochs_dict)
     # Generate 30 random dictionaries
     glue_list = []
-    for _ in range(30):
+    for _ in range(50):
         glue_dict = {}
         for app_name, k in num_epochs_dict.items():
-            max_glue = math.ceil(k / 10)
+            max_glue = math.ceil(k / 5)
             glue_dict[app_name] = random.randint(1, max_glue)
         if glue_dict not in glue_list:
             glue_list.append(glue_dict)
@@ -351,8 +356,8 @@ def _compute_width_iter(application_rates, size_data, speedup_dict, b):
     total_budget = None
     running_b = b
     k_dict = None
-    while ((total_budget is None) or (total_budget > b)) and running_b > 0:
-        # print("running_b: ", running_b, flush=True)
+    while ((total_budget is None) or (total_budget > b)) and running_b > 0.5 * b:
+        # LOG.info(f"running_b: {running_b}")
         k_dict = _compute_width(
             application_rates, size_data, speedup_dict, running_b
         )

@@ -13,7 +13,7 @@ from adaptdl.goodput import GoodputFunction
 
 CKP_PATH = './checkpoint/global-profile-state'
 
-NUM_GPU_PER_NODE = 1 
+NUM_GPU_PER_NODE = 4
 
 def load_goodput_function(global_profile_state, return_predictions=False):
     """
@@ -299,13 +299,13 @@ if __name__ == '__main__':
     goodput_dict, predicted_dict = load_goodput_function(global_profile_state, return_predictions=True)
     
     # Print summary of profiled vs predicted goodput
-    print_goodput_summary(global_profile_state, predicted_dict)
+    # print_goodput_summary(global_profile_state, predicted_dict)
     
     # Save to cache
-    goodput_cache_path = "./our_utils/goodput_dict.pkl"
-    with open(goodput_cache_path, "wb") as f:
-        pickle.dump((goodput_dict, predicted_dict), f)
-    print(f"Goodput dictionary saved to {goodput_cache_path}")
+    # goodput_cache_path = "./our_utils/goodput_dict.pkl"
+    # with open(goodput_cache_path, "wb") as f:
+    #     pickle.dump((goodput_dict, predicted_dict), f)
+    # print(f"Goodput dictionary saved to {goodput_cache_path}")
     
     # Print available applications and epochs
     print("\nAvailable applications and epochs:")

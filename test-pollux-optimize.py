@@ -1,18 +1,5 @@
-# Copyright 2020 Petuum, Inc. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
+Nodes ={'ip-192-168-65-42.ec2.internal': {'cpu': 47659, 'ephemeral-storage': 76224326324, 'memory': 197280776192, 'nvidia.com/gpu': 4, 'pods': 228}, 'ip-192-168-81-63.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-85-151.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}}
+Jobs = {('adaptdl', 'bert-102'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'bert-119'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'bert-130'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'bert-152'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'bert-78'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'bert-85'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-101'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-105'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-106'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-111'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-115'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-116'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-118'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-122'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-125'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-128'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-129'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-131'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-132'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-134'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-136'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-138'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-140'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-142'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-145'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-146'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-147'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-151'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-154'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-49'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-53'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-54'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-56'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-57'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-63'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-65'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-67'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-69'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-75'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-79'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-80'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-83'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-84'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-86'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-90'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-92'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'cifar10-98'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-104'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-110'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-117'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-155'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-60'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-73'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-94'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-96'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}, ('adaptdl', 'deepspeech2-97'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
 import copy
 import logging
 import numpy as np
@@ -27,18 +14,10 @@ from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.operators.crossover.util import crossover_mask
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
+
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 
-# CHANGE HERE
-
-def get_cluster_sizes(states):
-    N = states.shape[-1]
-    cluster_sizes = np.amax(
-        np.where(np.any(states, axis=-2), np.arange(N) + 1, 0),
-        axis=-1,
-    )
-    return cluster_sizes
 
 class PolluxPolicy(object):
     def __init__(self):
@@ -49,35 +28,6 @@ class PolluxPolicy(object):
         self._min_util = 0.35
         self._max_util = 0.65
 
-    def allocate_job(self, job_info, nodes):
-        """
-        A simple strategy that find the first available node for a new job.
-        This method is intended to allocate a single arriving job. It expects
-        the node resources to take into account adaptdl and non-adaptdl pods.
-
-        Arguments:
-            job_info (JobInfo): JobInfo object of the job
-            nodes (dict): dict from node name to node_info
-
-        Returns:
-            list(str): allocation of the job,
-                e.g. [node name 0, node name 1, ...] if found available
-                     node, else an empty list.
-        """
-        job_resources = job_info.resources
-        min_replicas = max(job_info.min_replicas, 1)
-        node_list = []
-        nodes = self._sort_nodes(nodes)
-        for node_name, node in nodes.items():
-            # number of replica fit in this node
-            replica_this = min(node.resources.get(key, 0) // val
-                               for key, val in job_resources.items())
-            if replica_this >= min_replicas:
-                node_list = [node_name] * min_replicas
-                return node_list
-        else:
-            return []
-
     def _sort_nodes(self, nodes):
         return OrderedDict(  # Sort preemptible nodes last.
             sorted(nodes.items(), key=lambda kv: (kv[1].preemptible,
@@ -86,7 +36,7 @@ class PolluxPolicy(object):
     def _allocations_to_state(self, allocations, jobs, nodes):
         jobs_index = {key: idx for idx, key in enumerate(jobs)}
         nodes_index = {key: idx for idx, key in enumerate(nodes)}
-        state = np.zeros((len(jobs), len(nodes)), dtype=np.int)
+        state = np.zeros((len(jobs), len(nodes)), dtype=np.int64)
         for job_key, alloc in allocations.items():
             for node_key in (key for key in alloc if key in nodes_index):
                 state[jobs_index[job_key], nodes_index[node_key]] += 1
@@ -108,7 +58,7 @@ class PolluxPolicy(object):
         max_nodes = min(20, 2 * len(nodes))
         # === END MODIFICATION ===
         shape = (len(self._prev_states), len(jobs), max_nodes)
-        states = np.zeros(shape, dtype=np.int)
+        states = np.zeros(shape, dtype=np.int64)
         jobs_src = [i for i, key in enumerate(self._prev_jobs) if key in jobs]
         jobs_dst = [i for i, key in enumerate(jobs) if key in self._prev_jobs]
         placeholder = len(self._prev_nodes)  # Next placeholder node to copy.
@@ -136,25 +86,7 @@ class PolluxPolicy(object):
             return None
         return np.argmin(np.where(values[:, 1] <= max_nodes, values[:, 0], 0))
 
-    def _desired_nodes(self, states, utilities, values, nodes):
-        # CHANGE HERE. ORIGINAL VERSION:
-        # idx = self._select_result(values, len(nodes))
-        # if idx is not None and \
-        #         self._min_util <= utilities[idx] <= self._max_util:
-        #     return len(nodes)
-        # target_util = (self._min_util + self._max_util) / 2
-        # best_util = np.inf
-        # best_nodes = len(nodes)
-        # for util, (_, num_nodes) in zip(utilities, values):
-        #     if util < self._min_util:
-        #         continue
-        #     if np.isclose(util, best_util) and num_nodes > best_nodes:
-        #         best_nodes = num_nodes
-        #     if abs(util - target_util) < abs(best_util - target_util):
-        #         best_util = util
-        #         best_nodes = num_nodes
-        # return int(best_nodes)
-        # START MODIFICATION:
+    def _desired_nodes(self, utilities, values, nodes):
         idx = self._select_result(values, len(nodes))
         if idx is not None and \
                 self._min_util <= utilities[idx] <= self._max_util:
@@ -162,17 +94,15 @@ class PolluxPolicy(object):
         target_util = (self._min_util + self._max_util) / 2
         best_util = np.inf
         best_nodes = len(nodes)
-        for util, state in zip(utilities, states):
+        for util, (_, num_nodes) in zip(utilities, values):
             if util < self._min_util:
                 continue
-            num_nodes = get_cluster_sizes(state)
             if np.isclose(util, best_util) and num_nodes > best_nodes:
                 best_nodes = num_nodes
             if abs(util - target_util) < abs(best_util - target_util):
                 best_util = util
                 best_nodes = num_nodes
         return int(best_nodes)
-        # === END MODIFICATION ===
 
     def optimize(self, jobs, nodes, base_allocations, node_template):
         """
@@ -198,10 +128,6 @@ class PolluxPolicy(object):
 
         # A job is considered pinned if it's non-preemptible *and* already has
         # an allocation.
-        LOG.info("Here: ")
-        LOG.info(jobs)
-        LOG.info(nodes)
-        LOG.info(base_allocations)
         def ispinned(key, job):
             return not job.preemptible and base_allocations.get(key, []) != []
 
@@ -267,23 +193,22 @@ class PolluxPolicy(object):
         utilities = problem.get_cluster_utilities(states)
         # LOG.info(f"Utilities: {utilities}")
         # LOG.info(f"States: {states}")
-        desired_nodes = self._desired_nodes(states, utilities, values, nodes)
+        desired_nodes = self._desired_nodes(utilities, values, nodes)
         # import random
         # if random.random() < 0.5:
         #     desired_nodes = 2 # changed here to test autoscaling.
         idx = self._select_result(values, min(len(nodes), desired_nodes))
-        LOG.info("\n" + "-" * 80)
+        print("\n" + "-" * 80)
         for i, state in enumerate(states):
-            out = "Solution {}:\n".format(i)
-            out += "Selected index: {}\n".format(idx)
-            out += "{}\n".format(state)
-            out += "Value: {}\n".format(values[i].tolist())
-            out += "Utility: {}\n".format(utilities[i])
-            out += "-" * 80
-            LOG.info(out)
+            print("Solution: ", i)
+            print("Selected index: ", idx)
+            # for lines in state:
+            #     print(lines)
+            print("Value: ", values[i].tolist())
+            print("Utility: ", utilities[i])
+            print("-" * 80)
         return (self._state_to_allocations(states[idx], jobs, nodes)
                 if idx is not None else {}), desired_nodes
-
 
 class Problem(pymoo.core.problem.Problem):
     def __init__(self, jobs, nodes, base_state):
@@ -331,7 +256,7 @@ class Problem(pymoo.core.problem.Problem):
         shares = self._job_resources / np.sum(self._node_resources, axis=0)
         self._dominant_share = np.amax(shares, axis=1)
         # Upper bound each job: <replicas on node 0> <replicas on node 1> ...
-        self._max_replicas = np.zeros(base_state.shape, dtype=np.int)
+        self._max_replicas = np.zeros(base_state.shape, dtype=np.int64)
         for j, job in enumerate(jobs):
             for n, node in enumerate(nodes):
                 self._max_replicas[j, n] = min(
@@ -340,14 +265,14 @@ class Problem(pymoo.core.problem.Problem):
                     for rtype in rtypes if job.resources.get(rtype, 0) > 0)
         self._restart_penalty = 0.1
         # Lower bound each job by min_replicas from job spec
-        self._min_replicas = np.zeros(base_state.shape, dtype=np.int)
+        self._min_replicas = np.zeros(base_state.shape, dtype=np.int64)
         for j, job in enumerate(jobs):
             min_replicas = self._jobs[j].min_replicas
             for n, node in enumerate(nodes):
                 self._min_replicas[j, n] = min(min_replicas,
                                                self._max_replicas[j, n])
                 min_replicas -= self._min_replicas[j, n]
-        super().__init__(n_var=self._base_state.size, n_obj=2, type_var=np.int)
+        super().__init__(n_var=self._base_state.size, n_obj=2, type_var=np.int64)
 
     def _get_avail_resource(self, node_idx, node, rtype):
         # Cutoff node's maximum allowable resources by amount already used by
@@ -381,9 +306,11 @@ class Problem(pymoo.core.problem.Problem):
         mask = np.sum(states, axis=1) > 0
         # total (pop_size x num_rtypes): total amount of cluster resources.
         total = np.sum(np.expand_dims(mask, 2) * self._node_resources, axis=1)
+        print(f"Total: {total}")
         # alloc (pop_size x num_jobs x num_rtypes):
         #     amount of cluster resources allocated to each job.
         alloc = np.expand_dims(num_replicas, 2) * self._job_resources
+        print(f"Alloc: {alloc}")
         with np.errstate(divide="ignore", invalid="ignore"):
             # shares (pop_size x num_jobs x num_rtypes):
             #     resource shares for each job as a fraction of the cluster.
@@ -393,6 +320,7 @@ class Problem(pymoo.core.problem.Problem):
             utilities = np.where(num_replicas, speedups / num_replicas, 0.0)
         # Weighted average across all jobs for each rtype.
         utilities = np.sum(np.expand_dims(utilities, 2) * shares, axis=1)
+        print(f"Utilities: {utilities}")
         # Return the utilities for the best utilized rtypes.
         return np.amax(utilities, axis=1)  # Shape: (pop_size).
 
@@ -403,13 +331,11 @@ class Problem(pymoo.core.problem.Problem):
         for idx, job in enumerate(self._jobs):
             speedup.append(job.speedup_fn(
                 num_nodes[:, idx], num_replicas[:, idx]))
-        return np.stack(speedup, axis=1).astype(np.float)
+        return np.stack(speedup, axis=1).astype(float)
 
     def _get_cluster_sizes(self, states):
         sizes = np.arange(len(self._nodes)) + 1
-        cluster_sizes = np.amax(np.where(np.any(states, axis=-2), sizes, 0), axis=-1)
-        assert np.array_equal(cluster_sizes, get_cluster_sizes(states))
-        return cluster_sizes
+        return np.amax(np.where(np.any(states, axis=-2), sizes, 0), axis=-1)
 
     def _evaluate(self, states, out, *args, **kwargs):
         states = states.reshape(states.shape[0], *self._base_state.shape)
@@ -421,7 +347,7 @@ class Problem(pymoo.core.problem.Problem):
         restart_mask = np.any(states != self._base_state, axis=2)
         scaled_speedups[restart_mask] *= 1.0 - self._restart_penalty
         out["F"] = np.column_stack([-np.sum(scaled_speedups, axis=1),
-                                    -self.get_cluster_utilities(states)])
+                                    -self._get_cluster_utilities(states)])
                                     # self._get_cluster_sizes(states)])
 
     def _crossover(self, states, **kwargs):
@@ -492,7 +418,6 @@ class Problem(pymoo.core.problem.Problem):
         states[mask] = 0
         return pop.new("X", states.reshape(states.shape[0], -1))
 
-
 class Crossover(pymoo.core.crossover.Crossover):
     def __init__(self):
         super().__init__(n_parents=2, n_offsprings=2)
@@ -500,12 +425,251 @@ class Crossover(pymoo.core.crossover.Crossover):
     def _do(self, problem, states, **kwargs):
         return problem._crossover(states, **kwargs)
 
-
 class Mutation(pymoo.core.mutation.Mutation):
     def _do(self, problem, states, **kwargs):
         return problem._mutation(states, **kwargs)
 
-
 class Repair(pymoo.core.repair.Repair):
     def _do(self, problem, pop, **kwargs):
         return problem._repair(pop, **kwargs)
+
+
+def create_job_infos_from_global_state(jobs, global_profile_path="checkpoint/global-profile-state"):
+    """
+    Create JobInfo objects with speedup functions based on global profile state.
+
+    Args:
+        jobs: Dictionary of jobs with resource requirements
+        global_profile_path: Path to the global profile state file
+
+    Returns:
+        Dictionary of job_key -> JobInfo objects with speedup functions
+    """
+    import pickle
+    import sys
+    import os
+
+    # Add adaptdl to path if needed
+    sys.path.insert(0, '/Users/lizhouzi/Documents/GitHub/adaptdl/adaptdl')
+    sys.path.insert(0, '/Users/lizhouzi/Documents/GitHub/adaptdl/sched')
+
+    from adaptdl.goodput import GoodputFunction, PerfParams, GradParams
+    from adaptdl_sched.policy.speedup import SpeedupFunction
+    from adaptdl_sched._configs import APPLICATIONS
+    from adaptdl.global_profile_state import GlobalProfileState
+
+    # Load global profile state using the proper State.load() method
+    global_state = GlobalProfileState()
+    with open(global_profile_path, 'rb') as f:
+        global_state.load(f)
+
+    print(f"Global state type: {type(global_state)}")
+    print(f"Perf params keys: {list(global_state.global_perf_params.keys())}")
+    print(f"Grad params keys: {list(global_state.global_grad_params.keys())}")
+
+    perf_params_dict = global_state.global_perf_params
+    grad_params_dict = global_state.global_grad_params
+
+    print("==" * 10)
+    print(perf_params_dict)
+    print(grad_params_dict)
+    print("==" * 10)
+
+    class JobInfo:
+        def __init__(self, key, resources, min_replicas=1, max_replicas=64,
+                     preemptible=True, creation_timestamp=0, speedup_fn=None):
+            self.key = key
+            self.resources = resources
+            self.min_replicas = min_replicas
+            self.max_replicas = max_replicas
+            self.preemptible = preemptible
+            self.creation_timestamp = creation_timestamp
+            self.speedup_fn = speedup_fn
+
+    job_infos = {}
+
+    for i, (job_key, job_resources) in enumerate(jobs.items()):
+        # Extract job application name from key
+        if isinstance(job_key, tuple):
+            namespace, job_name = job_key
+            # Extract application type from job name (e.g., 'bert-102' -> 'bert')
+            app_name = job_name.split('-')[0]
+            job_str = f"{namespace}-{job_name}"
+
+
+        assert app_name in APPLICATIONS, f"App {app_name} not in APPLICATIONS config"
+
+        # Get parameters for this application
+        if app_name not in perf_params_dict:
+            raise ValueError(f"No perf_params for {app_name}")
+
+        perf_params = perf_params_dict[app_name]
+
+        # Get grad_params from epoch 0
+        if app_name not in grad_params_dict:
+            raise ValueError(f"No grad_params for {app_name}")
+
+        app_grad_params = grad_params_dict[app_name]
+        if 0 not in app_grad_params:
+            raise ValueError(f"No grad_params for epoch 0 in {app_name}")
+
+        grad_data = app_grad_params[0]  # Use epoch 0
+        grad_params = GradParams(sqr=grad_data[0], var=grad_data[1])
+
+        # Get application config for batch sizes
+        app_config = APPLICATIONS[app_name]
+
+        # Extract resources (remove 'pods' which is not needed)
+        resources = {k: v for k, v in job_resources.items() if k != 'pods'}
+
+        # Create goodput function and speedup function
+        goodput_fn = GoodputFunction(
+            perf_params,
+            grad_params,
+            app_config.init_batch_size
+        )
+        speedup_fn_obj = SpeedupFunction(
+            goodput_fn,
+            max_batch_size=app_config.max_batch_size,
+            atomic_bsz_range=(app_config.min_local_bsz, app_config.max_local_bsz),
+            accumulation=app_config.gradient_accumulation
+        )
+
+        # Create a wrapper that matches the expected signature
+        def make_speedup_fn(sf):
+            def speedup_fn(num_nodes, num_replicas):
+                return sf(num_nodes, num_replicas)
+            return speedup_fn
+
+        speedup_fn = make_speedup_fn(speedup_fn_obj)
+
+        job_infos[job_str] = JobInfo(
+            key=job_str,
+            resources=resources,
+            min_replicas=1,
+            max_replicas=64,  # Fixed reasonable max
+            preemptible=True,
+            creation_timestamp=i,
+            speedup_fn=speedup_fn
+        )
+
+    print(f"Created JobInfos for {len(job_infos)} jobs")
+
+
+    return job_infos
+
+
+# Test the optimize function with the Nodes and Jobs defined at the top
+if __name__ == "__main__":
+    # Create NodeInfo class for nodes
+    class NodeInfo:
+        def __init__(self, name, resources, preemptible=False):
+            self.name = name
+            self.resources = resources
+            self.preemptible = preemptible
+
+    # Convert Nodes to NodeInfo objects
+    nodes_dict = {}
+    for node_name, node_resources in Nodes.items():
+        # Remove 'pods' from resources as it's not a compute resource
+        resources = {k: v for k, v in node_resources.items() if k != 'pods'}
+        nodes_dict[node_name] = NodeInfo(
+            name=node_name,
+            resources=resources,
+            preemptible=False
+        )
+
+    # Create node template for autoscaling
+    first_node = list(Nodes.values())[0]
+    template_resources = {k: v for k, v in first_node.items() if k != 'pods'}
+    node_template = NodeInfo(
+        name="template",
+        resources=template_resources,
+        preemptible=False
+    )
+
+    # Create JobInfo objects with speedup functions from global profile state
+    print("Loading job profiles from global state...")
+    jobs_dict = create_job_infos_from_global_state(Jobs)
+
+    # Empty base allocations
+    base_allocations = {}
+
+    # Create policy and run optimization
+    policy = PolluxPolicy()
+
+    print("=" * 80)
+    print("POLLUX SCHEDULING OPTIMIZATION TEST")
+    print("=" * 80)
+    print(f"\nTotal Jobs to schedule: {len(jobs_dict)}")
+    print("Sample jobs:")
+    for i, (job_key, job) in enumerate(list(jobs_dict.items())[:5]):
+        print(f"  {job_key}: min={job.min_replicas}, max={job.max_replicas}")
+
+    print(f"\nTotal Nodes available: {len(nodes_dict)}")
+    print("Sample nodes (showing GPU capacity):")
+    for i, (node_key, node) in enumerate(list(nodes_dict.items())[:3]):
+        gpu_count = node.resources.get('nvidia.com/gpu', 0)
+        print(f"  {node_key}: GPUs={gpu_count}")
+
+    print("\n" + "=" * 80)
+    print("Running Pollux optimization with real speedup functions...")
+    print("=" * 80)
+
+    # Run the optimization
+    allocations, desired_nodes = policy.optimize(
+        jobs_dict, nodes_dict, base_allocations, node_template
+    )
+
+    print(f"\n\nOptimization Results:")
+    print(f"Desired number of nodes: {desired_nodes}/{len(nodes_dict)}")
+
+    # Count allocated jobs
+    allocated_jobs = [k for k, v in allocations.items() if v]
+    print(f"Jobs allocated: {len(allocated_jobs)}/{len(jobs_dict)}")
+
+    # Group by application type
+    app_allocations = {}
+    for job_key, allocation in allocations.items():
+        if allocation:
+            app_type = job_key.split('-')[1] if '-' in job_key else 'unknown'
+            if app_type not in app_allocations:
+                app_allocations[app_type] = []
+            app_allocations[app_type].append((job_key, len(allocation)))
+
+    print("\nAllocations by application type:")
+    for app_type in sorted(app_allocations.keys()):
+        jobs = app_allocations[app_type]
+        total_replicas = sum(r for _, r in jobs)
+        print(f"  {app_type}: {len(jobs)} jobs, {total_replicas} total replicas")
+
+    # Calculate GPU utilization
+    total_gpus_used = 0
+    total_gpus_available = 0
+    used_nodes = set()
+
+    for allocation in allocations.values():
+        used_nodes.update(allocation)
+
+    for node_key in used_nodes:
+        if node_key in nodes_dict:
+            node = nodes_dict[node_key]
+            total_gpus_available += node.resources.get('nvidia.com/gpu', 0)
+
+    for job_key, allocation in allocations.items():
+        if allocation:
+            job = jobs_dict[job_key]
+            gpus_per_replica = job.resources.get('nvidia.com/gpu', 0)
+            total_gpus_used += gpus_per_replica * len(allocation)
+
+    print(f"\nCluster utilization:")
+    print(f"  Nodes used: {len(used_nodes)}/{len(nodes_dict)}")
+    if total_gpus_available > 0:
+        gpu_util = (total_gpus_used / total_gpus_available) * 100
+        print(f"  GPU utilization: {total_gpus_used}/{total_gpus_available} ({gpu_util:.1f}%)")
+
+    total_cluster_gpus = sum(n.resources.get('nvidia.com/gpu', 0) for n in nodes_dict.values())
+    overall_gpu_util = (total_gpus_used / total_cluster_gpus) * 100 if total_cluster_gpus > 0 else 0
+    print(f"  Overall GPU usage: {total_gpus_used}/{total_cluster_gpus} ({overall_gpu_util:.1f}%)")
+
+

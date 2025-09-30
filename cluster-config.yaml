@@ -5,7 +5,7 @@ metadata:
   region: us-east-1
 
 managedNodeGroups:
-  - name: 12xlargeonlycifar
+  - name: 12xlarge-cbd-0916-2
     instanceTypes: ["g4dn.12xlarge"]
     desiredCapacity: 0
     minSize: 0
@@ -13,7 +13,7 @@ managedNodeGroups:
 
     # <-- your snapshot AMI here
     amiFamily: AmazonLinux2
-    ami: ami-0c9cffa5d7ae29949
+    ami: ami-0b38b9361060164d3
 
     # required when you set a custom AMI for AL2
     overrideBootstrapCommand: |

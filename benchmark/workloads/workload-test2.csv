@@ -1,4 +1,2 @@
 name,time,application,num_replicas,batch_size
-cifar10-0,1,cifar10,6,2048
-cifar10-1,4,cifar10,6,2048
-cifar10-2,6,cifar10,6,2048
+cifar10-999,5,cifar10,8,2048

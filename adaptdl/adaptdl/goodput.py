@@ -59,32 +59,9 @@ class GoodputFunction(object):
         self._grad_params = GradParams(*grad_params)
         self._init_batch_size = init_batch_size
 
-    def _convert_profile_keys(self, profile):
-        """
-        Convert profile keys to ensure they are hashable and compatible with lookup.
-        Converts numpy arrays in tuple keys to regular Python types.
-        
-        Args:
-            profile (dict): Profile dictionary that may contain numpy arrays in keys
-            
-        Returns:
-            dict: Profile dictionary with converted keys
-        """
-        if profile is None:
-            return None
-            
-        converted_profile = {}
-        for key, value in profile.items():
-            # Convert key if it's a tuple containing numpy arrays
-            if isinstance(key, tuple):
-                # Convert numpy arrays to regular Python types
-                converted_key = tuple(int(x) if hasattr(x, 'item') else x for x in key)
-            else:
-                converted_key = key
-            converted_profile[converted_key] = value
-        return converted_profile
-
     def __call__(self, num_nodes, num_replicas, atomic_bsz, accum_steps, profile=None):
+        if profile is not None:
+            raise "Discarded change: Goodput function takes profile as input"
         return self.evaluate(num_nodes, num_replicas, atomic_bsz, accum_steps, profile=profile)
 
     def evaluate(self, num_nodes, num_replicas, atomic_bsz, accum_steps, profile=None):
@@ -98,8 +75,6 @@ class GoodputFunction(object):
         # Convert profile keys to ensure compatibility with lookup
         if profile is not None:
             raise "Discarded change: Goodput function takes profile as input"
-
-        profile = self._convert_profile_keys(profile)
 
         # Throughput function is not vectorized, so we can't operate on arrays.
         # This is inefficient, but should be acceptable for now.

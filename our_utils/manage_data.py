@@ -164,7 +164,7 @@ def main():
     Main function to analyze workload and update configs.
     """
     # Default paths
-    workload_file = "./benchmark/workloads/workload-test.csv"
+    workload_file = "./benchmark/workloads/workload-1-cbd.csv"
     configs_file = "./sched/adaptdl_sched/_configs.py"
     
     # Analyze the workload file
@@ -183,6 +183,6 @@ def main():
         print(f"  {app_type}: {rate:.8f}")
 
 if __name__ == "__main__":
-    main()
-    # scale_workload_arrival_times("benchmark/workloads/workload-test.csv", 
-    #                             "benchmark/workloads/workload-test4.csv", 4)
+    # main()
+    scale_workload_arrival_times("benchmark/workloads/workload-test.csv", 
+                                "benchmark/workloads/workload-test4.csv", 0.1)

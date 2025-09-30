@@ -102,9 +102,9 @@ class WidthCalculator:
             return
         
         # Log the fetched goodput data for debugging
-        LOG.info(f"Fetched goodput data for applications: {list(goodput_dict.keys())}")
-        for app in goodput_dict.keys():
-            LOG.info(f"  Application {app} has {len(goodput_dict[app])} epochs")
+        # LOG.info(f"Fetched goodput data for applications: {list(goodput_dict.keys())}")
+        # for app in goodput_dict.keys():
+        #     LOG.info(f"  Application {app} has {len(goodput_dict[app])} epochs")
         
         try:
             width = get_width(goodput_dict, self.budget)

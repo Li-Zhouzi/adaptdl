@@ -107,17 +107,19 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
     if adaptdl.env.replica_rank() == 0:
         _report_global_profile(profile_data)
 
+    _update_grad_params_from_global_profiler(epoch)
+
     # Start here for job wise profile
-    if accumulation_step:
-        state.profile[key]["accum_step_time"] += step_time
-        state.profile[key]["accum_count"] += 1
-    else:
-        state.profile[key]["optim_step_time"] += step_time
-        state.profile[key]["optim_sync_time"] += state.sync_time
-        state.profile[key]["optim_count"] += 1
-    del state.atomic_bsz
-    del state.step_start
-    del state.sync_time
+    # if accumulation_step:
+    #     state.profile[key]["accum_step_time"] += step_time
+    #     state.profile[key]["accum_count"] += 1
+    # else:
+    #     state.profile[key]["optim_step_time"] += step_time
+    #     state.profile[key]["optim_sync_time"] += state.sync_time
+    #     state.profile[key]["optim_count"] += 1
+    # del state.atomic_bsz
+    # del state.step_start
+    # del state.sync_time
     # End here for job wise profile
 
     
@@ -125,7 +127,7 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
         if _PREV_REPORT is None:
             _PREV_REPORT = time.time()
         if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 1:
-            _fit_perf_params() # if type wise profile, comment this line
+            # _fit_perf_params() # if type wise profile, comment this line
             _report_sched_hints(epoch, batch_size)
             _PREV_REPORT = time.time()
 
@@ -134,11 +136,11 @@ _GRAD_PARAM_DICT = {}
 
 
 def update_grad_params(edp_key, grad_norm_sqr, grad_variance):
-    global _GRAD_PARAM_DICT
-    _GRAD_PARAM_DICT[edp_key] = np.asarray([grad_norm_sqr, grad_variance])
-    grad_params = sum(_GRAD_PARAM_DICT.values())
-    _metrics_state().grad_params = (grad_params[0], grad_params[1])
-
+    return # for now, skip the whole grad params update. Always use global grad params.
+    # global _GRAD_PARAM_DICT
+    # _GRAD_PARAM_DICT[edp_key] = np.asarray([grad_norm_sqr, grad_variance])
+    # grad_params = sum(_GRAD_PARAM_DICT.values())
+    # _metrics_state().grad_params = (grad_params[0], grad_params[1])
 
 def update_progress(progress):
     _metrics_state().progress = progress
@@ -239,6 +241,7 @@ class _MetricsState(adaptdl.checkpoint.State):
         self.progress = 0.0  # Progress in scale-invariant iterations.
         self.last_fetch_global_time = 0.0  # Track when we last fetched global profiler state
 
+
     def save(self, fileobj):
         pickle.dump(self.profile, fileobj)
         pickle.dump(self.perf_params, fileobj)
@@ -250,6 +253,7 @@ class _MetricsState(adaptdl.checkpoint.State):
         pickle.dump(self.progress, fileobj)
         pickle.dump(self.last_fetch_global_time, fileobj)
 
+        
     def load(self, fileobj):
         self.profile = pickle.load(fileobj)
         self.perf_params = pickle.load(fileobj)
@@ -265,6 +269,38 @@ class _MetricsState(adaptdl.checkpoint.State):
         except EOFError:
             self.last_fetch_global_time = 0.0
 
+def _update_grad_params_from_global_profiler(epoch):
+    """Update grad_params from global profiler state for the current application and epoch."""
+    # Check if global profiler state exists, if not retrieve it
+    if not hasattr(_load_global_profiler_state, '_GLOBAL_PROFILE_STATE') or \
+       _load_global_profiler_state._GLOBAL_PROFILE_STATE is None:
+        _load_global_profiler_state(_metrics_state())
+    
+    global_state = _load_global_profiler_state._GLOBAL_PROFILE_STATE
+    if global_state is None:
+        print("Global profile state not available")
+        return
+    
+    # Get application from job_id
+    application = adaptdl.env.job_id().split("-")[0].split("/")[-1]
+    
+    # Check if global_grad_params exists in the global state
+    if not hasattr(global_state, 'global_grad_params'):
+        print("global_grad_params not found in global state")
+        return
+    
+    # Look for grad_params for this application and epoch
+    if application in global_state.global_grad_params:
+        app_grad_params = global_state.global_grad_params[application]
+        if epoch in app_grad_params:
+            # Update the metrics state with the grad_params for this epoch
+            grad_params = app_grad_params[epoch]
+            _metrics_state().grad_params = (grad_params[0], grad_params[1])
+            # print(f"Updated grad_params for application {application}, epoch {epoch}: {grad_params}")
+        else:
+            print(f"No grad_params found for application {application}, epoch {epoch}")
+    else:
+        print(f"No grad_params found for application {application}")
 
 def _metrics_state():
     global _METRICS_STATE
@@ -272,6 +308,8 @@ def _metrics_state():
         _METRICS_STATE = _MetricsState()
         print("loading state")
         adaptdl.checkpoint.load_state(_METRICS_STATE)
+        print("retrieving global profiler state")
+        _load_global_profiler_state(_METRICS_STATE)
 
     # else:
         # Check if we need to refresh global profiler state (every 60 seconds)
@@ -319,13 +357,7 @@ def _load_global_profiler_state(metrics_state):
             print(f"Failed to load from global checkpoint: {e}")
             return
     else:
-        print("Global checkpoint path not found, trying default checkpoint path")
-        # Fallback to default checkpoint path
-        if adaptdl.checkpoint.load_state(global_state):
-            print("Loaded global profiler state from default checkpoint")
-        else:
-            print("No global profiler state found, using empty state")
-            return
+        raise Exception("Global checkpoint path not found")
     
     # Get application from job_id
     application = adaptdl.env.job_id().split("-")[0].split("/")[-1]

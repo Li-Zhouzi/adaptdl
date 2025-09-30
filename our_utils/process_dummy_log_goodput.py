@@ -14,11 +14,11 @@ NUM_GPU_PER_NODE = 4
 
 # Application configurations from _configs.py
 APPLICATIONS = {
-    "bert": {"dataset_size": 97077, "max_epochs": 1},
+    "bert": {"dataset_size": 97077, "max_epochs": 2},
     "cifar10": {"dataset_size": 50000, "max_epochs": 100},
     "ncf": {"dataset_size": 1000000, "max_epochs": 10},
     "imagenet": {"dataset_size": 1281167, "max_epochs": 90},
-    "deepspeech2": {"dataset_size": 4074, "max_epochs": 15},
+    "deepspeech2": {"dataset_size": 4074, "max_epochs": 80},
     "yolov3": {"dataset_size": 14041, "max_epochs": 50}
 }
 
@@ -52,8 +52,60 @@ def process_single_log(log_file_path):
     with open(log_file_path, 'r') as f:
         lines = f.readlines()
     
+    # For parallel mode, pre-determine job to GPU mapping
+    job_to_expected_gpus = {}
+    if is_parallel:
+        print(f"Pre-determining job-to-GPU mapping for parallel file: {filename}")
+        for i, line in enumerate(lines):
+            log_entry = json.loads(line.strip())
+            submitted_jobs = log_entry.get('submitted_jobs', [])
+            
+            # Check if we have exactly the expected number of jobs
+            if len(submitted_jobs) == len(expected_gpus_list):
+                # Check if their allocations match expected GPU list
+                allocations = [len(job.get('allocation', [])) for job in submitted_jobs]
+                allocations.sort()
+                expected_gpus_list_sorted = sorted(expected_gpus_list)
+                
+                if allocations == expected_gpus_list_sorted:
+                    print(f"Found matching allocation at line {i}: {allocations}")
+                    
+                    # Map each job to its GPU count
+                    for job in submitted_jobs:
+                        job_name = job['name']
+                        allocation_size = len(job.get('allocation', []))
+                        job_to_expected_gpus[job_name] = allocation_size
+                    
+                    # Verify for next 10 lines that jobs maintain correct allocations
+                    verification_passed = True
+                    for verify_i in range(i + 1, min(i + 11, len(lines))):
+                        verify_entry = json.loads(lines[verify_i].strip())
+                        for job in verify_entry.get('submitted_jobs', []):
+                            job_name = job['name']
+                            if job_name in job_to_expected_gpus:
+                                current_allocation = len(job.get('allocation', []))
+                                expected = job_to_expected_gpus[job_name]
+                                if current_allocation != expected:
+                                    verification_passed = False
+                                    break
+                        if not verification_passed:
+                            break
+                    
+                    if verification_passed:
+                        print(f"Verification passed. Job-to-GPU mapping: {job_to_expected_gpus}")
+                        break
+                    else:
+                        print(f"Verification failed, continuing search...")
+                        job_to_expected_gpus = {}
+        
+        if not job_to_expected_gpus:
+            pass  # Will handle this case in job processing
+    else:
+        # For non-parallel mode, all jobs get the same expected GPU count
+        single_expected_gpus = expected_gpus_list[0]
+    
     # Define threshold for monitor gap detection (e.g., 100 seconds)
-    MONITOR_GAP_THRESHOLD = 100  # seconds
+    MONITOR_GAP_THRESHOLD = 20  # seconds
     monitor_gaps = []  # List of (start_time, end_time) tuples
     
     # Track global first timestamp
@@ -75,6 +127,7 @@ def process_single_log(log_file_path):
             time_diff = timestamp - prev_timestamp
             
             if time_diff > MONITOR_GAP_THRESHOLD:
+                print(f"Monitor gap detected: {prev_timestamp} to {timestamp}")
                 monitor_gaps.append((prev_timestamp, timestamp))
         
         # Check cluster nodes
@@ -94,19 +147,14 @@ def process_single_log(log_file_path):
             if job_name not in jobs_data:
                 # Determine expected GPUs for this job
                 if is_parallel:
-                    # In parallel mode, try to match job allocation to expected GPU counts
-                    job_expected_gpus = None
-                    for gpu_count in expected_gpus_list:
-                        # Find the first stable allocation that matches
-                        if len(allocation) == gpu_count:
-                            job_expected_gpus = gpu_count
-                            break
-                    # If no match yet, store allocation for later determination
+                    # Use pre-computed mapping
+                    job_expected_gpus = job_to_expected_gpus.get(job_name)
                     if job_expected_gpus is None:
-                        job_expected_gpus = len(allocation) if allocation else None
+                        print(f"Warning: No expected GPU count found for job {job_name}")
+                        continue
                 else:
                     # In single mode, all jobs should have the same expected GPUs
-                    job_expected_gpus = expected_gpus_list[0]
+                    job_expected_gpus = single_expected_gpus
                 
                 jobs_data[job_name] = {
                     'epochs': {},
@@ -125,15 +173,6 @@ def process_single_log(log_file_path):
             job_info = jobs_data[job_name]
             epochs = job_info['epochs']
             startup_metrics = job_info['startup_metrics']
-            
-            # Update expected GPUs if we have a stable allocation
-            if job_info['expected_gpus'] is None and len(allocation) > 0:
-                job_info['expected_gpus'] = len(allocation)
-            elif job_info['expected_gpus'] != len(allocation) and len(allocation) > 0:
-                # Check if this is a more stable allocation
-                if len(allocation) in expected_gpus_list:
-                    job_info['expected_gpus'] = len(allocation)
-            
             job_expected_gpus = job_info['expected_gpus']
             
             # Track when allocation reaches expected count
@@ -166,32 +205,17 @@ def process_single_log(log_file_path):
                 epochs[epoch] = {
                     'first_seen': timestamp,
                     'last_seen': timestamp,
-                    'progress_history': [],
                     'allocation_history': [],
                     'is_affected': False,  # Mark if epoch is affected by scaling/gaps/wrong allocation
-                    'idle_time_at_end': 0,
                     'duration': 0,
-                    'max_allocation': 0,
-                    'reached_expected': False,  # Track if epoch ever reached expected GPUs
                     'has_monitor_gap': False,  # Mark if epoch was affected by monitor gap
                     'has_wrong_allocation': False,  # Mark if epoch had wrong GPU count
                     'has_rescaling': False,  # Mark if epoch had rescaling during execution
-                    'stable_start_time': None,  # When epoch reached stable allocation
-                    'stable_allocation_duration': 0  # Duration with correct allocation
                 }
             
             epoch_info = epochs[epoch]
             epoch_info['last_seen'] = timestamp
-            epoch_info['progress_history'].append((timestamp, progress))
             epoch_info['allocation_history'].append((timestamp, len(allocation)))
-            epoch_info['max_allocation'] = max(epoch_info['max_allocation'], len(allocation))
-            
-            # Check if this epoch reached expected GPU count
-            if job_expected_gpus and len(allocation) >= job_expected_gpus:
-                epoch_info['reached_expected'] = True
-                # Track when stable allocation started
-                if epoch_info['stable_start_time'] is None:
-                    epoch_info['stable_start_time'] = timestamp
             
             # Check for wrong allocation (not expected GPU count)
             if job_expected_gpus and len(allocation) != job_expected_gpus:
@@ -204,15 +228,27 @@ def process_single_log(log_file_path):
                 if prev_allocation_size != current_allocation_size:
                     epoch_info['has_rescaling'] = True
                 
-    # Mark epochs that were affected by monitor gaps for all jobs
+    # Mark epochs that were affected by monitor gaps for all jobs,
+    # and additionally mark the immediate next epoch as affected.
     for job_name, job_info in jobs_data.items():
         epochs = job_info['epochs']
+        direct_gap_epochs = set()
         for epoch_num, epoch_info in epochs.items():
             for gap_start, gap_end in monitor_gaps:
                 # If the epoch was active during a monitor gap
                 if epoch_info['first_seen'] <= gap_end and epoch_info['last_seen'] >= gap_start:
                     epoch_info['has_monitor_gap'] = True
+                    direct_gap_epochs.add(epoch_num)
                     break
+        # After identifying epochs directly overlapping gaps, mark the next epoch as affected as well
+        if direct_gap_epochs:
+            sorted_epochs = sorted(epochs.keys())
+            index_by_epoch = {e: i for i, e in enumerate(sorted_epochs)}
+            for e in sorted(direct_gap_epochs):
+                idx = index_by_epoch.get(e)
+                if idx is not None and idx + 1 < len(sorted_epochs):
+                    next_epoch = sorted_epochs[idx + 1]
+                    epochs[next_epoch]['has_monitor_gap'] = True
     
         # Calculate startup timing metrics for each job
         startup_metrics = job_info['startup_metrics']
@@ -227,12 +263,32 @@ def process_single_log(log_file_path):
             )
     
         # Calculate epoch durations and mark affected epochs
+        # First, get all timestamps for this job to find previous timestamps
+        all_timestamps = []
+        for epoch_data in epochs.values():
+            for timestamp, _ in epoch_data['allocation_history']:
+                all_timestamps.append(timestamp)
+        all_timestamps = sorted(set(all_timestamps))
+        
         for epoch_num, epoch_info in epochs.items():
-            epoch_info['duration'] = epoch_info['last_seen'] - epoch_info['first_seen']
+            # Find the timestamp just before this epoch started
+            first_seen = epoch_info['first_seen']
+            last_seen = epoch_info['last_seen']
             
-            # Calculate stable allocation duration
-            if epoch_info['stable_start_time'] is not None:
-                epoch_info['stable_allocation_duration'] = epoch_info['last_seen'] - epoch_info['stable_start_time']
+            # Find previous timestamp
+            prev_timestamp = None
+            for ts in all_timestamps:
+                if ts < first_seen:
+                    prev_timestamp = ts
+                else:
+                    break
+            
+            # Calculate duration as last_seen - previous_timestamp (or first_seen if no previous)
+            if prev_timestamp is not None:
+                epoch_info['duration'] = last_seen - prev_timestamp
+            else:
+                # No previous timestamp, fall back to original calculation
+                epoch_info['duration'] = last_seen - first_seen
             
             # Mark epoch as affected if any of the conditions are met
             epoch_info['is_affected'] = (
@@ -242,19 +298,16 @@ def process_single_log(log_file_path):
                 epoch_info['has_rescaling']            # Rescaling during epoch
             )
             
-            # Debug output for affected epochs
-            if epoch_info['is_affected']:
-                reasons = []
-                if epoch_num == 0:
-                    reasons.append("startup_epoch")
-                if epoch_info['has_wrong_allocation']:
-                    reasons.append("wrong_allocation")
-                if epoch_info['has_monitor_gap']:
-                    reasons.append("monitor_gap") 
-                if epoch_info['has_rescaling']:
-                    reasons.append("rescaling")
-                print(f"    Epoch {epoch_num} marked as affected: {', '.join(reasons)}")
     
+    if "cifar10" in log_file_path and "parallel" in filename:
+        job = jobs_data["cifar10-2"]
+        print(f"Total epochs found: {len(epochs)}")
+        for epoch_num, epoch_info in epochs.items():
+            if epoch_num != 30:
+                continue
+            print(f"Epoch {epoch_num}:")
+            print(f"  Duration: {epoch_info['duration']}")
+            print(f"  Is affected: {epoch_info['is_affected']}")
     return jobs_data
 
 def calculate_goodput(epochs, app_name, expected_gpus):
@@ -265,14 +318,48 @@ def calculate_goodput(epochs, app_name, expected_gpus):
     dataset_size = APPLICATIONS[app_name]["dataset_size"]
     goodputs = {}
     
+    # Debug: Print epoch details for bert
+    # if app_name == "bert":
+    #     print(f"\n=== BERT DEBUG: Job with {expected_gpus} GPUs ===")
+    #     print(f"Total epochs found: {len(epochs)}")
+    #     for epoch_num, epoch_info in epochs.items():
+    #         print(f"Epoch {epoch_num}:")
+    #         print(f"  Duration: {epoch_info['duration']}")
+    #         print(f"  Is affected: {epoch_info['is_affected']}")
+    #         print(f"  Has wrong allocation: {epoch_info['has_wrong_allocation']}")
+    #         print(f"  Has rescaling: {epoch_info['has_rescaling']}")
+    #         print(f"  Has monitor gap: {epoch_info['has_monitor_gap']}")
+    #         print(f"  Allocation history length: {len(epoch_info['allocation_history'])}")
+    #         if len(epoch_info['allocation_history']) > 0:
+    #             print(f"  First allocation: {epoch_info['allocation_history'][0]}")
+    #             print(f"  Last allocation: {epoch_info['allocation_history'][-1]}")
+    #     print("=" * 50)
+    
     for epoch_num, epoch_info in epochs.items():
         # Only calculate goodput for unaffected epochs
-        if not epoch_info['is_affected'] and epoch_info['duration'] > 0:
-            # Use stable allocation duration if available, otherwise use total duration
-            if epoch_info['stable_allocation_duration'] > 0:
-                goodput = dataset_size / epoch_info['stable_allocation_duration']
-            else:
-                goodput = dataset_size / epoch_info['duration']
+        # Special case: For bert, treat all epochs as unaffected
+        is_unaffected = not epoch_info['is_affected'] if app_name != "bert" else True
+        
+        if is_unaffected and epoch_info['duration'] > 0:
+            goodput = dataset_size / epoch_info['duration']
+            
+            # Debug suspicious goodput values
+            # if (epoch_num == 60 and expected_gpus == 12 and app_name == "cifar10"):
+            #     print(f"\nDEBUG: {app_name} epoch {epoch_num}, {expected_gpus} GPU:")
+            #     print(f"  Dataset size: {dataset_size}")
+            #     print(f"  Duration: {epoch_info['duration']} seconds")
+            #     print(f"  First seen: {epoch_info['first_seen']}")
+            #     print(f"  Last seen: {epoch_info['last_seen']}")
+            #     print(f"  Calculated goodput: {goodput:.2f} samples/sec")
+            #     print(f"  Allocation history length: {len(epoch_info['allocation_history'])}")
+            #     if len(epoch_info['allocation_history']) > 0:
+            #         print(f"  First allocation entry: {epoch_info['allocation_history'][0]}")
+            #         print(f"  Last allocation entry: {epoch_info['allocation_history'][-1]}")
+            #     print(f"  Is affected: {epoch_info['is_affected']}")
+            #     print(f"  Has wrong allocation: {epoch_info['has_wrong_allocation']}")
+            #     print(f"  Has rescaling: {epoch_info['has_rescaling']}")
+            #     print(f"  Has monitor gap: {epoch_info['has_monitor_gap']}")
+            
             goodputs[epoch_num] = goodput
     
     return goodputs
@@ -296,10 +383,6 @@ def build_goodput_dict(base_dir):
         # Get all GPU log files (both single and parallel)
         log_files = glob.glob(os.path.join(app_dir, "*gpu.txt"))
         
-        # Debug: Print found log files
-        print(f"\nFound log files for {app_name}:")
-        for f in sorted(log_files):
-            print(f"  - {os.path.basename(f)}")
         
         for log_file in sorted(log_files):
             jobs_data = process_single_log(log_file)
@@ -311,11 +394,7 @@ def build_goodput_dict(base_dir):
                 startup_metrics = job_info['startup_metrics']
                 
                 if expected_gpus is None:
-                    print(f"Warning: Could not determine expected GPUs for job {job_name} in {log_file}")
                     continue
-                
-                # Debug: Show what GPU count was extracted
-                print(f"  Job {job_name}: {expected_gpus} GPUs")
                 
                 # Extract base app name from job name (e.g., "cifar10-0" -> "cifar10")
                 job_app_name = job_name.rsplit('-', 1)[0]
@@ -323,6 +402,18 @@ def build_goodput_dict(base_dir):
                 # Make sure we're processing the right application
                 if job_app_name != app_name:
                     continue
+                
+                # Special handling for BERT job filtering
+                if app_name == 'bert':
+                    base_filename = os.path.basename(log_file)
+                    # Ignore the single-GPU bert-1 job entirely
+                    if job_name == 'bert-1':
+                        continue
+                    # For parallel_1_2_4 logs, ignore the 2-GPU entry
+                    if (base_filename.startswith('parallel_') and 
+                        '1_2_4gpu.txt' in base_filename and 
+                        expected_gpus == 2):
+                        continue
                 
                 goodputs = calculate_goodput(epochs, app_name, expected_gpus)
                 
@@ -358,18 +449,17 @@ def build_goodput_dict(base_dir):
     for app_name in goodput_dict:
         max_epochs = APPLICATIONS[app_name]["max_epochs"]
         
-        # Get affected epochs
+        # Get affected epochs (keep a copy for fill policy below)
         affected_epochs = goodput_dict[app_name].get('affected_epochs', set())
-        if affected_epochs:
-            print(f"\n{app_name}: Removing data for affected epochs: {sorted(affected_epochs)}")
+        affected_epochs_copy = set(affected_epochs)
         
-        # Remove all data for affected epochs
-        for epoch_num in list(affected_epochs):
-            if epoch_num in goodput_dict[app_name]:
-                del goodput_dict[app_name][epoch_num]
-                print(f"  Removed all GPU data for epoch {epoch_num}")
+        # Remove all data for affected epochs, except for bert where we keep them
+        if app_name != 'bert':
+            for epoch_num in list(affected_epochs):
+                if epoch_num in goodput_dict[app_name]:
+                    del goodput_dict[app_name][epoch_num]
         
-        # Clean up the affected_epochs tracking
+        # Clean up the affected_epochs tracking for all apps
         if 'affected_epochs' in goodput_dict[app_name]:
             del goodput_dict[app_name]['affected_epochs']
         
@@ -382,10 +472,8 @@ def build_goodput_dict(base_dir):
         
         if not all_gpu_counts:
             continue
-            
-        print(f"  Available GPU counts: {all_gpu_counts}")
         
-        # Fill missing epochs (including affected ones)
+        # Fill missing epochs (including affected ones) by copying from nearest neighbor with data
         for epoch in range(max_epochs):
             if epoch not in goodput_dict[app_name]:
                 goodput_dict[app_name][epoch] = {}
@@ -414,27 +502,21 @@ def build_goodput_dict(base_dir):
                                 found = True
                                 break
                     
-                    if found and epoch in affected_epochs:
-                        print(f"    Interpolated {gpu_count} GPUs for affected epoch {epoch}")
-        
-        # Summary of interpolated epochs
-        interpolated_epochs = [e for e in affected_epochs if e < max_epochs]
-        if interpolated_epochs:
-            print(f"  Interpolated {len(interpolated_epochs)} affected epochs: {sorted(interpolated_epochs)}")
     
     return goodput_dict, startup_times_dict
 
 def plot_goodput_functions(goodput_dict):
     """Create figure with 6 subplots showing goodput functions."""
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axes = plt.subplots(3, 3, figsize=(15, 10))
     axes = axes.flatten()
     
+    type_print = "bert"
     # Define which epochs to plot for each application
     plot_configs = [
-        ("cifar10", 0),
-        ("cifar10", 7),
-        ("cifar10", 15),("cifar10", 30),("cifar10", 60),
-        ("cifar10", 90)
+        (type_print, 0),
+        (type_print, 1),
+        ("cifar10", 1),("cifar10", 10),("cifar10", 30),("cifar10", 60),("deepspeech2", 1),("deepspeech2", 10),
+        ("deepspeech2", 50)
     ]
     
     for idx, (app_name, epoch) in enumerate(plot_configs):
@@ -515,13 +597,12 @@ def print_startup_times_table(startup_times_dict):
             print(f"{job_name:<15} {gpus:<6} {image_build:<18} {rescaling:<18}")
 
 def print_goodput_functions(goodput_dict):
-    """Print goodput functions in a copy-paste friendly format."""
+    """Print goodput functions in Python dictionary format."""
     print("\n" + "="*80)
-    print("GOODPUT FUNCTIONS (Copy-Paste Format)")
+    print("GOODPUT FUNCTIONS")
     print("="*80)
     
     # Print as Python dictionary
-    print("\n# Python Dictionary Format:")
     print("goodput_functions = {")
     for app_name in sorted(goodput_dict.keys()):
         max_epochs = APPLICATIONS[app_name]["max_epochs"]
@@ -533,57 +614,14 @@ def print_goodput_functions(goodput_dict):
                     print(f"        {epoch}: {dict(sorted(gpu_goodputs.items()))},")
         print("    },")
     print("}")
-    
-    # Print as table format for each application
-    print("\n# Table Format:")
-    for app_name in sorted(goodput_dict.keys()):
-        max_epochs = APPLICATIONS[app_name]["max_epochs"]
-        print(f"\n{app_name.upper()} Goodput Table (max_epochs={max_epochs}):")
-        print("-" * 60)
-        
-        # Get all epochs and GPU counts
-        all_epochs = [e for e in sorted(goodput_dict[app_name].keys()) if e < max_epochs]
-        all_gpus = set()
-        for epoch in all_epochs:
-            all_gpus.update(goodput_dict[app_name][epoch].keys())
-        all_gpus = sorted(list(all_gpus))
-        
-        if not all_gpus:
-            continue
-            
-        # Print header
-        header = "Epoch\\GPUs"
-        for gpu in all_gpus:
-            header += f"\t{gpu}"
-        print(header)
-        
-        # Print data
-        for epoch in all_epochs:
-            row = f"{epoch}"
-            for gpu in all_gpus:
-                if gpu in goodput_dict[app_name][epoch]:
-                    row += f"\t{goodput_dict[app_name][epoch][gpu]:.2f}"
-                else:
-                    row += "\t-"
-            print(row)
-    
-    # Print as CSV format
-    print("\n# CSV Format:")
-    for app_name in sorted(goodput_dict.keys()):
-        max_epochs = APPLICATIONS[app_name]["max_epochs"]
-        print(f"\n{app_name}_goodput.csv (max_epochs={max_epochs}):")
-        print("epoch,num_gpus,goodput")
-        for epoch in sorted(goodput_dict[app_name].keys()):
-            if epoch < max_epochs:  # Only include epochs up to max_epochs
-                for gpu, goodput in sorted(goodput_dict[app_name][epoch].items()):
-                    print(f"{epoch},{gpu},{goodput:.2f}")
 
 def main():
     # Allow passing base directory as command line argument
     if len(sys.argv) > 1:
         base_dir = sys.argv[1]
     else:
-        base_dir = "./experiment_results/dummy-goodput-12xlarge"
+        base_dir = "./experiment_results/dummy-cbd-0916"
+        # base_dir = "./experiment_results/dummy-goodput-12xlarge"
     
     if not os.path.exists(base_dir):
         print(f"Error: Directory {base_dir} not found")
@@ -591,7 +629,6 @@ def main():
         print(f"Default: ./experiment_results/dummy-goodput-12xlarge")
         sys.exit(1)
     
-    print(f"Processing all application logs from: {base_dir}")
     goodput_dict, startup_times_dict = build_goodput_dict(base_dir)
     
     # Print goodput functions in copy-paste format
@@ -601,9 +638,7 @@ def main():
     print_startup_times_table(startup_times_dict)
     
     # Create goodput plots
-    print("\nCreating goodput function plots...")
     plot_goodput_functions(goodput_dict)
-    print("Plots saved to goodput_functions.png")
 
 if __name__ == "__main__":
     main()

@@ -5,16 +5,19 @@ import time
 import re
 import signal
 import sys
+import math
 from datetime import datetime
 
 
-"""Should make sure that 1. the schedulers are running 2. Docker login is done 3. make sure the workload-test3 consists of only one job called {JOB_TYPE}-0 4. experiment_results/dummy directory exists"""
-"""If PARALLEL is True, make sure workload-test3 consists of len(NUM_GPU_LIST) jobs"""
+"""Should make sure that 1. the schedulers are running 2. Docker login is done 3. make sure the run_workload.sh consists of only one job called {JOB_TYPE}-0""" 
+"""4. experiment_results/{DIRECTORY_NAME} directory exists; 5. the nodegroup name is correct"""
+"""If PARALLEL is True, make sure workload-test3 consists of len(NUM_GPU_LIST) jobs, and make sure that sum(NUM_GPU_LIST) <= 8"""
 # Configuration - list of GPU counts to test
-NUM_GPU_LIST = [12, 16]
+NUM_GPU_LIST = [8,12,16]
 JOB_TYPE = "cifar10"  # Job type (e.g., "cifar10", "imagenet", "bert", etc.)
-DIRECTORY_NAME = "dummy-goodput-12xlarge"  # Directory name under experiment_results/
-PARALLEL = False  # If True, use the entire list as input to DummyPolicy; if False, run one by one
+DIRECTORY_NAME = "dummy-cbd-0916"  # Directory name under experiment_results/
+PARALLEL = False # If True, use the entire list as input to DummyPolicy; if False, run one by one
+NUM_GPU_PER_NODE = 4
 
 # Setup logging
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log.txt")
@@ -189,21 +192,21 @@ def run_single_experiment(num_gpu):
     # Step 2: Verify and update policy
     verify_and_update_policy(num_gpu)
     
-    # Step 3: Scale up the cluster
-    # log(f"\n✓ Scaling up cluster to {num_gpu} nodes...")
-    # if num_gpu == 4 or num_gpu == 6:
-    #     log(f"Skipping scaling up for {num_gpu} GPUs")
-    # else:
-    #     run_command([
-    #         "aws", "autoscaling", "update-auto-scaling-group",
-    #         "--auto-scaling-group-name", "eksctl-adaptdl-eks-cluster-nodegroup-ng-1-NodeGroup-Ld2yZvkxjom7",
-    #         "--desired-capacity", str(num_gpu)
-    #     ])
-    
-    # Step 4: Run helm update
+    # Step 3: Run helm update
     log("\n✓ Running helm update...")
     run_command(["./helm/update_adaptdl.sh"], shell=True, capture_output=False)
     time.sleep(60)  # Give it time to update
+
+    # Step 4: Scale up the cluster
+    if PARALLEL == False:
+        log(f"\n✓ Scaling up cluster to {num_gpu} nodes...")
+        num_nodes = math.ceil(num_gpu / NUM_GPU_PER_NODE)
+        run_command([
+            "aws", "autoscaling", "update-auto-scaling-group",
+            "--auto-scaling-group-name", "eks-12xlarge-cbd-0916-2-c4ccaacd-92bd-9c11-2b35-d306bd1051c9",
+            "--desired-capacity", str(num_nodes)
+        ])
+        time.sleep(120)
     
     # Step 5: Delete existing job
     log(f"\n✓ Deleting existing job {JOB_TYPE}-0...")
@@ -388,7 +391,7 @@ def main():
             
             run_command([
                 "aws", "autoscaling", "update-auto-scaling-group",
-                "--auto-scaling-group-name", "eks-12xlargeonlycifar-7ecc86b8-d4ee-d536-05ac-7e5b51bfcc15",
+                "--auto-scaling-group-name", "eks-12xlarge-cbd-0916-2-c4ccaacd-92bd-9c11-2b35-d306bd1051c9",
                 "--desired-capacity", "0"
             ])
 
