@@ -406,13 +406,18 @@ def build_goodput_dict(base_dir):
                 # Special handling for BERT job filtering
                 if app_name == 'bert':
                     base_filename = os.path.basename(log_file)
-                    # Ignore the single-GPU bert-1 job entirely
-                    if job_name == 'bert-1':
-                        continue
                     # For parallel_1_2_4 logs, ignore the 2-GPU entry
                     if (base_filename.startswith('parallel_') and 
                         '1_2_4gpu.txt' in base_filename and 
-                        expected_gpus == 2):
+                        (expected_gpus == 2 or expected_gpus == 4)):
+                        continue
+
+                if app_name == 'cifar10':
+                    base_filename = os.path.basename(log_file)
+                    # For parallel_1_2_4 logs, ignore the 2-GPU entry
+                    if (base_filename.startswith('parallel_') and 
+                        '1_2_4gpu.txt' in base_filename and 
+                        (expected_gpus == 4)):
                         continue
                 
                 goodputs = calculate_goodput(epochs, app_name, expected_gpus)

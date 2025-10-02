@@ -49,7 +49,7 @@ class AdaptDLAllocator(object):
 
         # Select the policy to use
         # Options: "pollux", "dummy", "fixed-width"
-        SELECTED_POLICY = "dummy"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+        SELECTED_POLICY = "pollux"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
 
         # Width fetching configuration
         self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
@@ -60,7 +60,7 @@ class AdaptDLAllocator(object):
             self._policy = PolluxPolicy()
             self._policy_type = "pollux"
         elif SELECTED_POLICY == "dummy":
-            self._policy = DummyPolicy(num_gpus_per_job=2) # Configure dummy as needed
+            self._policy = DummyPolicy(num_gpus_per_job=[8,12,16]) # Configure dummy as needed
             self._policy_type = "dummy"
         elif SELECTED_POLICY == "fixed-width":
             # Initialize with None width, will be fetched later
@@ -297,6 +297,8 @@ class AdaptDLAllocator(object):
         min_replicas = job["spec"].get("minReplicas", 0)
         # max_replicas should be greater or equal to min_replicas
         max_replicas = max(max_replicas, min_replicas)
+        # CHANGE HERE: Artificial cap: do not allow more than 16 replicas per job
+        max_replicas = min(max_replicas, 16)
         preemptible = job["spec"].get("preemptible", True)
         if {"perfParams", "initBatchSize"} <= hints.keys() and preemptible:
             max_batch_size = (hints.get("maxBatchSize")

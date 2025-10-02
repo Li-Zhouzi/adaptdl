@@ -64,10 +64,13 @@ class DummyPolicy(object):
                 
                 # Find the first available GPU count from the options
                 assigned_gpu_count = None
-                for gpu_count in self._num_gpus_per_job:
-                    if gpu_count not in gpu_counts_in_use:
-                        assigned_gpu_count = gpu_count
-                        break
+                if len(self._num_gpus_per_job) == 1:
+                    assigned_gpu_count = self._num_gpus_per_job[0]
+                else:
+                    for gpu_count in self._num_gpus_per_job:
+                        if gpu_count not in gpu_counts_in_use:
+                            assigned_gpu_count = gpu_count
+                            break
                 
                 if assigned_gpu_count is None:
                     # All options are in use, default to the first option
