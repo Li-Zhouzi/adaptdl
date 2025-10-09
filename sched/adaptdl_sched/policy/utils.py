@@ -37,6 +37,24 @@ class JobInfo(object):
         self.epoch = None
         self.application = None
 
+    def to_dict(self):
+        # speedup_fn may not be JSON-serializable; store a brief identifier
+        speedup_id = getattr(self.speedup_fn, "__class__", type(self.speedup_fn)).__name__
+        return {
+            "resources": dict(self.resources),
+            "creation_timestamp": getattr(self.creation_timestamp, "isoformat", lambda: str(self.creation_timestamp))(),
+            "min_replicas": int(self.min_replicas),
+            "max_replicas": int(self.max_replicas),
+            "preemptible": bool(self.preemptible),
+            "epoch": None if self.epoch is None else int(self.epoch),
+            "application": self.application,
+            "speedup_fn": speedup_id,
+        }
+
+    def __repr__(self):
+        d = self.to_dict().copy()
+        return f"JobInfo({d})"
+
 
 class NodeInfo(object):
     def __init__(self, resources, preemptible):
@@ -47,3 +65,13 @@ class NodeInfo(object):
         """
         self.resources = resources
         self.preemptible = preemptible
+
+    def to_dict(self):
+        return {
+            "resources": dict(self.resources),
+            "preemptible": bool(self.preemptible),
+        }
+
+    def __repr__(self):
+        d = self.to_dict().copy()
+        return f"NodeInfo({d})"

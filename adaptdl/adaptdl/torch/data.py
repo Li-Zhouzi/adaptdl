@@ -349,12 +349,14 @@ class AdaptiveDataLoaderHelper(object):
         yield
 
         # Don't profile the first batch since it may be slower.
-        # Allow profiling during epoch 0 even if training flag isn't set yet
+        # Allow profiling during epoch 0 even if training flag isn't set yet (I dont remember why we did this)
+        # I think probably because of bert? idk
         # Also force profiling if it's been more than 1 minute since last profile
         current_time = time.time()
         time_since_last_profile = current_time - self._last_profile_time
         
-        if (should_profile or time_since_last_profile > 60.0) and (self.training or current_epoch_val == 0) and self.current_index > self.current_batch_size and record:
+        # if (should_profile or time_since_last_profile > 60.0) and (self.training or current_epoch_val == 0) and self.current_index > self.current_batch_size and record:
+        if should_profile and self.training and self.current_index > self.current_batch_size and record:
             # print("profiling")
             self._last_profiled_epoch = current_epoch_val
             self._last_profiled_batch_size = self.current_batch_size

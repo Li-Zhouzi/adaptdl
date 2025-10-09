@@ -58,7 +58,7 @@ def get_effective_cluster_sizes(states):
     else:
         raise ValueError("states must be 2D or 3D array")
 
-USE_PROFILED_GOODPUT = True
+USE_PROFILED_GOODPUT = False
 profiled_goodput_functions = {
     'bert': {
         0: {1: 14.777758035005506, 2: 21.352068051613056, 4: 24.453647524136986, 8: 16.740192512369788, 12: 13.237639734844972, 16: 16.49061741344335},
@@ -294,6 +294,7 @@ class PolluxPolicy(object):
         # Utilization thresholds for cluster autoscaling.
         self._min_util = 0.35
         self._max_util = 0.65
+        self.target_util = (self._min_util + self._max_util) / 2
 
         self._min_nodes = 2
         self._max_nodes = 20
@@ -339,8 +340,9 @@ class PolluxPolicy(object):
         nodes_index = {key: idx for idx, key in enumerate(nodes)}
         state = np.zeros((len(jobs), len(nodes)), dtype=np.int)
         for job_key, alloc in allocations.items():
-            for node_key in (key for key in alloc if key in nodes_index):
-                state[jobs_index[job_key], nodes_index[node_key]] += 1
+            for node_key in nodes_index:
+                if node_key in alloc:
+                    state[jobs_index[job_key], nodes_index[node_key]] += 1
         return state
 
     def _state_to_allocations(self, state, jobs, nodes):
@@ -438,7 +440,7 @@ class PolluxPolicy(object):
         return int(best_nodes)
         # === END MODIFICATION ===
 
-    def optimize_without_scaling_up(self, jobs, nodes, base_allocations, node_template, for_autoscaling=False):
+    def optimize_without_scaling_up(self, jobs, nodes, base_allocations, node_template):
         """
         Run one optimization cycle of the Pollux scheduling policy.
         This method expects the node resources to only take into account
@@ -462,12 +464,7 @@ class PolluxPolicy(object):
 
         # A job is considered pinned if it's non-preemptible *and* already has
         # an allocation.
-        LOG.info("Here: ")
-        LOG.info(jobs)
-        LOG.info(nodes)
-        LOG.info(base_allocations)
-        def ispinned(key, job):
-            return not job.preemptible and base_allocations.get(key, []) != []
+        # Make logs explicit and reproducible
 
         # We sort the jobs based on min_replicas and then creation_timestamp,
         # so jobs wanting lower or no min_replicas guarantees are prioritized
@@ -476,11 +473,7 @@ class PolluxPolicy(object):
         # will follow FIFO order. Pinned jobs are aggregated at front because
         # they already have an allocation and won't affect allocations of the
         # rest of the jobs.
-        jobs = OrderedDict(sorted(jobs.items(),
-                                  key=lambda kv: (not ispinned(kv[0], kv[1]),
-                                                  kv[1].min_replicas,
-                                                  kv[1].creation_timestamp)))
-        nodes = self._sort_nodes(nodes)
+        
         # Original version:
         # base_state = np.concatenate(
         #     (self._allocations_to_state(base_allocations, jobs, nodes),
@@ -521,10 +514,9 @@ class PolluxPolicy(object):
         # === START MODIFICATION: Use max_total_nodes for reshape ===
         states = result.X.reshape(result.X.shape[0], len(jobs), max_total_nodes)
         # === END MODIFICATION ===
-        if not for_autoscaling:
-            self._prev_states = copy.deepcopy(states)
-            self._prev_jobs = copy.deepcopy(jobs)
-            self._prev_nodes = copy.deepcopy(nodes)
+        self._prev_states = copy.deepcopy(states)
+        self._prev_jobs = copy.deepcopy(jobs)
+        self._prev_nodes = copy.deepcopy(nodes)
         # Get the pareto front.
         nds = NonDominatedSorting().do(result.F, only_non_dominated_front=True)
         states = states[nds]
@@ -533,8 +525,9 @@ class PolluxPolicy(object):
         utilities = problem.get_cluster_utilities(states)
         # LOG.info(f"Utilities: {utilities}")
         # LOG.info(f"States: {states}")
-        desired_nodes = self._desired_nodes(states, utilities, values, nodes)
-        LOG.info(f"When optimizing: Current max nodes: {len(nodes)}, Desired nodes: {desired_nodes}")
+        # desired_nodes = self._desired_nodes(states, utilities, values, nodes)
+        # LOG.info(f"When optimizing: Current max nodes: {len(nodes)}, Desired nodes: {desired_nodes}")
+        desired_nodes = len(nodes)
         # import random
         # if random.random() < 0.5:
         #     desired_nodes = 2 # changed here to test autoscaling.
@@ -554,20 +547,35 @@ class PolluxPolicy(object):
         return (states[idx], utilities[idx]) if idx is not None else (None, None), desired_nodes # this returned desired nodes should never be used
 
     def get_true_utility_given_nodes(self, jobs, nodes, base_allocations, node_template):
-        (state, utility), _ = self.optimize_without_scaling_up(jobs, nodes, base_allocations, node_template, for_autoscaling=True)
+        (state, utility), _ = self.optimize_without_scaling_up(jobs, nodes, base_allocations, node_template)
         if state is not None:
-            true_utility = utility * get_cluster_sizes(state) / get_effective_cluster_sizes(state)
+            true_utility = utility / get_cluster_sizes(state) * get_effective_cluster_sizes(state)
             return true_utility
         return None
+    
+    def get_nodes_given_num_nodes(self, nodes, num_nodes, node_template):
+        new_nodes = {}
+        cnt = 0
+        for i in nodes.keys():
+            if cnt < num_nodes:
+                new_nodes[i] = nodes[i]
+                cnt += 1
+            else:
+                break
+        while cnt < num_nodes:
+            new_nodes["~placeholder-node-{}".format(cnt)] = node_template
+            cnt += 1
+        return new_nodes
 
     def autoscale(self, jobs, nodes, base_allocations, node_template):
+        LOG.info("Autoscaling optimization starting")
         target_utility = self.target_util
         min_nodes = self._min_nodes
         max_nodes = self._max_nodes
         num_nodes = len(nodes)
         while min_nodes + 1 < max_nodes:
-            utility = self.get_true_utility_given_nodes(jobs, nodes, base_allocations, node_template)
-            LOG.info(num_nodes, utility)
+            utility = self.get_true_utility_given_nodes(jobs, self.get_nodes_given_num_nodes(nodes, num_nodes, node_template), base_allocations, node_template)
+            LOG.info("Autoscale probe | nodes=%s utility=%s", num_nodes, utility)
             if utility < target_utility:
                 max_nodes = num_nodes
             elif utility > target_utility:
@@ -575,19 +583,39 @@ class PolluxPolicy(object):
             else:
                 break
             num_nodes = (min_nodes + max_nodes) // 2
-        min_util = self.get_true_utility_given_nodes(jobs, nodes, base_allocations, node_template)
-        max_util = self.get_true_utility_given_nodes(jobs, nodes, base_allocations, node_template)
+        min_util = self.get_true_utility_given_nodes(jobs, self.get_nodes_given_num_nodes(nodes, min_nodes, node_template), base_allocations, node_template)
+        max_util = self.get_true_utility_given_nodes(jobs, self.get_nodes_given_num_nodes(nodes, max_nodes, node_template), base_allocations, node_template)
 
         if abs(target_utility - min_util) <= abs(target_utility - max_util):
             wanted_nodes =  min_nodes
         else:
             wanted_nodes =  max_nodes
-        LOG.info("rescaled: ", wanted_nodes)
+        LOG.info("rescaled: %s", wanted_nodes)
         return wanted_nodes
 
     def optimize(self, jobs, nodes, base_allocations, node_template):
+        def ispinned(key, job):
+            return not job.preemptible and base_allocations.get(key, []) != []
+        jobs = OrderedDict(sorted(jobs.items(),
+                                  key=lambda kv: (not ispinned(kv[0], kv[1]),
+                                                  kv[1].min_replicas,
+                                                  kv[1].creation_timestamp)))
+        nodes = self._sort_nodes(nodes)
+        try:
+            jobs_log = {str(k): v.to_dict() if hasattr(v, "to_dict") else str(v)
+                        for k, v in jobs.items()}
+            nodes_log = {str(k): v.to_dict() if hasattr(v, "to_dict") else str(v)
+                         for k, v in nodes.items()}
+            base_allocations_log = {str(k): list(v) for k, v in base_allocations.items()}
+            node_template_log = node_template.to_dict() if hasattr(node_template, "to_dict") else str(node_template)
+            LOG.info("Pollux optimize inputs | jobs=%s", jobs_log)
+            LOG.info("Pollux optimize inputs | nodes=%s", nodes_log)
+            LOG.info("Pollux optimize inputs | base_allocations=%s", base_allocations_log)
+            LOG.info("Pollux optimize inputs | node_template=%s", node_template_log)
+        except Exception as e:
+            LOG.warning("Failed to serialize optimize inputs: %s", e)
         # STEP 1: Check whether autoscaling is needed.
-        (state, utility), _ = self.optimize_without_scaling_up(jobs, nodes, base_allocations, node_template, for_autoscaling=True)
+        (state, utility), _ = self.optimize_without_scaling_up(jobs, nodes, base_allocations, node_template)
         need_autoscaling = False
         if state is None:
             need_autoscaling = True
@@ -595,14 +623,15 @@ class PolluxPolicy(object):
         else:
             true_utility = utility * get_cluster_sizes(state) / get_effective_cluster_sizes(state)
             self.utility.append(true_utility)
-                if len(self.utility) > 2:
-                    self.utility.pop(0)
-                    avg_utility = sum(self.utility) / len(self.utility)
-                    if (len(nodes) > self._min_nodes and avg_utility < self.low_util) or \
-                            (len(nodes) < self._max_nodes and avg_utility > self.high_util):
-                        need_autoscaling = True
-                        self.utility.clear()
-                        LOG.info("Autoscaling Happening. Current avg utility: {}, Current max nodes: {}\n".format(avg_utility, len(nodes)))
+            LOG.info("Utility: %s", self.utility)
+            if len(self.utility) > 2:
+                self.utility.pop(0)
+                avg_utility = sum(self.utility) / len(self.utility)
+                if (len(nodes) > self._min_nodes and avg_utility < self._min_util) or \
+                        (len(nodes) < self._max_nodes and avg_utility > self._max_util):
+                    need_autoscaling = True
+                    self.utility.clear()
+                    LOG.info("Autoscaling Happening. Current avg utility: {}, Current max nodes: {}\n".format(avg_utility, len(nodes)))
         if not need_autoscaling:
             return self._state_to_allocations(state, jobs, nodes), len(nodes)
         else:
@@ -617,8 +646,8 @@ class PolluxPolicy(object):
                 cnt += 1
             else:
                 break
-        (state, utility), _ = self.optimize_without_scaling_up(jobs, new_nodes, base_allocations, node_template, for_autoscaling=False)
-        return self._state_to_allocations(state, jobs, nodes), wanted_nodes
+        (state, utility), _ = self.optimize_without_scaling_up(jobs, new_nodes, base_allocations, node_template)
+        return self._state_to_allocations(state, jobs, new_nodes), wanted_nodes
 
 
 

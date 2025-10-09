@@ -11,7 +11,7 @@ from sched.adaptdl_sched._configs import APPLICATIONS
 from adaptdl.global_profile_state import GlobalProfileState
 from adaptdl.goodput import GoodputFunction
 
-CKP_PATH = './checkpoint/global-profile-state'
+CKP_PATH = './checkpoint/12xlarge-cbd-0916'
 
 NUM_GPU_PER_NODE = 4
 
@@ -334,7 +334,7 @@ if __name__ == '__main__':
         
     # Plot goodput curves
     app_to_plot = "cifar10"
-    epoch_to_plot = 50
+    epoch_to_plot = 1
     print(f"\nPlotting goodput curve for {app_to_plot} epoch {epoch_to_plot}")
     plot_goodput_curve(
         goodput_dict,

@@ -107,19 +107,19 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
     if adaptdl.env.replica_rank() == 0:
         _report_global_profile(profile_data)
 
-    _update_grad_params_from_global_profiler(epoch)
+    # _update_grad_params_from_global_profiler(epoch)
 
     # Start here for job wise profile
-    # if accumulation_step:
-    #     state.profile[key]["accum_step_time"] += step_time
-    #     state.profile[key]["accum_count"] += 1
-    # else:
-    #     state.profile[key]["optim_step_time"] += step_time
-    #     state.profile[key]["optim_sync_time"] += state.sync_time
-    #     state.profile[key]["optim_count"] += 1
-    # del state.atomic_bsz
-    # del state.step_start
-    # del state.sync_time
+    if accumulation_step:
+        state.profile[key]["accum_step_time"] += step_time
+        state.profile[key]["accum_count"] += 1
+    else:
+        state.profile[key]["optim_step_time"] += step_time
+        state.profile[key]["optim_sync_time"] += state.sync_time
+        state.profile[key]["optim_count"] += 1
+    del state.atomic_bsz
+    del state.step_start
+    del state.sync_time
     # End here for job wise profile
 
     
@@ -127,7 +127,7 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
         if _PREV_REPORT is None:
             _PREV_REPORT = time.time()
         if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 1:
-            # _fit_perf_params() # if type wise profile, comment this line
+            _fit_perf_params() # if type wise profile, comment this line
             _report_sched_hints(epoch, batch_size)
             _PREV_REPORT = time.time()
 
@@ -136,11 +136,11 @@ _GRAD_PARAM_DICT = {}
 
 
 def update_grad_params(edp_key, grad_norm_sqr, grad_variance):
-    return # for now, skip the whole grad params update. Always use global grad params.
-    # global _GRAD_PARAM_DICT
-    # _GRAD_PARAM_DICT[edp_key] = np.asarray([grad_norm_sqr, grad_variance])
-    # grad_params = sum(_GRAD_PARAM_DICT.values())
-    # _metrics_state().grad_params = (grad_params[0], grad_params[1])
+    # return # for now, skip the whole grad params update. Always use global grad params.
+    global _GRAD_PARAM_DICT
+    _GRAD_PARAM_DICT[edp_key] = np.asarray([grad_norm_sqr, grad_variance])
+    grad_params = sum(_GRAD_PARAM_DICT.values())
+    _metrics_state().grad_params = (grad_params[0], grad_params[1])
 
 def update_progress(progress):
     _metrics_state().progress = progress
@@ -308,8 +308,8 @@ def _metrics_state():
         _METRICS_STATE = _MetricsState()
         print("loading state")
         adaptdl.checkpoint.load_state(_METRICS_STATE)
-        print("retrieving global profiler state")
-        _load_global_profiler_state(_METRICS_STATE)
+        # print("retrieving global profiler state")
+        # _load_global_profiler_state(_METRICS_STATE)
 
     # else:
         # Check if we need to refresh global profiler state (every 60 seconds)

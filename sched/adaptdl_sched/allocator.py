@@ -60,7 +60,7 @@ class AdaptDLAllocator(object):
             self._policy = PolluxPolicy()
             self._policy_type = "pollux"
         elif SELECTED_POLICY == "dummy":
-            self._policy = DummyPolicy(num_gpus_per_job=[8,12,16]) # Configure dummy as needed
+            self._policy = DummyPolicy(num_gpus_per_job=8) # Configure dummy as needed
             self._policy_type = "dummy"
         elif SELECTED_POLICY == "fixed-width":
             # Initialize with None width, will be fetched later
@@ -250,6 +250,8 @@ class AdaptDLAllocator(object):
             job_allocation = job.get("status", {}).get("allocation", [])
             new_allocation = list(allocations.get((namespace, name), []))
             if list(job_allocation) != new_allocation:
+                LOG.info("Job allocation change detected; restarting %s/%s | old=%s -> new=%s",
+                         namespace, name, list(job_allocation), new_allocation)
                 patch = {"status": {"allocation": new_allocation}}
                 LOG.info("Patch AdaptDLJob %s/%s: %s", namespace, name, patch)
                 await patch_job_status(self._objs_api, namespace, name, patch)
@@ -339,6 +341,8 @@ class AdaptDLAllocator(object):
                 max_replicas, preemptible)
         job_info.epoch = job_epoch
         job_info.application = job_application
+        LOG.info("Job name: %s", job_name)
+        LOG.info("max_replicas: %s", max_replicas)
         return job_info
 
     async def _find_jobs_and_allocations(self):

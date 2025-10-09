@@ -70,11 +70,11 @@ class GlobalProfiler:
         application = profile_data.get('application')
         
         # Extract the actual profile data (excluding metadata like application)
-        # actual_profile_data = {k: v for k, v in profile_data.items() 
-        #                         if k != 'application'}
+        actual_profile_data = {k: v for k, v in profile_data.items() 
+                                if k != 'application'}
         
-        # # Always update the global profile state (for perf params fitting)
-        # self._global_state.update_profile(application, actual_profile_data, alpha=self._grad_params_alpha)
+        # Always update the global profile state (for perf params fitting)
+        self._global_state.update_profile(application, actual_profile_data, alpha=self._grad_params_alpha)
         
         # Note: perf_params fitting has been moved to _compute_goodput_with_fitting()
         # to avoid blocking profile reports
