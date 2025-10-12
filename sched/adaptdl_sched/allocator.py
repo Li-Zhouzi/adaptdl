@@ -19,6 +19,7 @@ import kubernetes_asyncio as kubernetes
 import logging
 import time
 import os
+from datetime import datetime, timezone
 import aiohttp
 
 from adaptdl.goodput import GoodputFunction, PerfParams, GradParams
@@ -341,6 +342,9 @@ class AdaptDLAllocator(object):
                 max_replicas, preemptible)
         job_info.epoch = job_epoch
         job_info.application = job_application
+        job_info.num_restarts = job.get("status", {}).get("group") or 0
+        current_ts = datetime.now(timezone.utc)
+        job_info.age = (current_ts - creation_ts).total_seconds()
         LOG.info("Job name: %s", job_name)
         LOG.info("max_replicas: %s", max_replicas)
         return job_info

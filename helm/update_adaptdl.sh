@@ -8,6 +8,6 @@ helm install adaptdl ./adaptdl-sched -n adaptdl \
 
 
 # upload the global profile state to the scheduler pod
-# sleep 60
-# cd ..
-# ./our_utils/restore_checkpoint.sh ./checkpoint/global-profile-state
+sleep 60
+cd ..
+./our_utils/restore_checkpoint.sh ./checkpoint/global-profile-state

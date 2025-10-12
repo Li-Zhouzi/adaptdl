@@ -39,13 +39,15 @@ LOG.setLevel(logging.INFO)
 # to do the autoscaling. We should similarly do this in the implementation. In the OSDI 21 implementation, the effective utility is used in all places, 
 # and the code is also carried to the current version. Thus, mechanism is missing to prevent "renting many nodes but not using them" from happening.
 
-def get_cluster_sizes(states):
-    N = states.shape[-1]
-    cluster_sizes = np.amax(
-        np.where(np.any(states, axis=-2), np.arange(N) + 1, 0),
-        axis=-1,
-    )
-    return cluster_sizes
+# def get_cluster_sizes(states):
+#     N = states.shape[-1]
+#     cluster_sizes = np.amax(
+#         np.where(np.any(states, axis=-2), np.arange(N) + 1, 0),
+#         axis=-1,
+#     )
+#     return cluster_sizes
+
+ 
 
 def get_effective_cluster_sizes(states):
     # Supports either (pop_size, num_jobs, num_nodes) or (num_jobs, num_nodes).
@@ -58,7 +60,8 @@ def get_effective_cluster_sizes(states):
     else:
         raise ValueError("states must be 2D or 3D array")
 
-USE_PROFILED_GOODPUT = False
+USE_PROFILED_GOODPUT = True
+NUM_GPUS_PER_NODE = 4 # Ideally, it should be got from node templates. Hard code it here for simplicity.
 profiled_goodput_functions = {
     'bert': {
         0: {1: 14.777758035005506, 2: 21.352068051613056, 4: 24.453647524136986, 8: 16.740192512369788, 12: 13.237639734844972, 16: 16.49061741344335},
@@ -284,6 +287,27 @@ def _get_profiled_speedup(app_name, epoch, num_replicas):
     return g_interp / base_goodput
 
 # Change Ends Here
+def get_total_speedup(jobs, state):
+    if not USE_PROFILED_GOODPUT:
+        # state shape is (num_jobs, num_nodes)
+        num_nodes = np.count_nonzero(state, axis=1)  # (num_jobs,)
+        num_replicas = np.sum(state, axis=1)         # (num_jobs,)
+        speedup_values = []
+        for idx, job in enumerate(jobs):
+            speedup_values.append(job.speedup_fn(num_nodes[idx], num_replicas[idx]))
+        return float(np.sum(speedup_values))
+    else: # Change here. The previous branch is the original version.
+        # state shape is (num_jobs, num_nodes)
+        num_replicas = np.sum(state, axis=1)  # (num_jobs,)
+        speedup_values = []  # will become (num_jobs)
+        for idx, job in enumerate(jobs):
+            app_name = job.application
+            epoch = job.epoch
+            r = int(num_replicas[idx])
+            val = 0.0 if r <= 0 else _get_profiled_speedup(app_name, epoch, r)
+            speedup_values.append(val)
+        return float(np.sum(speedup_values))
+   
 
 
 class PolluxPolicy(object):
@@ -387,20 +411,25 @@ class PolluxPolicy(object):
 
     def _select_result(self, states, values, max_nodes):
     # Change here: previously it was comparing utility with max nodes.
-        # if np.amin(values[:, 1]) > max_nodes:
-        #     return None
-        # return np.argmin(np.where(values[:, 1] <= max_nodes, values[:, 0], 0))
-        best_idx = None
-        for i, state in enumerate(states):
-            num_nodes = get_cluster_sizes(state)
-            if num_nodes > max_nodes:
-                continue
-            if best_idx is None:
-                best_idx = i
-            else:
-                if values[i, 0] < values[best_idx, 0]:
-                    best_idx = i
-        return best_idx
+    # Note: this function is actually doing nothing but choosing the solution with highest mean speedup.
+    # the second entry of the value is negative utility so is always smaller than max nodes. 
+    # Also, since the the optimziation is only choosing solution using len(nodes), this autoscaling never happens in the optimization level.
+        if np.amin(values[:, 1]) > max_nodes:
+            return None
+        return np.argmin(np.where(values[:, 1] <= max_nodes, values[:, 0], 0))
+
+        
+        # best_idx = None
+        # for i, state in enumerate(states):
+        #     num_nodes = get_cluster_sizes(state)
+        #     if num_nodes > max_nodes:
+        #         continue
+        #     if best_idx is None:
+        #         best_idx = i
+        #     else:
+        #         if values[i, 0] < values[best_idx, 0]:
+        #             best_idx = i
+        # return best_idx
 
     def _desired_nodes(self, states, utilities, values, nodes):
         # CHANGE HERE. ORIGINAL VERSION:
@@ -421,23 +450,24 @@ class PolluxPolicy(object):
         #         best_nodes = num_nodes
         # return int(best_nodes)
         # START MODIFICATION:
-        idx = self._select_result(states, values, len(nodes))
-        if idx is not None and \
-                self._min_util <= utilities[idx] <= self._max_util:
-            return len(nodes)
-        target_util = (self._min_util + self._max_util) / 2
-        best_util = np.inf
-        best_nodes = len(nodes)
-        for util, state in zip(utilities, states):
-            if util < self._min_util:
-                continue
-            num_nodes = get_cluster_sizes(state)
-            if np.isclose(util, best_util) and num_nodes > best_nodes:
-                best_nodes = num_nodes
-            if abs(util - target_util) < abs(best_util - target_util):
-                best_util = util
-                best_nodes = num_nodes
-        return int(best_nodes)
+        raise NotImplementedError("Not implemented")
+        # idx = self._select_result(states, values, len(nodes))
+        # if idx is not None and \
+        #         self._min_util <= utilities[idx] <= self._max_util:
+        #     return len(nodes)
+        # target_util = (self._min_util + self._max_util) / 2
+        # best_util = np.inf
+        # best_nodes = len(nodes)
+        # for util, state in zip(utilities, states):
+        #     if util < self._min_util:
+        #         continue
+        #     num_nodes = get_cluster_sizes(state)
+        #     if np.isclose(util, best_util) and num_nodes > best_nodes:
+        #         best_nodes = num_nodes
+        #     if abs(util - target_util) < abs(best_util - target_util):
+        #         best_util = util
+        #         best_nodes = num_nodes
+        # return int(best_nodes)
         # === END MODIFICATION ===
 
     def optimize_without_scaling_up(self, jobs, nodes, base_allocations, node_template):
@@ -534,6 +564,8 @@ class PolluxPolicy(object):
         idx = self._select_result(states, values, min(len(nodes), desired_nodes))
         LOG.info("\n" + "-" * 80)
         for i, state in enumerate(states):
+            if i != idx:
+                continue
             out = "Solution {}:\n".format(i)
             out += "Selected index: {}\n".format(idx)
             out += "{}\n".format(state)
@@ -543,13 +575,34 @@ class PolluxPolicy(object):
             LOG.info(out)
         if idx is None:
             LOG.info("WARNING: It should not happen.")
+        
+        job_items = list(jobs.items())  # preserve ordering and keep keys for logging
+        job_values = [job for _, job in job_items]
+        num_restarts = np.array([job.num_restarts for job in job_values])
+        age = np.array([job.age for job in job_values])
+        # delay = 30
+        delay = np.empty(len(job_values), dtype=np.float64)
+        for i, job in enumerate(job_values):
+            if getattr(job, "application", "") == "cifar10":
+                delay[i] = 120.0
+            elif getattr(job, "application", "") == "deepspeech2":
+                delay[i] = 150.0
+            elif getattr(job, "application", "") == "bert":
+                delay[i] = 300.0
+            else:
+                raise ValueError(f"Application {getattr(job, 'application', '')} not supported")
+                # delay[i] = 30.0
+        factor = np.maximum(age - num_restarts * delay, 0.0) / (age + delay)
+        for i, (job_key, job) in enumerate(job_items):
+            LOG.info("Job: %s num_restarts=%s epoch=%s factor=%.4f age=%s",
+                     job_key, num_restarts[i], getattr(job, "epoch", None), factor[i], age[i])
             
         return (states[idx], utilities[idx]) if idx is not None else (None, None), desired_nodes # this returned desired nodes should never be used
 
     def get_true_utility_given_nodes(self, jobs, nodes, base_allocations, node_template):
         (state, utility), _ = self.optimize_without_scaling_up(jobs, nodes, base_allocations, node_template)
         if state is not None:
-            true_utility = utility / get_cluster_sizes(state) * get_effective_cluster_sizes(state)
+            true_utility = get_total_speedup(list(jobs.values()), state) / (len(nodes) * NUM_GPUS_PER_NODE)
             return true_utility
         return None
     
@@ -621,7 +674,7 @@ class PolluxPolicy(object):
             need_autoscaling = True
             LOG.info("WARNING & AUTOSCALING HAPPENING")
         else:
-            true_utility = utility * get_cluster_sizes(state) / get_effective_cluster_sizes(state)
+            true_utility = get_total_speedup(list(jobs.values()), state) / (len(nodes) * NUM_GPUS_PER_NODE)
             self.utility.append(true_utility)
             LOG.info("Utility: %s", self.utility)
             if len(self.utility) > 2:
@@ -697,6 +750,18 @@ class Problem(pymoo.core.problem.Problem):
         # Calculate dominant per-replica resource shares for each job.
         shares = self._job_resources / np.sum(self._node_resources, axis=0)
         self._dominant_share = np.amax(shares, axis=1)
+        fair_replicas = np.ceil(1.0 / self._dominant_share / len(self._jobs))
+        fair_nodes = np.ceil(len(nodes) * self._dominant_share)
+        for job, num_nodes, num_replicas in zip(jobs, fair_nodes, fair_replicas):
+            if not hasattr(job.speedup_fn, "_goodput_fn"):
+                job.speedup_fn = lambda n, r: r / num_replicas
+                continue
+            # job.speedup_fn._base_goodput = job.speedup_fn._goodput_fn.optimize(
+            #     num_nodes=num_nodes, num_replicas=num_replicas,
+            #     max_batch_size=job.speedup_fn._max_batch_size,
+            #     atomic_bsz_range=job.speedup_fn._atomic_bsz_range,
+            #     accumulation=job.speedup_fn._accumulation)[0] # This is never used when given speedup path.
+    
         # Upper bound each job: <replicas on node 0> <replicas on node 1> ...
         self._max_replicas = np.zeros(base_state.shape, dtype=np.int)
         for j, job in enumerate(jobs):
@@ -705,7 +770,7 @@ class Problem(pymoo.core.problem.Problem):
                     self._get_avail_resource(
                         n, node, rtype) // job.resources[rtype]
                     for rtype in rtypes if job.resources.get(rtype, 0) > 0)
-        self._restart_penalty = 0.1
+        # self._restart_penalty = 0.1
         # Lower bound each job by min_replicas from job spec
         self._min_replicas = np.zeros(base_state.shape, dtype=np.int)
         for j, job in enumerate(jobs):
@@ -789,10 +854,11 @@ class Problem(pymoo.core.problem.Problem):
             return np.stack(speedup, axis=1).astype(np.float)
 
     def _get_cluster_sizes(self, states):
-        sizes = np.arange(len(self._nodes)) + 1
-        cluster_sizes = np.amax(np.where(np.any(states, axis=-2), sizes, 0), axis=-1)
+        # sizes = np.arange(len(self._nodes)) + 1
+        # cluster_sizes = np.amax(np.where(np.any(states, axis=-2), sizes, 0), axis=-1)
         # assert np.array_equal(cluster_sizes, get_cluster_sizes(states))
-        return cluster_sizes
+        # return cluster_sizes
+        return np.full(len(states), len(self._nodes))
 
     def _evaluate(self, states, out, *args, **kwargs):
         states = states.reshape(states.shape[0], *self._base_state.shape)
@@ -801,10 +867,47 @@ class Problem(pymoo.core.problem.Problem):
         # equivalent to a single node results in a speedup of 1.
         scaled_speedups = speedups * self._dominant_share * len(self._nodes)
         # Penalize job restarts.
-        restart_mask = np.any(states != self._base_state, axis=2)
-        scaled_speedups[restart_mask] *= 1.0 - self._restart_penalty
-        out["F"] = np.column_stack([-np.sum(scaled_speedups, axis=1),
+        num_restarts = np.array([job.num_restarts for job in self._jobs])
+        age = np.array([job.age for job in self._jobs])
+        # delay = 30
+        delay = np.empty(len(self._jobs), dtype=np.float64)
+        for i, job in enumerate(self._jobs):
+            if getattr(job, "application", "") == "cifar10":
+                delay[i] = 120.0
+            elif getattr(job, "application", "") == "deepspeech2":
+                delay[i] = 150.0
+            elif getattr(job, "application", "") == "bert":
+                delay[i] = 300.0
+            else:
+                raise ValueError(f"Application {getattr(job, 'application', '')} not supported")
+                # delay[i] = 30.0
+        
+        factor = np.maximum(age - num_restarts * delay, 0.0) / (age + delay)
+        restart = np.any(states != self._base_state, axis=2)
+        scaled_speedups *= np.where(restart, factor, 1)
+        p = -1  # Exponent used in power mean. More negative = more fair.
+        if p == 0:
+            # Geometric mean
+            mean = np.exp(np.sum(np.log(np.maximum(scaled_speedups, 1e-3)),
+                                 axis=1) / states.shape[1])
+        else:
+            mean = (np.sum((scaled_speedups + 1e-3) ** p, axis=1)
+                    / states.shape[1]) ** (1.0 / p)
+        out["F"] = np.column_stack([-mean,
                                     -self.get_cluster_utilities(states)])
+
+
+        
+        # states = states.reshape(states.shape[0], *self._base_state.shape)
+        # speedups = self._get_job_speedups(states)
+        # # Scale the speedup of each job so that a dominant resource share
+        # # equivalent to a single node results in a speedup of 1.
+        # scaled_speedups = speedups * self._dominant_share * len(self._nodes)
+        # # Penalize job restarts.
+        # restart_mask = np.any(states != self._base_state, axis=2)
+        # scaled_speedups[restart_mask] *= 1.0 - self._restart_penalty
+        # out["F"] = np.column_stack([-np.sum(scaled_speedups, axis=1),
+        #                             -self.get_cluster_utilities(states)])
                                     # self._get_cluster_sizes(states)])
 
     def _crossover(self, states, **kwargs):
@@ -825,26 +928,83 @@ class Problem(pymoo.core.problem.Problem):
     def _mutation(self, states, **kwargs):
         # Select variables randomly, then assign each of them a random value
         # within their upper bounds.
+        # states = states.reshape(states.shape[0], *self._base_state.shape)
+        # num_nonzero = np.count_nonzero(states, axis=2, keepdims=True)
+        # num_zero = states.shape[2] - num_nonzero
+        # # Try to balance the number of mutations between zero/nonzero elements.
+        # prob = 1.0 / np.where(states > 0, num_nonzero, num_zero)
+        # prob = prob.reshape(states.shape)
+        # m = np.random.random(states.shape) < prob
+        # r = np.random.randint(self._min_replicas, self._max_replicas + 1,
+        #                       size=states.shape)
+        # states[m] = r[m]
+        # # We need at least min_replicas
+        # states = np.maximum(states, self._min_replicas)
+        # return states.reshape(states.shape[0], -1)
         states = states.reshape(states.shape[0], *self._base_state.shape)
-        num_nonzero = np.count_nonzero(states, axis=2, keepdims=True)
-        num_zero = states.shape[2] - num_nonzero
-        # Try to balance the number of mutations between zero/nonzero elements.
-        prob = 1.0 / np.where(states > 0, num_nonzero, num_zero)
-        prob = prob.reshape(states.shape)
-        m = np.random.random(states.shape) < prob
-        r = np.random.randint(self._min_replicas, self._max_replicas + 1,
-                              size=states.shape)
+        mask = np.random.random(states.shape[:2]) < 0.1
+        states = np.where(np.expand_dims(mask, 2), self._base_state, states)
+        # (2) Randomly zero out some elements.
+        prob = np.where(np.random.random(states.shape[:2]) < 0.1, 0.1, 0.0)
+        states[np.random.random(states.shape) < np.expand_dims(prob, 2)] = 0
+        # (3) Randomly increase some elements.
+        used_resources = (np.expand_dims(self._job_resources, 1) *
+                          np.expand_dims(states, -1)).sum(axis=1)
+        free_resources = self._node_resources - used_resources
+        mask1 = np.all(np.expand_dims(self._job_resources, 1) <=
+                       np.expand_dims(free_resources, 1), axis=-1)
+        prob1 = 1.0 * mask1 / np.maximum(mask1.sum(axis=1, keepdims=True), 1.0)
+        mask2 = np.logical_and(states, mask1)
+        prob2 = 1.0 * mask2 / np.maximum(mask2.sum(axis=1, keepdims=True), 1.0)
+        m = np.random.random(states.shape) < prob1 + prob2 - prob1 * prob2
+        r = np.random.randint(states, self._max_replicas + 1)
         states[m] = r[m]
-        # We need at least min_replicas
         states = np.maximum(states, self._min_replicas)
         return states.reshape(states.shape[0], -1)
 
     def _repair(self, pop, **kwargs):
+        # states = pop.get("X")
+        # states = states.reshape(states.shape[0], *self._base_state.shape)
+        # # Copy previous allocations for pinned jobs
+        # states[:, self._pinned_indices] = \
+        #     self._base_state[self._pinned_indices, :]
+        # # Enforce at most one distributed job per node. Exclude all
+        # # nonpreemptible jobs.
+        # distributed = np.count_nonzero(states, axis=2) > 1
+        # mask = states * np.expand_dims(distributed, axis=-1) > 0
+        # mask = mask.cumsum(axis=1) > 1
+        # states[mask] = 0
+        # # Enforce no more than max replicas per job.
+        # # max_replicas: (num_jobs x 1)
+        # max_replicas = np.array([[j.max_replicas] for j in self._jobs])
+        # shuffle = np.argsort(np.random.random(states.shape), axis=2)
+        # states = np.take_along_axis(states, shuffle, axis=2)  # Shuffle nodes.
+        # states = np.minimum(np.cumsum(states, axis=2), max_replicas)
+        # states = np.diff(states, axis=2, prepend=0)
+        # inverse = np.argsort(shuffle, axis=2)  # Undo shuffle nodes.
+        # states = np.take_along_axis(states, inverse, axis=2)
+        # # Enforce node resource limits.
+        # # job_resources: (num_jobs x num_nodes x num_rtypes)
+        # job_resources = np.expand_dims(self._job_resources, 1)
+        # states = np.expand_dims(states, -1) * job_resources
+        # states = np.minimum(np.cumsum(states, axis=1), self._node_resources)
+        # states = np.diff(states, axis=1, prepend=0)
+        # with np.errstate(divide="ignore", invalid="ignore"):
+        #     states = np.amin(np.floor_divide(states, job_resources),
+        #                      where=job_resources > 0, initial=99, axis=-1)
+        # # Only choose solutions which have at least min_replicas allocations
+        # min_replicas = np.array([j.min_replicas for j in self._jobs])
+        # mask = np.sum(states, axis=-1) < min_replicas
+        # states[mask] = 0
+        # return pop.new("X", states.reshape(states.shape[0], -1))
         states = pop.get("X")
         states = states.reshape(states.shape[0], *self._base_state.shape)
         # Copy previous allocations for pinned jobs
         states[:, self._pinned_indices] = \
-            self._base_state[self._pinned_indices, :]
+           self._base_state[self._pinned_indices, :]
+        # Order jobs by dominant resource share.
+        #sort = np.argsort(self._dominant_share * states.sum(axis=2), axis=1)
+        #states = np.take_along_axis(states, np.expand_dims(sort, -1), axis=1)
         # Enforce at most one distributed job per node. Exclude all
         # nonpreemptible jobs.
         distributed = np.count_nonzero(states, axis=2) > 1
@@ -858,6 +1018,10 @@ class Problem(pymoo.core.problem.Problem):
         states = np.take_along_axis(states, shuffle, axis=2)  # Shuffle nodes.
         states = np.minimum(np.cumsum(states, axis=2), max_replicas)
         states = np.diff(states, axis=2, prepend=0)
+        max_nodes = 16
+        mask = np.minimum(np.cumsum(states > 0, axis=2), max_nodes)
+        mask = np.diff(mask, axis=2, prepend=0)
+        states[np.logical_not(mask)] = 0
         inverse = np.argsort(shuffle, axis=2)  # Undo shuffle nodes.
         states = np.take_along_axis(states, inverse, axis=2)
         # Enforce node resource limits.
@@ -869,6 +1033,9 @@ class Problem(pymoo.core.problem.Problem):
         with np.errstate(divide="ignore", invalid="ignore"):
             states = np.amin(np.floor_divide(states, job_resources),
                              where=job_resources > 0, initial=99, axis=-1)
+        # Unsort jobs
+        #unsort = sort.argsort(axis=1)
+        #states = np.take_along_axis(states, np.expand_dims(unsort, -1), axis=1)
         # Only choose solutions which have at least min_replicas allocations
         min_replicas = np.array([j.min_replicas for j in self._jobs])
         mask = np.sum(states, axis=-1) < min_replicas
