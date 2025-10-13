@@ -54,7 +54,7 @@ class AdaptDLAllocator(object):
 
         # Width fetching configuration
         self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
-        self._width_fetch_interval = int(os.environ.get("WIDTH_FETCH_INTERVAL", "60")) 
+        self._width_fetch_interval = int(os.environ.get("WIDTH_FETCH_INTERVAL", "60"))
         self._current_width = None
 
         if SELECTED_POLICY == "pollux":
@@ -72,6 +72,11 @@ class AdaptDLAllocator(object):
 
         # lock for the two corountines in run()
         self._lock = asyncio.Lock()
+
+        # Track desired number of nodes for autoscaling
+        self._desired_num_nodes = None
+        # Track which nodes are actually allocated to jobs
+        self._allocated_nodes = None
 
     async def run(self):
         # three functionality: (1) watch for new job and start if possible.
@@ -345,8 +350,8 @@ class AdaptDLAllocator(object):
         job_info.num_restarts = job.get("status", {}).get("group") or 0
         current_ts = datetime.now(timezone.utc)
         job_info.age = (current_ts - creation_ts).total_seconds()
-        LOG.info("Job name: %s", job_name)
-        LOG.info("max_replicas: %s", max_replicas)
+        # LOG.info("Job name: %s", job_name)
+        # LOG.info("max_replicas: %s", max_replicas)
         return job_info
 
     async def _find_jobs_and_allocations(self):
@@ -391,22 +396,136 @@ class AdaptDLAllocator(object):
         if not jobs and not unschedulable_jobs:
             # There are no jobs, let the expander shrink the cluster.
             self._cluster_expander.fit([])
+            self._desired_num_nodes = None  # Reset scaling state
+            self._allocated_nodes = None  # Reset allocated nodes tracking
         elif jobs and nodes:
+            # Filter nodes based on autoscaling state
+            nodes_for_policy = self._get_filtered_nodes_for_policy(nodes)
+
             allocations, desired_nodes = self._get_policy().optimize(
-                jobs, nodes, prev_allocations, node_template)
-            if desired_nodes < len(nodes):
+                jobs, nodes_for_policy, prev_allocations, node_template)
+
+            # Track which nodes are actually being used for next round
+            if allocations:
+                self._allocated_nodes = set.union(*map(set, allocations.values()))
+            else:
+                self._allocated_nodes = set()
+
+            # Update desired nodes and handle scaling state
+            self._update_scaling_state(desired_nodes, len(nodes), len(nodes_for_policy))
+
+            # Determine active_nodes for cluster_expander
+            # Always use self._desired_num_nodes (which is set by _update_scaling_state)
+
+            # First, get allocated nodes
+            if allocations:
                 active_nodes = list(set.union(*map(set, allocations.values())))
             else:
-                active_nodes = list(nodes)
-                while len(active_nodes) < desired_nodes:
-                    active_nodes.append(f"~{desired_nodes-len(active_nodes)}")
+                active_nodes = []
+
+            # If we need more nodes than allocated, add additional nodes
+            if len(active_nodes) < self._desired_num_nodes:
+                # Add real nodes that aren't already allocated
+                for node_name in nodes:
+                    if node_name not in active_nodes:
+                        active_nodes.append(node_name)
+                        if len(active_nodes) >= self._desired_num_nodes:
+                            break
+
+                # If still need more, add placeholder nodes
+                while len(active_nodes) < self._desired_num_nodes:
+                    active_nodes.append(f"~{self._desired_num_nodes-len(active_nodes)}")
+
             self._cluster_expander.fit(active_nodes)
-            LOG.info("Active nodes: %s", active_nodes)
+            LOG.info("Active nodes: %s (target: %s, actual: %s, allocated: %s)",
+                     active_nodes, self._desired_num_nodes, len(nodes), len(self._allocated_nodes))
         elif jobs or unschedulable_jobs:
             # Expand job ASG from zero nodes.
             # Assumption is AdaptDL is running on a different ASG
             self._cluster_expander.fit(['~1'])
         return allocations
+
+    def _get_filtered_nodes_for_policy(self, nodes):
+        """Filter nodes based on autoscaling state to prevent oscillation.
+
+        For scale-down: Show policy only the desired subset to prevent re-expanding.
+        For scale-up: Show policy only current nodes until scaling completes.
+        """
+        if self._desired_num_nodes is None:
+            # First allocation, no filtering needed
+            return nodes
+
+        actual_num_nodes = len(nodes)
+
+        if self._desired_num_nodes == actual_num_nodes:
+            # Steady state: desired matches actual
+            LOG.info("Steady state: desired=%s, actual=%s",
+                     self._desired_num_nodes, actual_num_nodes)
+            return nodes
+        elif self._desired_num_nodes < actual_num_nodes:
+            # Scale-down in progress: filter to desired count
+            # Prioritize nodes that were allocated in the previous round
+            from collections import OrderedDict
+
+            filtered_nodes = OrderedDict()
+
+            # First, add nodes that were allocated in the previous round
+            assert len(self._allocated_nodes) <= self._desired_num_nodes, "Allocated nodes should be less than or equal to desired nodes"
+            if self._allocated_nodes:
+                for node_name in self._allocated_nodes:
+                    assert not node_name.startswith("~"), "Allocated nodes should not be virtual nodes"
+                    if node_name in nodes:
+                        filtered_nodes[node_name] = nodes[node_name]
+
+            # Then fill remaining slots with other nodes
+            for node_name, node_info in nodes.items():
+                if len(filtered_nodes) >= self._desired_num_nodes:
+                    break
+                if node_name not in filtered_nodes:
+                    filtered_nodes[node_name] = node_info
+
+            LOG.info("Scale-down in progress: showing policy %s/%s nodes (previously allocated: %s)",
+                     len(filtered_nodes), actual_num_nodes,
+                     len(self._allocated_nodes) if self._allocated_nodes else 0)
+            return filtered_nodes
+        else:
+            # Scale-up in progress: show only current nodes
+            LOG.info("Scale-up in progress: showing policy %s/%s nodes (target: %s)",
+                     actual_num_nodes, actual_num_nodes, self._desired_num_nodes)
+            return nodes
+
+    def _update_scaling_state(self, desired_nodes, actual_num_nodes, policy_num_nodes):
+        """Update autoscaling state and log warnings if needed.
+
+        self._desired_num_nodes is always set after this method, never None.
+        """
+        if self._desired_num_nodes is None:
+            # First allocation: initialize desired_num_nodes
+            LOG.info("Allocator side: Initializing desired nodes: %s", desired_nodes)
+            self._desired_num_nodes = desired_nodes
+            return
+
+        # Check if we're in the middle of autoscaling
+        if self._desired_num_nodes == actual_num_nodes:
+            # Steady state: update to new desired if policy wants change
+            if desired_nodes != actual_num_nodes:
+                LOG.info("Allocator side: Starting autoscaling: current=%s, desired=%s",
+                         actual_num_nodes, desired_nodes)
+            self._desired_num_nodes = desired_nodes
+        elif self._desired_num_nodes > actual_num_nodes:
+            # Scale-up in progress
+            if desired_nodes != policy_num_nodes:
+                LOG.warning("Allocator side: Autoscaling needed during scale-up: "
+                           "policy wants %s nodes but was shown %s nodes, "
+                           "target is %s nodes, actual is %s nodes. "
+                           "Keeping target at %s until scale-up completes.",
+                           desired_nodes, policy_num_nodes,
+                           self._desired_num_nodes, actual_num_nodes,
+                           self._desired_num_nodes)
+            # Keep the original target during scale-up
+        else:
+            # Scale-down in progress: allow updating to new target
+            self._desired_num_nodes = desired_nodes
 
 
 if __name__ == "__main__":

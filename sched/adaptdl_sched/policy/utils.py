@@ -15,7 +15,8 @@
 
 class JobInfo(object):
     def __init__(self, resources, speedup_fn, creation_timestamp,
-                 min_replicas, max_replicas, preemptible=True):
+                 min_replicas, max_replicas, preemptible=True,
+                 num_restarts=0, age=0):
         """
         Args:
             resources (dict): Requested resources (eg. GPUs) of each replica.
@@ -25,6 +26,8 @@ class JobInfo(object):
             max_replicas (int): Maximum number of replicas. Maximum should be
                                 greater or equal to Minimum
             preemptible (bool): Is the job preemptible?
+            num_restarts (int): Number of times this job has been restarted.
+            age (float): Age of the job in seconds.
         """
         assert max_replicas > 0
         assert max_replicas >= min_replicas
@@ -36,6 +39,8 @@ class JobInfo(object):
         self.preemptible = preemptible
         self.epoch = None
         self.application = None
+        self.num_restarts = num_restarts
+        self.age = age
 
     def to_dict(self):
         # speedup_fn may not be JSON-serializable; store a brief identifier
@@ -49,6 +54,8 @@ class JobInfo(object):
             "epoch": None if self.epoch is None else int(self.epoch),
             "application": self.application,
             "speedup_fn": speedup_id,
+            "num_restarts": int(self.num_restarts),
+            "age": float(self.age),
         }
 
     def __repr__(self):

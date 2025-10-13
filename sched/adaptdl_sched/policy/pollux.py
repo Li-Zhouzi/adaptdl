@@ -647,6 +647,7 @@ class PolluxPolicy(object):
         return wanted_nodes
 
     def optimize(self, jobs, nodes, base_allocations, node_template):
+        LOG.info("Pollux number of nodes taken into optimization {}".format(len(nodes)))
         def ispinned(key, job):
             return not job.preemptible and base_allocations.get(key, []) != []
         jobs = OrderedDict(sorted(jobs.items(),
