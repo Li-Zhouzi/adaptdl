@@ -181,10 +181,14 @@ def train(args, train_dataset, model, tokenizer):
             # print(current_step, loss.item())
 
         with accum.synchronized():
-            accum["loss_avg"] = accum["loss_sum"] / accum["loss_cnt"]
-            tb_writer.add_scalar("Loss/Train", accum["loss_avg"], epoch)
-            report_train_metrics(epoch, accum["loss_avg"])
-            print("Train:", accum)
+            total = accum.get("loss_cnt", 0)
+            if total:
+                accum["loss_avg"] = accum["loss_sum"] / accum["loss_cnt"]
+                tb_writer.add_scalar("Loss/Train", accum["loss_avg"], epoch)
+                report_train_metrics(epoch, accum["loss_avg"])
+                print("Train:", accum)
+            else:
+                print("Train: skipped (no batches processed)")
 
         results = evaluate(args, model, tokenizer)
         for key, value in results.items():

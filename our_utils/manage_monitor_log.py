@@ -19,6 +19,7 @@ def process_log_file(log_file_path):
     high_waste_examples = []
     last_job_arrival_time = None
     previous_allocations = {}  # Track previous GPU allocations for each job
+    completed_jobs_status = {}  # Track completion_time and pod_status for completed jobs
     
     with open(log_file_path, 'r') as f:
         lines = f.readlines()
@@ -77,6 +78,17 @@ def process_log_file(log_file_path):
             epoch = job['epoch']
             allocation = job.get('allocation', [])
             progress = job.get('progress', 0)
+
+            # Track completed jobs and their pod status
+            completion_time = job.get('completion_time', None)
+            pod_status = job.get('pod_status', '')
+            if completion_time is not None:
+                # Store or update the completion info
+                completed_jobs_status[job_name] = {
+                    'completion_time': completion_time,
+                    'pod_status': pod_status,
+                    'timestamp': timestamp
+                }
             
             # Check for GPU allocation changes and calculate theoretical rescaling hours
             current_gpu_count = len(allocation)
@@ -171,7 +183,36 @@ def process_log_file(log_file_path):
                 max_gpus = max(gpu_allocations)
                 rescaling_hours += (wasted_seconds * max_gpus) / 3600
     
-    return jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time
+    return jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status
+
+def is_pod_status_failing(pod_status):
+    """
+    Determine if a pod status string indicates failure.
+    Returns True if the pod status shows signs of failure.
+    """
+    if not pod_status:
+        return False
+
+    # "pod status normal" means everything is OK
+    if pod_status == "pod status normal":
+        return False
+
+    # Check for failure indicators in the pod status string
+    failure_indicators = [
+        "Failed",
+        "Error",
+        "CrashLoopBackOff",
+        "ImagePullBackOff",
+        "terminated",
+        "not ready"
+    ]
+
+    pod_status_lower = pod_status.lower()
+    for indicator in failure_indicators:
+        if indicator.lower() in pod_status_lower:
+            return True
+
+    return False
 
 def calculate_metrics(total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, last_job_arrival_time, first_job_time):
     """Calculate simplified metrics based on GPU hours and job arrival time."""
@@ -222,6 +263,39 @@ def print_summary(metrics):
     print(f"Theoretical Rescaling Average: {metrics['theoretical_rescaling_average']:.2f} GPUs")
     
     print(f"\nLast Job Arrival Time: {datetime.fromtimestamp(metrics['last_job_arrival_time'])}")
+
+def print_failed_completed_jobs(completed_jobs_status):
+    """Print jobs that completed with failing pod status."""
+    failed_jobs = []
+
+    for job_name, job_info in completed_jobs_status.items():
+        pod_status = job_info['pod_status']
+        if is_pod_status_failing(pod_status):
+            failed_jobs.append({
+                'job_name': job_name,
+                'completion_time': job_info['completion_time'],
+                'pod_status': pod_status,
+                'timestamp': job_info['timestamp']
+            })
+
+    if not failed_jobs:
+        print(f"\n" + "="*80)
+        print("COMPLETED JOBS WITH FAILING POD STATUS")
+        print("="*80)
+        print("No completed jobs with failing pod status found.")
+        return
+
+    print(f"\n" + "="*80)
+    print("COMPLETED JOBS WITH FAILING POD STATUS")
+    print("="*80)
+    print(f"Found {len(failed_jobs)} job(s) that completed with failing pod status:\n")
+
+    for job in failed_jobs:
+        print(f"Job: {job['job_name']}")
+        print(f"  Completion Time: {job['completion_time']}")
+        print(f"  Timestamp: {datetime.fromtimestamp(job['timestamp'])}")
+        print(f"  Pod Status: {job['pod_status']}")
+        print()
 
 def print_high_waste_examples(high_waste_examples, limit=10):
     """Print examples of timestamps with high wasted capacity."""
@@ -705,15 +779,18 @@ def main():
     
     log_file_path = sys.argv[1]
     print(f"Processing log file: {log_file_path}")
-    
-    jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time = process_log_file(log_file_path)
+
+    jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status = process_log_file(log_file_path)
     
     # Find first job time for metrics calculation
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
     
     # Print response time and wasted time for all jobs
     print_all_jobs_summary(jobs)
-    
+
+    # Print jobs that completed with failing pod status
+    print_failed_completed_jobs(completed_jobs_status)
+
     # List of jobs to show detailed epoch information for
     # Modify this list to see details for different jobs
     detailed_jobs = []  # Add more job names here as needed

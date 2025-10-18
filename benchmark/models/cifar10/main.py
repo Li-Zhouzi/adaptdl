@@ -131,12 +131,17 @@ def train(epoch):
         net.to_tensorboard(writer, epoch, tag_prefix="AdaptDL/Model")
 
     with stats.synchronized():
-        stats["loss_avg"] = stats["loss_sum"] / stats["total"]
-        stats["accuracy"] = stats["correct"] / stats["total"]
-        writer.add_scalar("Loss/Train", stats["loss_avg"], epoch)
-        writer.add_scalar("Accuracy/Train", stats["accuracy"], epoch)
-        report_train_metrics(epoch, stats["loss_avg"], accuracy=stats["accuracy"])
-        print("Train:", stats)
+        total = stats.get("total", 0)
+        if total:
+            stats["loss_avg"] = stats["loss_sum"] / stats["total"]
+            stats["accuracy"] = stats["correct"] / stats["total"]
+            writer.add_scalar("Loss/Train", stats["loss_avg"], epoch)
+            writer.add_scalar("Accuracy/Train", stats["accuracy"], epoch)
+            report_train_metrics(epoch, stats["loss_avg"], accuracy=stats["accuracy"])
+            print("Train:", stats)
+        else:
+            # No batches processed this epoch window; skip logging to avoid KeyError.
+            print("Train: skipped (no batches processed)")
 
 def valid(epoch):
     net.eval()
@@ -151,14 +156,20 @@ def valid(epoch):
             _, predicted = outputs.max(1)
             stats["total"] += targets.size(0)
             stats["correct"] += predicted.eq(targets).sum().item()
+            print("HERE", stats["loss_sum"])
 
     with stats.synchronized():
-        stats["loss_avg"] = stats["loss_sum"] / stats["total"]
-        stats["accuracy"] = stats["correct"] / stats["total"]
-        writer.add_scalar("Loss/Valid", stats["loss_avg"], epoch)
-        writer.add_scalar("Accuracy/Valid", stats["accuracy"], epoch)
-        report_valid_metrics(epoch, stats["loss_avg"], accuracy=stats["accuracy"])
-        print("Valid:", stats)
+        total = stats.get("total", 0)
+        if total:
+            stats["loss_avg"] = stats["loss_sum"] / stats["total"]
+            stats["accuracy"] = stats["correct"] / stats["total"]
+            writer.add_scalar("Loss/Valid", stats["loss_avg"], epoch)
+            writer.add_scalar("Accuracy/Valid", stats["accuracy"], epoch)
+            report_valid_metrics(epoch, stats["loss_avg"], accuracy=stats["accuracy"])
+            print("Valid:", stats)
+        else:
+            # No batches processed this epoch window; skip logging to avoid KeyError.
+            print("Valid: skipped (no batches processed)")
 
 
 print(f"[TIMING] Initialization complete, starting training loop at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)

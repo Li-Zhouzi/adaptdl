@@ -86,14 +86,20 @@ def evaluate(test_loader, device, model, decoder, target_decoder):
 
     with stats_valid.synchronized():
         print(stats_valid)
-        # wer is defined in evaluate() as 100*(total word errors in test batch)/(total words in test batch)
-        stats_valid["wer"] = stats_valid["wer_total"] / stats_valid["num_tokens"] * 100
-        # cer is defined in evaluate() as 100*(total character errors in test batch)/(total characters in test batch)
-        stats_valid["cer"] = stats_valid["cer_total"] / stats_valid["num_chars"] * 100
-        writer.add_scalar("WER/Valid", stats_valid["wer"], epoch)
-        writer.add_scalar("CER/Valid", stats_valid["cer"], epoch)
-        report_valid_metrics(epoch, 0, wer=stats_valid["wer"], cer=stats_valid["cer"])
-        return stats_valid["wer"], stats_valid["cer"]
+        num_tokens = stats_valid.get("num_tokens", 0)
+        num_chars = stats_valid.get("num_chars", 0)
+        if num_tokens and num_chars:
+            # wer is defined in evaluate() as 100*(total word errors in test batch)/(total words in test batch)
+            stats_valid["wer"] = stats_valid["wer_total"] / stats_valid["num_tokens"] * 100
+            # cer is defined in evaluate() as 100*(total character errors in test batch)/(total characters in test batch)
+            stats_valid["cer"] = stats_valid["cer_total"] / stats_valid["num_chars"] * 100
+            writer.add_scalar("WER/Valid", stats_valid["wer"], epoch)
+            writer.add_scalar("CER/Valid", stats_valid["cer"], epoch)
+            report_valid_metrics(epoch, 0, wer=stats_valid["wer"], cer=stats_valid["cer"])
+            return stats_valid["wer"], stats_valid["cer"]
+        else:
+            print("Valid: skipped (no batches processed)")
+            return float("nan"), float("nan")
 
 
 if __name__ == '__main__':
@@ -195,11 +201,15 @@ if __name__ == '__main__':
                 del loss, out, float_out
 
             with stats_train.synchronized():
-                stats_train["train_loss_avg"] = stats_train["train_loss_sum"] / stats_train["train_total"]
-                writer.add_scalar("Loss/Train", stats_train["train_loss_avg"], epoch)
-                report_train_metrics(epoch, stats_train["train_loss_avg"])
-                print('Training Summary Epoch: [{0}]\t'
-                      'Average Loss {loss:.3f}\t'.format(epoch + 1, loss=stats_train["train_loss_avg"]))
+                total = stats_train.get("train_total", 0)
+                if total:
+                    stats_train["train_loss_avg"] = stats_train["train_loss_sum"] / stats_train["train_total"]
+                    writer.add_scalar("Loss/Train", stats_train["train_loss_avg"], epoch)
+                    report_train_metrics(epoch, stats_train["train_loss_avg"])
+                    print('Training Summary Epoch: [{0}]\t'
+                          'Average Loss {loss:.3f}\t'.format(epoch + 1, loss=stats_train["train_loss_avg"]))
+                else:
+                    print('Training Summary Epoch: [{0}]\tSkipped (no batches processed)'.format(epoch + 1))
 
             with torch.no_grad():
                 wer, cer, = evaluate(test_loader=test_loader,

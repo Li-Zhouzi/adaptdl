@@ -21,8 +21,10 @@ after the current job restarts and resumed from where it left off.
 """
 
 import os
+import time
+import json
 
-from adaptdl.env import checkpoint_path, replica_rank
+from adaptdl.env import checkpoint_path, replica_rank, job_id
 
 # FIXME: Keeping global state like this will result in memory leaks for
 # applications which do not restart too often.
@@ -110,10 +112,33 @@ def save_state(state, sync=True):
         state.sync()
     if replica_rank() == 0:
         name = _STATES_TO_NAMES[state]
-        print("Saving to ", os.path.join(checkpoint_path(), name))
         if checkpoint_path() is not None:
-            with open(os.path.join(checkpoint_path(), name), "wb") as f:
+            final_path = os.path.join(checkpoint_path(), name)
+            start_time = time.time()
+            print("[TIMING] Checkpoint save started at:",
+                  time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)),
+                  f"({start_time})")
+            print("Saving to ", final_path)
+
+            with open(final_path, "wb") as f:
                 state.save(f)
+
+            end_time = time.time()
+            duration = end_time - start_time
+
+            print("[TIMING] Checkpoint save completed at:",
+                  time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time)),
+                  f"({end_time})")
+
+            log_path = os.path.join(checkpoint_path(),
+                                    ".adaptdl-checkpoint-times.log")
+            record = {
+                "state_name": name,
+                "duration_s": round(duration, 3),
+            }
+            with open(log_path, "a") as lf:
+                lf.write(json.dumps(record) + "\n")
+
 
 
 def load_state(state):

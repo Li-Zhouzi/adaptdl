@@ -1,11 +1,7 @@
 name,time,application,num_replicas,batch_size
-cifar10-0,17,cifar10,6,2048
-cifar10-1,27,cifar10,6,2048
-cifar10-2,77,cifar10,6,2048
-deepspeech2-1,110,deepspeech2,6,320
-cifar10-4,356,cifar10,16,4096
-cifar10-8,1332,cifar10,12,4096
-cifar10-10,1496,cifar10,6,2048
-cifar10-14,1778,cifar10,16,4096
-cifar10-15,1932,cifar10,16,4096
-cifar10-28,3041,cifar10,8,2048
+cifar10-999,17,cifar10,6,2048
+bert-1020,33,bert,12,384
+deepspeech2-1000,70,deepspeech2,12,640
+cifar10-998,287,cifar10,6,2048
+cifar10-997,487,cifar10,6,2048
+cifar10-996,687,cifar10,6,2048
