@@ -93,8 +93,23 @@ def save_all_states():
     Invokes `save_state` on all `State` objects for which `State.skip` is True.
     This function can be used to trigger a global checkpoint and save every
     `State` in the current job.
+
+    Saves checkpoints in order of size (largest first) to minimize lost work
+    if pod is terminated during checkpoint save. Model checkpoint (dataparallel)
+    is saved first as it's the largest and most expensive to recompute.
     """
-    for state in _STATES_TO_NAMES:
+    all_states = list(_STATES_TO_NAMES.keys())
+
+    # Separate states by type - save model (largest) first
+    model_states = [s for s in all_states if 'dataparallel' in _STATES_TO_NAMES[s]]
+    other_states = [s for s in all_states if s not in model_states]
+
+    # Save model checkpoints first (largest, most expensive)
+    for state in model_states:
+        save_state(state)
+
+    # Then save other checkpoints
+    for state in other_states:
         save_state(state)
 
 
@@ -103,6 +118,9 @@ def save_state(state, sync=True):
     Saves a `State` object to persistent storage. First invokes `State.sync` on
     all replicas if `sync` is `True` (default), and then invokes `State.save`
     on the replica of rank 0 only.
+
+    Uses atomic write pattern: writes to temp file, fsyncs, then atomically
+    renames to final destination to prevent corruption on pod termination.
 
     Arguments:
         state (State): The `State` object to save to persistent storage.
@@ -114,27 +132,56 @@ def save_state(state, sync=True):
         name = _STATES_TO_NAMES[state]
         if checkpoint_path() is not None:
             final_path = os.path.join(checkpoint_path(), name)
-            start_time = time.time()
-            print("[TIMING] Checkpoint save started at:",
-                  time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)),
-                  f"({start_time})")
-            print("Saving to ", final_path)
+            temp_path = final_path + ".tmp"
 
-            with open(final_path, "wb") as f:
+            overall_start = time.time()
+            print(f"\n[CHECKPOINT] Starting save for '{name}'")
+            print(f"[TIMING] Save started at: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(overall_start))} ({overall_start:.3f})")
+
+            # Phase 1: Write to temporary file
+            write_start = time.time()
+            with open(temp_path, "wb") as f:
                 state.save(f)
+                f.flush()  # Flush Python buffers to OS
+                write_end = time.time()
 
-            end_time = time.time()
-            duration = end_time - start_time
+                # Phase 2: fsync to ensure data reaches EFS/NFS
+                print(f"[TIMING] '{name}' write to buffer completed: {write_end - write_start:.3f}s")
+                fsync_start = time.time()
+                os.fsync(f.fileno())
+                fsync_end = time.time()
+                print(f"[TIMING] '{name}' fsync completed: {fsync_end - fsync_start:.3f}s")
 
-            print("[TIMING] Checkpoint save completed at:",
-                  time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time)),
-                  f"({end_time})")
+            # Phase 3: Atomic rename
+            rename_start = time.time()
+            os.rename(temp_path, final_path)
+            rename_end = time.time()
+            print(f"[TIMING] '{name}' atomic rename completed: {rename_end - rename_start:.3f}s")
 
-            log_path = os.path.join(checkpoint_path(),
-                                    ".adaptdl-checkpoint-times.log")
+            # Calculate and log total duration
+            overall_end = time.time()
+            total_duration = overall_end - overall_start
+            write_duration = write_end - write_start
+            fsync_duration = fsync_end - fsync_start
+            rename_duration = rename_end - rename_start
+
+            file_size_mb = os.path.getsize(final_path) / (1024 * 1024)
+            print(f"[CHECKPOINT] '{name}' save completed successfully")
+            print(f"[TIMING] Total: {total_duration:.3f}s | Write: {write_duration:.3f}s | "
+                  f"Fsync: {fsync_duration:.3f}s | Rename: {rename_duration:.3f}s | "
+                  f"Size: {file_size_mb:.2f}MB")
+            print(f"[TIMING] Completed at: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(overall_end))} ({overall_end:.3f})\n")
+
+            # Log to file for analysis
+            log_path = os.path.join(checkpoint_path(), ".adaptdl-checkpoint-times.log")
             record = {
                 "state_name": name,
-                "duration_s": round(duration, 3),
+                "total_duration_s": round(total_duration, 3),
+                "write_duration_s": round(write_duration, 3),
+                "fsync_duration_s": round(fsync_duration, 3),
+                "rename_duration_s": round(rename_duration, 3),
+                "file_size_mb": round(file_size_mb, 2),
+                "timestamp": overall_end
             }
             with open(log_path, "a") as lf:
                 lf.write(json.dumps(record) + "\n")
@@ -147,6 +194,9 @@ def load_state(state):
     previously saved, then State.load will be invoked with a readable file
     object to load from.
 
+    Implements retry logic to handle transient NFS/EFS issues where checkpoint
+    file may exist but data is not yet fully available due to async writeback.
+
     Arguments:
         state (State): `State` object to load from persistent storage.
 
@@ -156,11 +206,70 @@ def load_state(state):
     """
     if checkpoint_path() is None:
         return False
-    try:
-        name = _STATES_TO_NAMES[state]
-        print("Loading from ", os.path.join(checkpoint_path(), name))
-        with open(os.path.join(checkpoint_path(), name), "rb") as f:
-            state.load(f)
-        return True
-    except FileNotFoundError:
+
+    name = _STATES_TO_NAMES[state]
+    checkpoint_file = os.path.join(checkpoint_path(), name)
+
+    # Check if file doesn't exist - no need to retry
+    if not os.path.exists(checkpoint_file):
+        print(f"[CHECKPOINT] No checkpoint found for '{name}' at {checkpoint_file}")
         return False
+
+    # File exists, try loading with retry logic
+    max_retries = 50
+    retry_delay = 10  # seconds
+
+    for attempt in range(max_retries):
+        try:
+            if attempt > 0:
+                print(f"[CHECKPOINT] Retry {attempt}/{max_retries} loading '{name}' after {retry_delay}s delay...")
+                time.sleep(retry_delay)
+
+            print(f"[CHECKPOINT] Loading '{name}' from {checkpoint_file} (attempt {attempt + 1}/{max_retries})")
+            load_start = time.time()
+
+            with open(checkpoint_file, "rb") as f:
+                state.load(f)
+
+            load_end = time.time()
+            load_duration = load_end - load_start
+
+            print(f"[CHECKPOINT] Successfully loaded '{name}' in {load_duration:.3f}s")
+            if attempt > 0:
+                print(f"[CHECKPOINT] SUCCESS after {attempt} retries!")
+
+            return True
+
+        except FileNotFoundError:
+            # File disappeared between existence check and open
+            print(f"[CHECKPOINT ERROR] File '{name}' disappeared during load attempt {attempt + 1}")
+            if attempt == max_retries - 1:
+                print(f"[CHECKPOINT ERROR] Max retries reached, file not found")
+                return False
+
+        except (EOFError, OSError, ValueError, RuntimeError) as e:
+            # Checkpoint corruption or incomplete write
+            error_type = type(e).__name__
+            print(f"[CHECKPOINT ERROR] Failed to load '{name}' (attempt {attempt + 1}/{max_retries}): {error_type}: {str(e)}")
+
+            # Check file size for debugging
+            try:
+                file_size = os.path.getsize(checkpoint_file)
+                print(f"[CHECKPOINT DEBUG] File size: {file_size / (1024 * 1024):.2f} MB")
+            except:
+                pass
+
+            if attempt == max_retries - 1:
+                print(f"[CHECKPOINT ERROR] Max retries ({max_retries}) reached, giving up")
+                raise RuntimeError(f"Failed to load checkpoint '{name}' after {max_retries} attempts. "
+                                 f"Last error: {error_type}: {str(e)}")
+
+        except Exception as e:
+            # Unexpected error - log and re-raise
+            error_type = type(e).__name__
+            print(f"[CHECKPOINT ERROR] Unexpected error loading '{name}': {error_type}: {str(e)}")
+            if attempt == max_retries - 1:
+                raise
+
+    # Should not reach here
+    return False
