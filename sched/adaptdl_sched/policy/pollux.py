@@ -364,9 +364,8 @@ class PolluxPolicy(object):
         nodes_index = {key: idx for idx, key in enumerate(nodes)}
         state = np.zeros((len(jobs), len(nodes)), dtype=np.int)
         for job_key, alloc in allocations.items():
-            for node_key in nodes_index:
-                if node_key in alloc:
-                    state[jobs_index[job_key], nodes_index[node_key]] += 1
+            for node_key in (key for key in alloc if key in nodes_index):
+                state[jobs_index[job_key], nodes_index[node_key]] += 1
         return state
 
     def _state_to_allocations(self, state, jobs, nodes):
@@ -564,8 +563,8 @@ class PolluxPolicy(object):
         idx = self._select_result(states, values, min(len(nodes), desired_nodes))
         LOG.info("\n" + "-" * 80)
         for i, state in enumerate(states):
-            if i != idx:
-                continue
+            # if i != idx:
+            #     continue
             out = "Solution {}:\n".format(i)
             out += "Selected index: {}\n".format(idx)
             out += "{}\n".format(state)
@@ -594,9 +593,9 @@ class PolluxPolicy(object):
                 # delay[i] = 30.0
         factor = np.maximum(age - num_restarts * delay, 0.0) / (age + delay)
         for i, (job_key, job) in enumerate(job_items):
+            # print(f"Job: {job_key} num_restarts={num_restarts[i]} epoch={getattr(job, 'epoch', None)} factor={factor[i]:.4f} age={age[i]}")
             LOG.info("Job: %s num_restarts=%s epoch=%s factor=%.4f age=%s",
                      job_key, num_restarts[i], getattr(job, "epoch", None), factor[i], age[i])
-            
         return (states[idx], utilities[idx]) if idx is not None else (None, None), desired_nodes # this returned desired nodes should never be used
 
     def get_true_utility_given_nodes(self, jobs, nodes, base_allocations, node_template):
@@ -665,6 +664,7 @@ class PolluxPolicy(object):
             LOG.info("Pollux optimize inputs | jobs=%s", jobs_log)
             LOG.info("Pollux optimize inputs | nodes=%s", nodes_log)
             LOG.info("Pollux optimize inputs | base_allocations=%s", base_allocations_log)
+            # print(f"Pollux optimize inputs | base_allocations={base_allocations_log}")
             LOG.info("Pollux optimize inputs | node_template=%s", node_template_log)
         except Exception as e:
             LOG.warning("Failed to serialize optimize inputs: %s", e)
