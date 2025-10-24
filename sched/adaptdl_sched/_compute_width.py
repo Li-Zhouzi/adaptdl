@@ -348,7 +348,7 @@ def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
         return None, None, None
 
     LOG.info(f"--------------------OPTIMAL GLUE: {glue_list[min_glue_ind]} ----------------------------")
-
+    LOG.info(f"Optimal average jct: {min_jct_over_glue}, total budget: {total_b}")
 
     return final_k_dict
                 
@@ -370,7 +370,7 @@ def _compute_width_iter(application_rates, size_data, speedup_dict, b):
     if total_budget is None or total_budget > b:
         LOG.info(f"No valid solution within budget constraint. Total budget: {total_budget}, limit: {b}")
         return None 
-    LOG.info(f"Found solution with total budget: {total_budget}")
+    LOG.info(f"Found solution with total budget: {total_budget}, total rescale time: {rescale_time}, mean jct: {s}")
     return k_dict
 
 

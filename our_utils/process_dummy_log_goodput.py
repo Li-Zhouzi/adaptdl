@@ -141,6 +141,7 @@ def process_single_log(log_file_path):
             epoch = job['epoch']
             allocation = job.get('allocation', [])
             progress = job.get('progress', 0)
+            batch_size = job.get('batch_size', None)
             pod_status = job.get('pod_status', '')
             
             # Initialize job data if not exists
@@ -206,6 +207,7 @@ def process_single_log(log_file_path):
                     'first_seen': timestamp,
                     'last_seen': timestamp,
                     'allocation_history': [],
+                    'batch_sizes': set(),
                     'is_affected': False,  # Mark if epoch is affected by scaling/gaps/wrong allocation
                     'duration': 0,
                     'has_monitor_gap': False,  # Mark if epoch was affected by monitor gap
@@ -216,6 +218,10 @@ def process_single_log(log_file_path):
             epoch_info = epochs[epoch]
             epoch_info['last_seen'] = timestamp
             epoch_info['allocation_history'].append((timestamp, len(allocation)))
+            # Track batch sizes only when allocation equals expected GPUs for the job
+            if (isinstance(batch_size, (int, float)) and batch_size > 0 and
+                job_expected_gpus and len(allocation) == job_expected_gpus):
+                epoch_info['batch_sizes'].add(int(batch_size))
             
             # Check for wrong allocation (not expected GPU count)
             if job_expected_gpus and len(allocation) != job_expected_gpus:
@@ -297,6 +303,7 @@ def process_single_log(log_file_path):
                 epoch_info['has_monitor_gap'] or       # Monitor gaps
                 epoch_info['has_rescaling']            # Rescaling during epoch
             )
+        # Do not forward-fill here; keep raw per-epoch batch_sizes only
             
     
     if "cifar10" in log_file_path and "parallel" in filename:
@@ -368,6 +375,7 @@ def build_goodput_dict(base_dir):
     """Build goodput dictionary for all applications and GPU configurations."""
     goodput_dict = {}
     startup_times_dict = defaultdict(list)
+    bsz_dict = {}
     
     # Get all application directories
     app_dirs = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
@@ -378,6 +386,7 @@ def build_goodput_dict(base_dir):
             continue
             
         goodput_dict[app_name] = {}
+        bsz_dict[app_name] = {}
         app_dir = os.path.join(base_dir, app_name)
         
         # Get all GPU log files (both single and parallel)
@@ -419,6 +428,18 @@ def build_goodput_dict(base_dir):
                         '1_2_4gpu.txt' in base_filename and 
                         (expected_gpus == 4)):
                         continue
+                
+                # Aggregate batch sizes per epoch and expected replica count only for unaffected epochs
+                for epoch_num, epoch_info in epochs.items():
+                    is_unaffected = not epoch_info.get('is_affected', False)
+                    if app_name == 'bert':
+                        is_unaffected = True  # Mirror goodput handling so we keep BERT data
+                    if epoch_info.get('batch_sizes') and is_unaffected:
+                        if epoch_num not in bsz_dict[app_name]:
+                            bsz_dict[app_name][epoch_num] = {}
+                        if expected_gpus not in bsz_dict[app_name][epoch_num]:
+                            bsz_dict[app_name][epoch_num][expected_gpus] = set()
+                        bsz_dict[app_name][epoch_num][expected_gpus].update(epoch_info['batch_sizes'])
                 
                 goodputs = calculate_goodput(epochs, app_name, expected_gpus)
                 
@@ -508,7 +529,47 @@ def build_goodput_dict(base_dir):
                                 break
                     
     
-    return goodput_dict, startup_times_dict
+    # Fill missing epochs for bsz_dict similar to goodput: copy nearest neighbor values
+    for app_name in bsz_dict:
+        max_epochs = APPLICATIONS[app_name]["max_epochs"]
+        # Determine all gpu counts observed for this app
+        all_gpu_counts = set()
+        for epoch_key, epoch_data in bsz_dict[app_name].items():
+            all_gpu_counts.update(epoch_data.keys())
+        all_gpu_counts = sorted(list(all_gpu_counts))
+        if not all_gpu_counts:
+            continue
+        # Ensure all epochs exist
+        for epoch in range(max_epochs):
+            if epoch not in bsz_dict[app_name]:
+                bsz_dict[app_name][epoch] = {}
+            for gpu_count in all_gpu_counts:
+                if gpu_count not in bsz_dict[app_name][epoch]:
+                    # Look forward then backward for nearest available
+                    found = False
+                    for next_epoch in range(epoch + 1, max_epochs):
+                        if (next_epoch in bsz_dict[app_name] and
+                            gpu_count in bsz_dict[app_name][next_epoch] and
+                            bsz_dict[app_name][next_epoch][gpu_count]):
+                            bsz_dict[app_name][epoch][gpu_count] = set(bsz_dict[app_name][next_epoch][gpu_count])
+                            found = True
+                            break
+                    if not found:
+                        for prev_epoch in range(epoch - 1, -1, -1):
+                            if (prev_epoch in bsz_dict[app_name] and
+                                gpu_count in bsz_dict[app_name][prev_epoch] and
+                                bsz_dict[app_name][prev_epoch][gpu_count]):
+                                bsz_dict[app_name][epoch][gpu_count] = set(bsz_dict[app_name][prev_epoch][gpu_count])
+                                found = True
+                                break
+        # Convert sets to sorted lists
+        for epoch_num in list(bsz_dict[app_name].keys()):
+            for gpu_count in list(bsz_dict[app_name][epoch_num].keys()):
+                values = bsz_dict[app_name][epoch_num][gpu_count]
+                if isinstance(values, set):
+                    bsz_dict[app_name][epoch_num][gpu_count] = sorted(list(values))
+
+    return goodput_dict, startup_times_dict, bsz_dict
 
 def plot_goodput_functions(goodput_dict):
     """Create figure with 6 subplots showing goodput functions."""
@@ -620,6 +681,25 @@ def print_goodput_functions(goodput_dict):
         print("    },")
     print("}")
 
+def print_bsz_functions(bsz_dict):
+    """Print batch size functions in Python dictionary format."""
+    print("\n" + "="*80)
+    print("BATCH SIZE FUNCTIONS")
+    print("="*80)
+    
+    # Print as Python dictionary
+    print("bsz_functions = {")
+    for app_name in sorted(bsz_dict.keys()):
+        max_epochs = APPLICATIONS[app_name]["max_epochs"]
+        print(f"    '{app_name}': {{")
+        for epoch in sorted(bsz_dict[app_name].keys()):
+            if epoch < max_epochs:  # Only include epochs up to max_epochs
+                gpu_bsz = bsz_dict[app_name][epoch]
+                if gpu_bsz:
+                    print(f"        {epoch}: {dict(sorted(gpu_bsz.items()))},")
+        print("    },")
+    print("}")
+
 def main():
     # Allow passing base directory as command line argument
     if len(sys.argv) > 1:
@@ -634,10 +714,11 @@ def main():
         print(f"Default: ./experiment_results/dummy-goodput-12xlarge")
         sys.exit(1)
     
-    goodput_dict, startup_times_dict = build_goodput_dict(base_dir)
+    goodput_dict, startup_times_dict, bsz_dict = build_goodput_dict(base_dir)
     
     # Print goodput functions in copy-paste format
     print_goodput_functions(goodput_dict)
+    print_bsz_functions(bsz_dict)
     
     # Print startup times table
     print_startup_times_table(startup_times_dict)

@@ -124,19 +124,19 @@ class GlobalProfiler:
         This runs in the executor thread pool to avoid blocking the main event loop.
         """
         # Check if it's time to fit perf_params (every 60 seconds)
-        if self._global_state.should_fit_perf_params():
-            LOG.info(f"[TIMESTAMP: {time.time()}] Starting perf_params fitting in executor thread")
-            fit_start_time = time.time()
-            self._global_state.fit_all_perf_params()
+        # if self._global_state.should_fit_perf_params():
+        #     LOG.info(f"[TIMESTAMP: {time.time()}] Starting perf_params fitting in executor thread")
+        #     fit_start_time = time.time()
+        #     self._global_state.fit_all_perf_params()
             
-            # Save the state to persistent storage
-            save_state(self._global_state, sync=False)
-            LOG.info("Saved global profile state to persistent storage")
+        #     # Save the state to persistent storage
+        #     save_state(self._global_state, sync=False)
+        #     LOG.info("Saved global profile state to persistent storage")
             
 
             
-            fit_duration = time.time() - fit_start_time
-            LOG.info(f"[TIMESTAMP: {time.time()}] Completed perf_params fitting in {fit_duration:.3f} seconds")
+        #     fit_duration = time.time() - fit_start_time
+        #     LOG.info(f"[TIMESTAMP: {time.time()}] Completed perf_params fitting in {fit_duration:.3f} seconds")
         
         # Now compute and return goodput
         return self._load_goodput_function()
@@ -152,51 +152,51 @@ class GlobalProfiler:
             dict: A dictionary where goodput_dict[app][epoch][num_replica] contains the optimized goodput
         """
         goodput_dict = {}
-        global_profile_state = self._global_state
+        # global_profile_state = self._global_state
         
-        # Validate that all applications have required data
-        for application in global_profile_state.global_perf_params.keys():            
-            # Get application configuration
+        # # Validate that all applications have required data
+        # for application in global_profile_state.global_perf_params.keys():            
+        #     # Get application configuration
             
-            perf_params = global_profile_state.global_perf_params[application]
-            profile = global_profile_state.global_profiles[application]
+        #     perf_params = global_profile_state.global_perf_params[application]
+        #     profile = global_profile_state.global_profiles[application]
             
-            goodput_dict[application] = {}
-            app_config = APPLICATIONS[application]
+        #     goodput_dict[application] = {}
+        #     app_config = APPLICATIONS[application]
 
-            # For each epoch that has grad_params
-            for epoch in global_profile_state.global_grad_params[application].keys():
-                grad_params = global_profile_state.global_grad_params[application][epoch]
+        #     # For each epoch that has grad_params
+        #     for epoch in global_profile_state.global_grad_params[application].keys():
+        #         grad_params = global_profile_state.global_grad_params[application][epoch]
             
 
-                # Create GoodputFunction with the global profile data
-                goodput_fn = GoodputFunction(perf_params, grad_params, app_config.init_batch_size)
+        #         # Create GoodputFunction with the global profile data
+        #         goodput_fn = GoodputFunction(perf_params, grad_params, app_config.init_batch_size)
                 
-                goodput_dict[application][epoch] = {}
+        #         goodput_dict[application][epoch] = {}
                 
-                # Calculate optimal goodput for replicas 1-64
-                for num_replicas in range(1, 65):
-                    # Check if we have profiled goodput for this configuration
-                    if (application in global_profile_state.global_goodput_profile and
-                        epoch in global_profile_state.global_goodput_profile[application] and
-                        num_replicas in global_profile_state.global_goodput_profile[application][epoch]):
-                        # Use profiled goodput
-                        # NOTE: The goodput we store is already gain/second (actual goodput).
-                        # The progress in the original implementation was incorrectly scaled by init_batch_size.
-                        # This is fixed in _compute_width, where init_batch_size is not divided.
-                        optimal_goodput = global_profile_state.global_goodput_profile[application][epoch][num_replicas]
-                    else:
-                        # Use prediction
-                        num_nodes = max(1, (num_replicas + NUM_GPU_PER_NODE - 1) // NUM_GPU_PER_NODE)
-                        # Optimize for the best goodput using application-specific config
-                        optimal_goodput, _, _ = goodput_fn.optimize(
-                            num_nodes, num_replicas, 
-                            max_batch_size=app_config.max_batch_size,
-                            atomic_bsz_range=(app_config.min_local_bsz, app_config.max_local_bsz),
-                            accumulation=app_config.gradient_accumulation
-                        )
+        #         # Calculate optimal goodput for replicas 1-64
+        #         for num_replicas in range(1, 65):
+        #             # Check if we have profiled goodput for this configuration
+        #             if (application in global_profile_state.global_goodput_profile and
+        #                 epoch in global_profile_state.global_goodput_profile[application] and
+        #                 num_replicas in global_profile_state.global_goodput_profile[application][epoch]):
+        #                 # Use profiled goodput
+        #                 # NOTE: The goodput we store is already gain/second (actual goodput).
+        #                 # The progress in the original implementation was incorrectly scaled by init_batch_size.
+        #                 # This is fixed in _compute_width, where init_batch_size is not divided.
+        #                 optimal_goodput = global_profile_state.global_goodput_profile[application][epoch][num_replicas]
+        #             else:
+        #                 # Use prediction
+        #                 num_nodes = max(1, (num_replicas + NUM_GPU_PER_NODE - 1) // NUM_GPU_PER_NODE)
+        #                 # Optimize for the best goodput using application-specific config
+        #                 optimal_goodput, _, _ = goodput_fn.optimize(
+        #                     num_nodes, num_replicas, 
+        #                     max_batch_size=app_config.max_batch_size,
+        #                     atomic_bsz_range=(app_config.min_local_bsz, app_config.max_local_bsz),
+        #                     accumulation=app_config.gradient_accumulation
+        #                 )
                     
-                    goodput_dict[application][epoch][num_replicas] = optimal_goodput
+        #             goodput_dict[application][epoch][num_replicas] = optimal_goodput
         # for now, use hard profiled goodput
         goodput_functions = {
             'bert': {

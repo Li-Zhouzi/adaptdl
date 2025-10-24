@@ -127,12 +127,19 @@ def process_log_file(log_file_path):
                     'progress_history': [],
                     'wasted_time': 0,
                     'last_progress': None,
-                    'stuck_start_time': None
+                    'stuck_start_time': None,
+                    'allocation_pairs': set()
                 }
             
             epoch_info = jobs[job_name]['epochs'][epoch]
             epoch_info['last_seen'] = timestamp
             
+            # Track allocation pairs (num_nodes, num_replicas) observed in this epoch
+            if allocation:
+                num_replicas = len(allocation)
+                num_nodes = len(set(allocation))
+                epoch_info['allocation_pairs'].add((num_nodes, num_replicas))
+
             # Track GPU allocations
             gpu_count = len(allocation)
             if gpu_count not in epoch_info['gpu_allocations']:
@@ -633,6 +640,94 @@ def print_epoch_details(job_name, jobs, goodput_function=None):
         
         print(f"{epoch:<8} {gpu_str:<15} {duration:<12.1f} {wasted:<10.1f} {theoretical:<15.1f}")
 
+def print_job_breakdown(job_name, jobs):
+    """Print per-epoch breakdown for a specific job: actual, wasted, theoretical, rescaling, and allocation."""
+    if job_name not in jobs:
+        print(f"\nJob '{job_name}' not found for breakdown.")
+        return
+
+    application = job_name.split('-')[0]
+    job_epochs = jobs[job_name]['epochs']
+    if not job_epochs:
+        print(f"\nNo epoch data for job {job_name}.")
+        return
+
+    # Header
+    print(f"\n" + "="*90)
+    print(f"PER-EPOCH BREAKDOWN FOR {job_name}")
+    print("="*90)
+    print(f"{'Epoch':<6} {'Actual(s)':<12} {'Wasted(s)':<12} {'Theoretical(s)':<15} {'Rescale(s)':<12} {'Allocations':<20}")
+    print("-" * 90)
+
+    previous_final_gpu_count = None
+    sum_actual_durations = 0.0
+    sum_theoretical_durations = 0.0
+    sum_rescale = 0.0
+
+    for epoch in sorted(job_epochs.keys()):
+        epoch_info = job_epochs[epoch]
+        duration = epoch_info.get('duration', 0)
+        wasted = epoch_info.get('wasted_time', 0)
+
+        gpu_allocations = epoch_info.get('gpu_allocations', [])
+        # Format allocation string (GPU counts) and pairs if available
+        alloc_str = str(gpu_allocations) if len(gpu_allocations) > 1 else (str(gpu_allocations[0]) if gpu_allocations else "0")
+
+        # Theoretical duration: average across observed allocations if multiple
+        theoretical = -1
+        if gpu_allocations:
+            if len(gpu_allocations) == 1:
+                gpu_count = gpu_allocations[0]
+                try:
+                    theoretical = get_theoretical_duration(application, epoch, gpu_count)
+                except (AssertionError, ValueError):
+                    theoretical = -1
+            else:
+                durations = []
+                for gpu_count in gpu_allocations:
+                    try:
+                        durations.append(get_theoretical_duration(application, epoch, gpu_count))
+                    except (AssertionError, ValueError):
+                        continue
+                if durations:
+                    theoretical = sum(durations) / len(durations)
+
+        # Rescaling overhead if final allocation changed from previous epoch
+        if gpu_allocations:
+            final_gpu_count = gpu_allocations[-1]
+        else:
+            final_gpu_count = 0
+
+        rescale = 0
+        if previous_final_gpu_count is not None and final_gpu_count != previous_final_gpu_count:
+            if application == "cifar10":
+                rescale = 120
+            elif application == "deepspeech2":
+                rescale = 150
+            elif application == "bert":
+                rescale = 300
+            else:
+                rescale = 0
+
+        previous_final_gpu_count = final_gpu_count
+
+        sum_actual_durations += float(duration)
+        if theoretical != -1:
+            sum_theoretical_durations += float(theoretical)
+        sum_rescale += float(rescale)
+
+        print(f"{epoch:<6} {duration:<12.1f} {wasted:<12.1f} {theoretical:<15.1f} {rescale:<12.1f} {alloc_str:<20}")
+
+    # Total actual response time for this job (from first_seen to last epoch end)
+    last_epoch_end = max(ei['last_seen'] for ei in job_epochs.values())
+    total_response_time = last_epoch_end - jobs[job_name]['first_seen']
+    total_theoretical_time = calculate_theoretical_response_time(job_name, jobs[job_name])
+
+    print("-" * 90)
+    print(f"Total Actual Response Time (first->last) (s): {total_response_time:.1f}")
+    print(f"Total Actual (sum of epoch durations) (s): {sum_actual_durations:.1f}")
+    print(f"Total Theoretical Response Time (s): {total_theoretical_time:.1f}")
+
 def calculate_theoretical_response_time(job_name, job_info):
     """Calculate theoretical response time for a job including rescaling overhead."""
     application = job_name.split('-')[0]
@@ -790,6 +885,10 @@ def main():
 
     # Print jobs that completed with failing pod status
     print_failed_completed_jobs(completed_jobs_status)
+
+    # Hardcoded specific job breakdown
+    specific_job_breakdown = 'cifar10-46'
+    print_job_breakdown(specific_job_breakdown, jobs)
 
     # List of jobs to show detailed epoch information for
     # Modify this list to see details for different jobs
