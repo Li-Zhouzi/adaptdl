@@ -75,6 +75,9 @@ class WidthCalculator:
         
         # Main computation loop - call _compute_width every 5 minutes (300 seconds)
         while True:
+            if self.width is not None: # for the experiment, it is perfect info case, so never compute width again.
+                await asyncio.sleep(60)
+                continue
             await self._compute_width()
             await asyncio.sleep(60)  # Sleep for 1 minutes
 

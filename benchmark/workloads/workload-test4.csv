@@ -1,2 +1,3 @@
 name,time,application,num_replicas,batch_size
-deepspeech2-73,1,deepspeech2,12,640
+cifar10-35,1,cifar10,6,2048
+deepspeech2-73,2,deepspeech2,12,640

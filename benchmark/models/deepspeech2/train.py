@@ -19,6 +19,39 @@ import adaptdl
 import adaptdl.torch
 from adaptdl.torch._metrics import report_train_metrics, report_valid_metrics
 
+# --- Debug/diagnostic helpers ---
+def _cuda_mem(prefix=""):
+    try:
+        if not torch.cuda.is_available():
+            return f"{prefix}CUDA not available"
+        dev = torch.cuda.current_device()
+        alloc = torch.cuda.memory_allocated(dev) / (1024 * 1024)
+        reserved = torch.cuda.memory_reserved(dev) / (1024 * 1024)
+        max_alloc = torch.cuda.max_memory_allocated(dev) / (1024 * 1024)
+        return (f"{prefix}gpu={dev} alloc={alloc:.1f}MiB reserved={reserved:.1f}MiB "
+                f"max_alloc={max_alloc:.1f}MiB")
+    except Exception as _e:
+        return f"{prefix}CUDA mem unavailable: {_e}"
+
+def _summarize_batch(inputs, input_sizes, targets, target_sizes):
+    try:
+        bsz = int(inputs.size(0)) if hasattr(inputs, 'size') else None
+        shape = tuple(inputs.shape) if hasattr(inputs, 'shape') else None
+        dtype = getattr(inputs, 'dtype', None)
+        device = str(getattr(inputs, 'device', 'cpu'))
+        is_contig = getattr(inputs, 'is_contiguous', lambda: None)()
+        # input_sizes/target_sizes may be tensors
+        inp_sizes = input_sizes.detach().cpu().int().tolist() if torch.is_tensor(input_sizes) else list(input_sizes)
+        tgt_sizes = target_sizes.detach().cpu().int().tolist() if torch.is_tensor(target_sizes) else list(target_sizes)
+        lens_min = min(inp_sizes) if inp_sizes else None
+        lens_max = max(inp_sizes) if inp_sizes else None
+        lens_mean = (sum(inp_sizes) / len(inp_sizes)) if inp_sizes else None
+        num_targets = sum(tgt_sizes) if tgt_sizes else None
+        return (f"batch: bsz={bsz} shape={shape} dtype={dtype} device={device} contig={is_contig} "
+                f"input_len[min/mean/max]={lens_min}/{lens_mean}/{lens_max} targets_total={num_targets}")
+    except Exception as e:
+        return f"batch summary unavailable: {e}"
+
 parser = argparse.ArgumentParser(description='DeepSpeech training')
 parser.add_argument('--train-manifest', metavar='DIR',
                     help='path to train manifest csv', default='data/train_manifest.csv')
@@ -112,6 +145,18 @@ if __name__ == '__main__':
         random.seed(args.seed)
 
     device = torch.device("cuda" if args.cuda else "cpu")
+    print("=" * 60)
+    print("ENVIRONMENT INFO:")
+    print(f"  torch={torch.__version__} cuda={torch.version.cuda} cudnn={torch.backends.cudnn.version()}")
+    if torch.cuda.is_available():
+        try:
+            print(f"  cuda devices={torch.cuda.device_count()} name={torch.cuda.get_device_name(torch.cuda.current_device())}")
+            print("  "+_cuda_mem("startup: "))
+        except Exception as _e:
+            print(f"  cuda query failed: {_e}")
+    else:
+        print("  CUDA not available")
+    print("=" * 60)
 
     with open(args.labels_path) as label_file:
         labels = str(''.join(json.load(label_file)))
@@ -170,35 +215,51 @@ if __name__ == '__main__':
         for epoch in adaptdl.torch.remaining_epochs_until(args.epochs):
             model.train()
             stats_train = adaptdl.torch.Accumulator()
+            if torch.cuda.is_available():
+                try:
+                    torch.cuda.reset_peak_memory_stats(torch.cuda.current_device())
+                except TypeError:
+                    # older PyTorch: reset without arg
+                    torch.cuda.reset_peak_memory_stats()
             for i, data in enumerate(train_loader):
-                inputs, targets, input_sizes, target_sizes = data
-                inputs = inputs.to(device)
-                input_sizes = input_sizes.to(device)
-                out, output_sizes = model(inputs, input_sizes)
-                out = out.transpose(0, 1)  # TxNxH
+                try:
+                    inputs, targets, input_sizes, target_sizes = data
+                    inputs = inputs.to(device)
+                    input_sizes = input_sizes.to(device)
+                    out, output_sizes = model(inputs, input_sizes)
+                    out = out.transpose(0, 1)  # TxNxH
 
-                float_out = out.float()  # ensure float32 for loss
-                loss = criterion(float_out, targets, output_sizes, target_sizes).to(device)
+                    float_out = out.float()  # ensure float32 for loss
+                    loss = criterion(float_out, targets, output_sizes, target_sizes).to(device)
 
-                loss_value = loss.item()
+                    loss_value = loss.item()
 
-                loss.backward()
-                if train_loader._elastic.is_sync_step():
-                    norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_norm)
-                optimizer.step()
+                    loss.backward()
+                    if train_loader._elastic.is_sync_step():
+                        norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_norm)
+                    optimizer.step()
 
-                # measure elapsed time
-                print('Epoch: [{0}][{1}/{2}]\tLoss {loss:.4f}\t'
-                      .format((epoch + 1), (i + 1), len(train_loader), loss=loss.item()))
+                    # per-iteration log (loss only)
+                    print('Epoch: [{0}][{1}/{2}]\tLoss {loss:.4f}'
+                          .format((epoch + 1), (i + 1), len(train_loader), loss=loss.item()))
 
-                stats_train["train_loss_sum"] += loss.item() * inputs.size(0)
-                stats_train["train_total"] += inputs.size(0)
+                    stats_train["train_loss_sum"] += loss.item() * inputs.size(0)
+                    stats_train["train_total"] += inputs.size(0)
 
-                global_step = int(model.adascale._state["progress"])
-                train_loader.to_tensorboard(writer, global_step, tag_prefix="AdaptDL/Data")
-                model.to_tensorboard(writer, global_step, tag_prefix="AdaptDL/Model")
+                    global_step = int(model.adascale._state["progress"])
+                    train_loader.to_tensorboard(writer, global_step, tag_prefix="AdaptDL/Data")
+                    model.to_tensorboard(writer, global_step, tag_prefix="AdaptDL/Model")
 
-                del loss, out, float_out
+                    del loss, out, float_out
+                except Exception as e:
+                    print("! Exception in training iteration")
+                    print(_cuda_mem("at-exception: "))
+                    try:
+                        print(_summarize_batch(inputs, input_sizes, targets, target_sizes))
+                    except Exception:
+                        pass
+                    traceback.print_exc()
+                    raise
 
             with stats_train.synchronized():
                 total = stats_train.get("train_total", 0)
@@ -206,8 +267,22 @@ if __name__ == '__main__':
                     stats_train["train_loss_avg"] = stats_train["train_loss_sum"] / stats_train["train_total"]
                     writer.add_scalar("Loss/Train", stats_train["train_loss_avg"], epoch)
                     report_train_metrics(epoch, stats_train["train_loss_avg"])
+                    mem_line = _cuda_mem("epoch-end: ")
+                    peak_line = ""
+                    if torch.cuda.is_available():
+                        try:
+                            dev = torch.cuda.current_device()
+                            peak_alloc = torch.cuda.max_memory_allocated(dev) / (1024 * 1024)
+                            try:
+                                peak_reserved = torch.cuda.max_memory_reserved(dev) / (1024 * 1024)
+                            except AttributeError:
+                                peak_reserved = float('nan')
+                            peak_line = f" Peak: alloc={peak_alloc:.1f}MiB reserved={peak_reserved:.1f}MiB"
+                        except Exception:
+                            pass
                     print('Training Summary Epoch: [{0}]\t'
-                          'Average Loss {loss:.3f}\t'.format(epoch + 1, loss=stats_train["train_loss_avg"]))
+                          'Average Loss {loss:.3f}\t{mem}{peak}'
+                          .format(epoch + 1, loss=stats_train["train_loss_avg"], mem=mem_line, peak=peak_line))
                 else:
                     print('Training Summary Epoch: [{0}]\tSkipped (no batches processed)'.format(epoch + 1))
 
