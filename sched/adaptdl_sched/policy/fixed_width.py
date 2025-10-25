@@ -14,6 +14,7 @@ class FixedWidthPolicy(object):
     '''
     def __init__(self, width):
         self.width = width
+        self.max_nodes = 20
 
     def _sort_nodes(self, nodes):
         return OrderedDict(  # Sort preemptible nodes last.
@@ -95,6 +96,9 @@ class FixedWidthPolicy(object):
         
         desired_nodes = math.ceil(total_gpus_needed / node_template.resources.get("nvidia.com/gpu", 1))        
         LOG.info(f"FixedWidthPolicy optimize results: {new_allocations}, desired_nodes: {desired_nodes}")
+        if desired_nodes > self.max_nodes:
+            desired_nodes = self.max_nodes
+            LOG.warning(f"Desired nodes {desired_nodes} is greater than max nodes {self.max_nodes}, setting to max nodes {self.max_nodes}")
         return new_allocations, desired_nodes 
     
 
