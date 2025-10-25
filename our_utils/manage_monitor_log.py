@@ -20,6 +20,9 @@ def process_log_file(log_file_path):
     last_job_arrival_time = None
     previous_allocations = {}  # Track previous GPU allocations for each job
     completed_jobs_status = {}  # Track completion_time and pod_status for completed jobs
+    decreased_progress_issues = {}  # Track any progress decreases per job
+    job_drop_sums = {}  # Sum of progress drops per job
+    job_max_progress = {}  # Max progress observed per job
     
     with open(log_file_path, 'r') as f:
         lines = f.readlines()
@@ -78,6 +81,12 @@ def process_log_file(log_file_path):
             epoch = job['epoch']
             allocation = job.get('allocation', [])
             progress = job.get('progress', 0)
+
+            # Track per-job max progress
+            if isinstance(progress, (int, float)):
+                prev_max = job_max_progress.get(job_name)
+                if prev_max is None or progress > prev_max:
+                    job_max_progress[job_name] = progress
 
             # Track completed jobs and their pod status
             completion_time = job.get('completion_time', None)
@@ -157,6 +166,27 @@ def process_log_file(log_file_path):
                 # For epoch 0, only count as wasted if progress > 0 (startup time at 0 is normal)
                 if epoch != 0 or progress > 0:
                     is_wasted = True
+
+            # Detect decreasing progress
+            if (
+                progress is not None
+                and epoch_info['last_progress'] is not None
+                and isinstance(progress, (int, float))
+                and isinstance(epoch_info['last_progress'], (int, float))
+                and progress < epoch_info['last_progress']
+            ):
+                if job_name not in decreased_progress_issues:
+                    decreased_progress_issues[job_name] = []
+                decreased_progress_issues[job_name].append({
+                    'epoch': epoch,
+                    'previous': epoch_info['last_progress'],
+                    'current': progress,
+                    'timestamp': timestamp
+                })
+                # Accumulate drop amount
+                drop_amount = epoch_info['last_progress'] - progress
+                if drop_amount > 0:
+                    job_drop_sums[job_name] = job_drop_sums.get(job_name, 0) + drop_amount
             
             if is_wasted:
                 if epoch_info['stuck_start_time'] is None:
@@ -190,7 +220,7 @@ def process_log_file(log_file_path):
                 max_gpus = max(gpu_allocations)
                 rescaling_hours += (wasted_seconds * max_gpus) / 3600
     
-    return jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status
+    return jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress
 
 def is_pod_status_failing(pod_status):
     """
@@ -327,6 +357,21 @@ def print_high_waste_examples(high_waste_examples, limit=10):
                 print(f"  - {job_info}")
         else:
             print("Jobs: None running")
+
+def print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress):
+    """Print warning for jobs where progress decreased, including drop stats."""
+    if not decreased_progress_issues:
+        return
+
+    print(f"\n" + "="*80)
+    print("WARNING: JOBS WITH DECREASING PROGRESS DETECTED")
+    print("="*80)
+    for job_name in sorted(decreased_progress_issues.keys()):
+        occurrences = len(decreased_progress_issues[job_name])
+        total_progress = job_max_progress.get(job_name, 0) or 0
+        total_drop = job_drop_sums.get(job_name, 0) or 0
+        fraction = (total_drop / total_progress) if total_progress > 0 else 0.0
+        print(f"{job_name} (occurrences: {occurrences}) | sum_drops: {total_drop:.6f}, total_progress: {total_progress:.6f}, fraction: {fraction:.6f}")
 
 def print_all_jobs_summary(jobs):
     """Print response time and wasted time for all jobs."""
@@ -875,7 +920,7 @@ def main():
     log_file_path = sys.argv[1]
     print(f"Processing log file: {log_file_path}")
 
-    jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status = process_log_file(log_file_path)
+    jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress = process_log_file(log_file_path)
     
     # Find first job time for metrics calculation
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
@@ -887,8 +932,8 @@ def main():
     print_failed_completed_jobs(completed_jobs_status)
 
     # Hardcoded specific job breakdown
-    specific_job_breakdown = 'cifar10-46'
-    print_job_breakdown(specific_job_breakdown, jobs)
+    # specific_job_breakdown = 'cifar10-46'
+    # print_job_breakdown(specific_job_breakdown, jobs)
 
     # List of jobs to show detailed epoch information for
     # Modify this list to see details for different jobs
@@ -932,6 +977,9 @@ def main():
     print("\n" + "="*60)
     print(f"Mean Job Response Time (s): {mean_rt:.1f}")
     print("="*60)
+
+    # At the very end, warn about any jobs with decreasing progress
+    print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress)
 
 if __name__ == "__main__":
     main()
