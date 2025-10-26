@@ -10,14 +10,15 @@ from datetime import datetime
 
 
 """Should make sure that 1. the schedulers are running 2. Docker login is done 3. make sure the run_workload.sh consists of only one job called {JOB_TYPE}-0""" 
-"""4. experiment_results/{DIRECTORY_NAME} directory exists; 5. the nodegroup name is correct"""
+"""4. experiment_results/{DIRECTORY_NAME} directory exists; 5. the nodegroup name is correct 6. Allocator is using dummy"""
 """If PARALLEL is True, make sure workload-test3 consists of len(NUM_GPU_LIST) jobs, and make sure that sum(NUM_GPU_LIST) <= 8"""
 # Configuration - list of GPU counts to test
-NUM_GPU_LIST = [8,12,16]
-JOB_TYPE = "cifar10"  # Job type (e.g., "cifar10", "imagenet", "bert", etc.)
-DIRECTORY_NAME = "dummy-cbd-0916"  # Directory name under experiment_results/
+NUM_GPU_LIST = [24, 32]
+JOB_TYPE = "deepspeech2"  # Job type (e.g., "cifar10", "imagenet", "bert", etc.)
+DIRECTORY_NAME = "dummy-cbd-0916-2"  # Directory name under experiment_results/
 PARALLEL = False # If True, use the entire list as input to DummyPolicy; if False, run one by one
 NUM_GPU_PER_NODE = 4
+AUTOSCALING_GROUP_NAME = "eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084"
 
 # Setup logging
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "log.txt")
@@ -203,7 +204,7 @@ def run_single_experiment(num_gpu):
         num_nodes = math.ceil(num_gpu / NUM_GPU_PER_NODE)
         run_command([
             "aws", "autoscaling", "update-auto-scaling-group",
-            "--auto-scaling-group-name", "eks-12xlarge-cbd-0916-2-c4ccaacd-92bd-9c11-2b35-d306bd1051c9",
+            "--auto-scaling-group-name", AUTOSCALING_GROUP_NAME,
             "--desired-capacity", str(num_nodes)
         ])
         time.sleep(120)
@@ -391,7 +392,7 @@ def main():
             
             run_command([
                 "aws", "autoscaling", "update-auto-scaling-group",
-                "--auto-scaling-group-name", "eks-12xlarge-cbd-0916-2-c4ccaacd-92bd-9c11-2b35-d306bd1051c9",
+                "--auto-scaling-group-name", AUTOSCALING_GROUP_NAME,
                 "--desired-capacity", "0"
             ])
 
