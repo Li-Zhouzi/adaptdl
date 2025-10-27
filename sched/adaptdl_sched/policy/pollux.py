@@ -268,7 +268,7 @@ def _get_profiled_speedup(app_name, epoch, num_replicas):
     # Linear interpolation between nearest keys; clamp outside range
     keys = sorted(gp_dict.keys())
     # Below range
-    assert 1 <= num_replicas <= 16, "num_replicas must be between 1 and 16"
+    assert 1 <= num_replicas <= 32, "num_replicas must be between 1 and 32"
 
     # Find bracketing points
     lower = keys[0]

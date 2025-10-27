@@ -13,7 +13,9 @@ def process_log_file(log_file_path):
     jobs = {}
     total_gpu_hours = 0
     effective_gpu_hours = 0
-    waiting_for_ready_hours = 0
+    # New waste decomposition metrics
+    fragmentation_waste_hours = 0
+    ready_unused_waste_hours = 0
     wasted_capacity_hours = 0
     theoretical_rescaling_hours = 0
     high_waste_examples = []
@@ -38,25 +40,36 @@ def process_log_file(log_file_path):
             
             # Extract cluster node information
             cluster_nodes = prev_log.get('cluster_nodes', {})
-            total_nodes = cluster_nodes.get('total', 0)
             ready_nodes = cluster_nodes.get('ready', 0)
-            
-            # Calculate GPU metrics
-            prev_total_gpus = total_nodes * NUM_GPU_PER_NODE
+
+            # Calculate GPU metrics (use READY GPUs for total/average usage)
             ready_gpus = ready_nodes * NUM_GPU_PER_NODE
-            total_gpu_hours += prev_total_gpus * time_diff / 3600  # Convert to hours
-            
+            total_gpu_hours += ready_gpus * time_diff / 3600  # Convert to hours using ready capacity
+
             # Count effective GPUs (only those actually allocated)
             prev_effective_gpus = sum(len(job.get('allocation', [])) for job in prev_log['submitted_jobs'] if job.get('allocation'))
             effective_gpu_hours += prev_effective_gpus * time_diff / 3600
-            
-            # Calculate decomposition metrics
-            # WaitingForReady: total - ready
-            waiting_for_ready_gpus = prev_total_gpus - ready_gpus
-            waiting_for_ready_hours += waiting_for_ready_gpus * time_diff / 3600
-            
-            # Wasted Capacity: ready - effective (since effective includes all allocated)
-            wasted_capacity_gpus = ready_gpus - prev_effective_gpus
+
+            # New waste decomposition:
+            # - Fragmentation waste: 4 * (used_nodes) - used_gpus
+            # - Ready-unused nodes waste: 4 * (ready_nodes - used_nodes)
+            all_alloc_items = []
+            for job in prev_log['submitted_jobs']:
+                allocation = job.get('allocation', [])
+                if allocation:
+                    all_alloc_items.extend(allocation)
+
+            used_gpus = len(all_alloc_items)
+            used_nodes = len(set(all_alloc_items))
+
+            fragmentation_waste_gpus = max(0, NUM_GPU_PER_NODE * used_nodes - used_gpus)
+            ready_unused_waste_gpus = max(0, NUM_GPU_PER_NODE * (ready_nodes - used_nodes))
+
+            fragmentation_waste_hours += fragmentation_waste_gpus * time_diff / 3600
+            ready_unused_waste_hours += ready_unused_waste_gpus * time_diff / 3600
+
+            # Total wasted capacity is the sum of the two components
+            wasted_capacity_gpus = fragmentation_waste_gpus + ready_unused_waste_gpus
             wasted_capacity_hours += wasted_capacity_gpus * time_diff / 3600
             
             # Track examples of high waste (>= 50 wasted GPUs)
@@ -220,7 +233,22 @@ def process_log_file(log_file_path):
                 max_gpus = max(gpu_allocations)
                 rescaling_hours += (wasted_seconds * max_gpus) / 3600
     
-    return jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress
+    return (
+        jobs,
+        total_gpu_hours,
+        effective_gpu_hours,
+        fragmentation_waste_hours,
+        ready_unused_waste_hours,
+        wasted_capacity_hours,
+        rescaling_hours,
+        theoretical_rescaling_hours,
+        high_waste_examples,
+        last_job_arrival_time,
+        completed_jobs_status,
+        decreased_progress_issues,
+        job_drop_sums,
+        job_max_progress,
+    )
 
 def is_pod_status_failing(pod_status):
     """
@@ -251,12 +279,14 @@ def is_pod_status_failing(pod_status):
 
     return False
 
-def calculate_metrics(total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, last_job_arrival_time, first_job_time):
+def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, last_job_arrival_time, first_job_time):
     """Calculate simplified metrics based on GPU hours and job arrival time."""
     experiment_duration_hours = (last_job_arrival_time - first_job_time) / 3600
+    # average_gpu_usage now reflects READY GPUs average
     average_gpu_usage = total_gpu_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     effective_average_gpu_usage = effective_gpu_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
-    waiting_for_ready_average = waiting_for_ready_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
+    fragmentation_waste_average = fragmentation_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
+    ready_unused_average = ready_unused_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     wasted_capacity_average = wasted_capacity_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     rescaling_average = rescaling_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     theoretical_rescaling_average = theoretical_rescaling_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
@@ -265,14 +295,16 @@ def calculate_metrics(total_gpu_hours, effective_gpu_hours, waiting_for_ready_ho
     return {
         'total_gpu_hours': total_gpu_hours,
         'effective_gpu_hours': effective_gpu_hours,
-        'waiting_for_ready_hours': waiting_for_ready_hours,
+        'fragmentation_waste_hours': fragmentation_waste_hours,
+        'ready_unused_waste_hours': ready_unused_waste_hours,
         'wasted_capacity_hours': wasted_capacity_hours,
         'rescaling_hours': rescaling_hours,
         'theoretical_rescaling_hours': theoretical_rescaling_hours,
         'experiment_duration_hours': experiment_duration_hours,
         'average_gpu_usage': average_gpu_usage,
         'effective_average_gpu_usage': effective_average_gpu_usage,
-        'waiting_for_ready_average': waiting_for_ready_average,
+        'fragmentation_waste_average': fragmentation_waste_average,
+        'ready_unused_average': ready_unused_average,
         'wasted_capacity_average': wasted_capacity_average,
         'rescaling_average': rescaling_average,
         'theoretical_rescaling_average': theoretical_rescaling_average,
@@ -292,9 +324,8 @@ def print_summary(metrics):
     print(f"Effective Average GPU Usage: {metrics['effective_average_gpu_usage']:.2f} GPUs")
     
     print(f"\nDecomposition:")
-    # print(f"WaitingForReady Hours: {metrics['waiting_for_ready_hours']:.2f}")
-    print(f"WaitingForReady Average: {metrics['waiting_for_ready_average']:.2f} GPUs")
-    # print(f"Wasted Capacity Hours: {metrics['wasted_capacity_hours']:.2f}")
+    print(f"Fragmentation Waste Average: {metrics['fragmentation_waste_average']:.2f} GPUs")
+    print(f"Ready-Unused Nodes Average: {metrics['ready_unused_average']:.2f} GPUs")
     print(f"Wasted Capacity Average: {metrics['wasted_capacity_average']:.2f} GPUs")
     print(f"Rescaling Average: {metrics['rescaling_average']:.2f} GPUs")
     print(f"Theoretical Rescaling Average: {metrics['theoretical_rescaling_average']:.2f} GPUs")
@@ -920,7 +951,7 @@ def main():
     log_file_path = sys.argv[1]
     print(f"Processing log file: {log_file_path}")
 
-    jobs, total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress = process_log_file(log_file_path)
+    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress = process_log_file(log_file_path)
     
     # Find first job time for metrics calculation
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
@@ -969,7 +1000,7 @@ def main():
     plot_filename = base_name + '_response_time_comparison.png'
     plot_response_time_comparison(jobs, plot_filename)
     
-    metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, waiting_for_ready_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, last_job_arrival_time, first_job_time)
+    metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, last_job_arrival_time, first_job_time)
     print_summary(metrics)
 
     # Finally, print mean job total response time (placed at the very end)
