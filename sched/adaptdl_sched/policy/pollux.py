@@ -563,8 +563,8 @@ class PolluxPolicy(object):
         idx = self._select_result(states, values, min(len(nodes), desired_nodes))
         LOG.info("\n" + "-" * 80)
         for i, state in enumerate(states):
-            # if i != idx:
-            #     continue
+            if i != idx:
+                continue
             out = "Solution {}:\n".format(i)
             out += "Selected index: {}\n".format(idx)
             out += "{}\n".format(state)
