@@ -17,10 +17,7 @@ def process_log_file(log_file_path):
     fragmentation_waste_hours = 0
     ready_unused_waste_hours = 0
     wasted_capacity_hours = 0
-    theoretical_rescaling_hours = 0
-    high_waste_examples = []
     last_job_arrival_time = None
-    previous_allocations = {}  # Track previous GPU allocations for each job
     completed_jobs_status = {}  # Track completion_time and pod_status for completed jobs
     decreased_progress_issues = {}  # Track any progress decreases per job
     job_drop_sums = {}  # Sum of progress drops per job
@@ -72,22 +69,6 @@ def process_log_file(log_file_path):
             wasted_capacity_gpus = fragmentation_waste_gpus + ready_unused_waste_gpus
             wasted_capacity_hours += wasted_capacity_gpus * time_diff / 3600
             
-            # Track examples of high waste (>= 50 wasted GPUs)
-            if wasted_capacity_gpus >= 50:
-                # Get job allocations for this timestamp
-                job_info = []
-                for job in prev_log['submitted_jobs']:
-                    allocation = job.get('allocation', [])
-                    if allocation:
-                        gpu_count = len(allocation)
-                        job_info.append(f"{job['name']} using {set(allocation)} ({gpu_count} GPUs)")
-                
-                high_waste_examples.append({
-                    'timestamp': prev_log['timestamp'],
-                    'ready_nodes': ready_nodes,
-                    'wasted_gpus': wasted_capacity_gpus,
-                    'jobs': job_info
-                })
         
         for job in log_entry['submitted_jobs']:
             job_name = job['name']
@@ -111,25 +92,6 @@ def process_log_file(log_file_path):
                     'pod_status': pod_status,
                     'timestamp': timestamp
                 }
-            
-            # Check for GPU allocation changes and calculate theoretical rescaling hours
-            current_gpu_count = len(allocation)
-            if job_name in previous_allocations:
-                previous_gpu_count = len(previous_allocations[job_name])
-                if current_gpu_count != previous_gpu_count and current_gpu_count > 0:
-                    # GPU allocation changed, add theoretical rescaling cost
-                    if "cifar10" in job_name:
-                        theoretical_rescaling_hours += (current_gpu_count * 120) / 3600
-                    elif "bert" in job_name:
-                        theoretical_rescaling_hours += (current_gpu_count * 300) / 3600
-                    elif "deepspeech2" in job_name:
-                        theoretical_rescaling_hours += (current_gpu_count * 150) / 3600
-                    else:
-                        raise ValueError(f"Application {job_name} not supported")
-            
-            # Update previous allocation for this job
-            if current_gpu_count > 0:
-                previous_allocations[job_name] = allocation
             
             # Initialize job if first time seeing it
             if job_name not in jobs:
@@ -221,18 +183,6 @@ def process_log_file(log_file_path):
             if epoch_info['stuck_start_time'] is not None:
                 epoch_info['wasted_time'] += epoch_info['last_seen'] - epoch_info['stuck_start_time']
     
-    # Calculate rescaling hours from existing wasted time data
-    rescaling_hours = 0
-    for job_name, job_info in jobs.items():
-        for epoch_num, epoch_info in job_info['epochs'].items():
-            # Convert wasted time from seconds to hours and multiply by GPU count
-            wasted_seconds = epoch_info['wasted_time']
-            gpu_allocations = epoch_info['gpu_allocations']
-            if gpu_allocations:
-                # Use the maximum GPU allocation for this epoch
-                max_gpus = max(gpu_allocations)
-                rescaling_hours += (wasted_seconds * max_gpus) / 3600
-    
     return (
         jobs,
         total_gpu_hours,
@@ -240,9 +190,6 @@ def process_log_file(log_file_path):
         fragmentation_waste_hours,
         ready_unused_waste_hours,
         wasted_capacity_hours,
-        rescaling_hours,
-        theoretical_rescaling_hours,
-        high_waste_examples,
         last_job_arrival_time,
         completed_jobs_status,
         decreased_progress_issues,
@@ -279,7 +226,7 @@ def is_pod_status_failing(pod_status):
 
     return False
 
-def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, last_job_arrival_time, first_job_time):
+def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, first_job_time):
     """Calculate simplified metrics based on GPU hours and job arrival time."""
     experiment_duration_hours = (last_job_arrival_time - first_job_time) / 3600
     # average_gpu_usage now reflects READY GPUs average
@@ -288,8 +235,6 @@ def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_
     fragmentation_waste_average = fragmentation_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     ready_unused_average = ready_unused_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     wasted_capacity_average = wasted_capacity_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
-    rescaling_average = rescaling_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
-    theoretical_rescaling_average = theoretical_rescaling_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
 
     
     return {
@@ -298,16 +243,12 @@ def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_
         'fragmentation_waste_hours': fragmentation_waste_hours,
         'ready_unused_waste_hours': ready_unused_waste_hours,
         'wasted_capacity_hours': wasted_capacity_hours,
-        'rescaling_hours': rescaling_hours,
-        'theoretical_rescaling_hours': theoretical_rescaling_hours,
         'experiment_duration_hours': experiment_duration_hours,
         'average_gpu_usage': average_gpu_usage,
         'effective_average_gpu_usage': effective_average_gpu_usage,
         'fragmentation_waste_average': fragmentation_waste_average,
         'ready_unused_average': ready_unused_average,
         'wasted_capacity_average': wasted_capacity_average,
-        'rescaling_average': rescaling_average,
-        'theoretical_rescaling_average': theoretical_rescaling_average,
         'last_job_arrival_time': last_job_arrival_time
     }
 
@@ -327,8 +268,6 @@ def print_summary(metrics):
     print(f"Fragmentation Waste Average: {metrics['fragmentation_waste_average']:.2f} GPUs")
     print(f"Ready-Unused Nodes Average: {metrics['ready_unused_average']:.2f} GPUs")
     print(f"Wasted Capacity Average: {metrics['wasted_capacity_average']:.2f} GPUs")
-    print(f"Rescaling Average: {metrics['rescaling_average']:.2f} GPUs")
-    print(f"Theoretical Rescaling Average: {metrics['theoretical_rescaling_average']:.2f} GPUs")
     
     print(f"\nLast Job Arrival Time: {datetime.fromtimestamp(metrics['last_job_arrival_time'])}")
 
@@ -365,29 +304,94 @@ def print_failed_completed_jobs(completed_jobs_status):
         print(f"  Pod Status: {job['pod_status']}")
         print()
 
-def print_high_waste_examples(high_waste_examples, limit=10):
-    """Print examples of timestamps with high wasted capacity."""
-    if not high_waste_examples:
-        print(f"\nNo high waste examples found (threshold >= 50 GPUs)")
-        return
-    
-    print(f"\n" + "="*80)
-    print(f"HIGH WASTE EXAMPLES (showing up to {limit})")
-    print("="*80)
-    
-    # Sort by wasted GPUs descending and take top examples
-    sorted_examples = sorted(high_waste_examples, key=lambda x: x['wasted_gpus'], reverse=True)[:limit]
-    
-    for example in sorted_examples:
-        print(f"\nTimestamp: {example['timestamp']}")
-        print(f"Ready Nodes: {example['ready_nodes']}, Wasted GPUs: {example['wasted_gpus']:.0f}")
+
+def print_mean_rescaling_time(jobs):
+    """Calculate and print mean rescaling time per job type using wasted epochs."""
+    rescale_stats = {}
+
+    for job_name, job_info in jobs.items():
+        job_type = job_name.split('-')[0] if '-' in job_name else job_name
+        epochs = sorted(job_info.get('epochs', {}).items())
+        if not epochs:
+            continue
         
-        if example['jobs']:
-            print("Jobs:")
-            for job_info in example['jobs']:
-                print(f"  - {job_info}")
-        else:
-            print("Jobs: None running")
+        previous_final_alloc = None
+        previous_alloc_len = 0
+
+        for idx, (epoch_num, epoch_info) in enumerate(epochs):
+            gpu_allocations = epoch_info.get('gpu_allocations', [])
+            current_alloc_len = len(gpu_allocations)
+            current_final_alloc = gpu_allocations[-1] if gpu_allocations else 0
+
+            rescale_count = max(0, current_alloc_len - 1)
+
+            if (
+                previous_final_alloc is not None
+                and previous_alloc_len == 1
+                and current_alloc_len == 1
+                and current_final_alloc != previous_final_alloc
+            ):
+                rescale_count += 1
+
+            if idx == len(epochs) - 1 and rescale_count > 0:
+                rescale_count = 0 # ignore the last epoch's rescaling to 0.
+            if idx == 0 and 0 in gpu_allocations and 1 in gpu_allocations:
+                rescale_count -= 1 # ignore the first epoch's rescaling to 1.
+            if rescale_count <= 0:
+                previous_final_alloc = current_final_alloc
+                previous_alloc_len = current_alloc_len
+                continue
+            wasted_time = float(epoch_info.get('wasted_time', 0) or 0)
+            if job_name == 'cifar10-46':
+                print(f"Rescaling detected for job {job_name}, epoch {epoch_num}, rescale_count: {rescale_count}")
+            if wasted_time <= 0:
+                if idx + 1 >= len(epochs):
+                    raise AssertionError(
+                        f"Rescaling detected but no subsequent wasted time for job {job_name}, epoch {epoch_num}"
+                    )
+                next_wasted = float(epochs[idx + 1][1].get('wasted_time', 0) or 0)
+                assert next_wasted > 0, (
+                    f"Expected wasted time after rescaling for job {job_name}, epoch {epoch_num}, got 0"
+                )
+                wasted_time = next_wasted
+
+            stats = rescale_stats.setdefault(job_type, {'num_rescaling': 0, 'total_time': 0.0})
+            stats['num_rescaling'] += rescale_count
+            stats['total_time'] += wasted_time
+
+            previous_final_alloc = current_final_alloc
+            previous_alloc_len = current_alloc_len
+    if not rescale_stats:
+        print("\nNo rescaling events detected across jobs.")
+        return
+
+    print(f"\n" + "=" * 80)
+    print("MEAN RESCALING TIME BY JOB TYPE")
+    print("=" * 80)
+
+    overall_events = 0
+    overall_time = 0.0
+
+    for job_type in sorted(rescale_stats.keys()):
+        stats = rescale_stats[job_type]
+        events = stats['num_rescaling']
+        total_time = stats['total_time']
+        mean_time = (total_time / events) if events > 0 else 0.0
+        print(
+            f"{job_type:<15} mean_rescale_time: {mean_time:.1f}s | "
+            f"events: {events}, total_wasted: {total_time:.1f}s"
+        )
+        overall_events += events
+        overall_time += total_time
+
+    if overall_events > 0:
+        overall_mean = overall_time / overall_events
+        print("-" * 80)
+        print(
+            f"Overall mean rescaling time: {overall_mean:.1f}s "
+            f"across {overall_events} rescaling events"
+        )
+
 
 def print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress):
     """Print warning for jobs where progress decreased, including drop stats."""
@@ -639,45 +643,6 @@ def get_theoretical_duration(application, epoch, num_gpus):
     else:
         raise ValueError(f"Application {application} not supported")
 
-def export_all_jobs_epoch_details_csv(jobs, csv_filename):
-    """Export epoch details for all jobs to CSV file."""
-    with open(csv_filename, 'w', newline='') as csvfile:
-        fieldnames = ['job_name', 'epoch', 'allocation', 'duration', 'wasted', 'theoretical']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        
-        for job_name, job_info in jobs.items():
-            application = job_name.split('-')[0]
-            job_epochs = job_info['epochs']
-            
-            for epoch in sorted(job_epochs.keys()):
-                epoch_info = job_epochs[epoch]
-                gpu_list = sorted(epoch_info['gpu_allocations'])
-                
-                # Format allocation string
-                allocation_str = str(gpu_list) if len(gpu_list) > 1 else str(gpu_list[0]) if gpu_list else "0"
-                
-                duration = epoch_info['duration']
-                wasted = epoch_info['wasted_time']
-                
-                # Calculate theoretical duration based on final GPU allocation
-                if len(gpu_list) > 1:
-                    theoretical = -1
-                else:
-                    final_gpu_count = gpu_list[0] if gpu_list else 0
-                    try:
-                        theoretical = get_theoretical_duration(application, epoch, final_gpu_count) if final_gpu_count > 0 else -1
-                    except (AssertionError, ValueError):
-                        theoretical = -1
-                
-                writer.writerow({
-                    'job_name': job_name,
-                    'epoch': epoch,
-                    'allocation': allocation_str,
-                    'duration': round(duration, 1),
-                    'wasted': round(wasted, 1),
-                    'theoretical': round(theoretical, 1) if theoretical != -1 else -1
-                })
 
 def print_epoch_details(job_name, jobs, goodput_function=None):
     """Print formatted epoch details table."""
@@ -951,7 +916,7 @@ def main():
     log_file_path = sys.argv[1]
     print(f"Processing log file: {log_file_path}")
 
-    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, high_waste_examples, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress = process_log_file(log_file_path)
+    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress = process_log_file(log_file_path)
     
     # Find first job time for metrics calculation
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
@@ -963,8 +928,10 @@ def main():
     print_failed_completed_jobs(completed_jobs_status)
 
     # Hardcoded specific job breakdown
-    # specific_job_breakdown = 'cifar10-46'
-    # print_job_breakdown(specific_job_breakdown, jobs)
+    specific_job_breakdown = 'cifar10-46'
+    print_job_breakdown(specific_job_breakdown, jobs)
+
+    print_mean_rescaling_time(jobs)
 
     # List of jobs to show detailed epoch information for
     # Modify this list to see details for different jobs
@@ -981,26 +948,13 @@ def main():
             if available_jobs and job_name == detailed_jobs[0]:  # Only for first job in list
                 print_epoch_details(available_jobs[0], jobs)
     
-    # Export all jobs epoch details to CSV
     import os
     base_name = os.path.splitext(log_file_path)[0]  # Remove extension properly
-    csv_filename = base_name + '_epoch_details.csv'
-    
-    # Safety check to never overwrite the original file
-    if csv_filename == log_file_path:
-        csv_filename = log_file_path + '_epoch_details.csv'
-    
-    # export_all_jobs_epoch_details_csv(jobs, csv_filename)
-    # print(f"\nEpoch details for all jobs exported to: {csv_filename}")
-    
-    # Print high waste examples before summary
-    print_high_waste_examples(high_waste_examples)
-    
     # Plot response time comparison
     plot_filename = base_name + '_response_time_comparison.png'
     plot_response_time_comparison(jobs, plot_filename)
     
-    metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, rescaling_hours, theoretical_rescaling_hours, last_job_arrival_time, first_job_time)
+    metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, first_job_time)
     print_summary(metrics)
 
     # Finally, print mean job total response time (placed at the very end)
