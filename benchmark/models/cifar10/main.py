@@ -4,6 +4,27 @@ from datetime import datetime
 
 # Log Python script start time
 print(f"[TIMING] Python main.py started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+# Timing helpers for pre-training steps
+_t0 = time.perf_counter()
+_step_records = []
+
+def _step_begin(name):
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    print(f"[TIMING] {name} started at: {ts} ({time.time():.3f})", flush=True)
+    return time.perf_counter()
+
+def _step_end(name, start):
+    end = time.perf_counter()
+    duration = end - start
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    total = end - _t0
+    print(f"[TIMING] {name} completed at: {ts} ({time.time():.3f}) | duration={duration:.3f}s | total={total:.3f}s", flush=True)
+    _step_records.append((name, ts, duration, total))
+
+def _print_pretraining_summary():
+    print("[TIMING] Pre-training steps summary:", flush=True)
+    for idx, (name, ts, duration, total) in enumerate(_step_records, 1):
+        print(f"[TIMING]   {idx}. {name}: duration={duration:.3f}s, completed at {ts}, total_since_start={total:.3f}s", flush=True)
 
 import torch
 import torch.nn as nn
@@ -51,22 +72,26 @@ transform_test = transforms.Compose([
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
 ])
 
-print(f"[TIMING] Loading training dataset at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_s = _step_begin("Load training dataset")
 trainset = torchvision.datasets.CIFAR10(root="/mnt", train=True, download=False, transform=transform_train)
+_step_end("Load training dataset", _s)
 print("trainset length:", len(trainset))
-print(f"[TIMING] Creating AdaptiveDataLoader at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_s = _step_begin("Create AdaptiveDataLoader (train)")
 trainloader = adaptdl.torch.AdaptiveDataLoader(trainset, batch_size=args.bs, shuffle=True, num_workers=2, drop_last=True)
 trainloader.autoscale_batch_size(4096, local_bsz_bounds=(32, 1024),
                                  gradient_accumulation=True)
+_step_end("Create AdaptiveDataLoader (train)", _s)
 
-print(f"[TIMING] Loading validation dataset at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_s = _step_begin("Load validation dataset")
 validset = torchvision.datasets.CIFAR10(root="/mnt", train=False, download=False, transform=transform_test)
+_step_end("Load validation dataset", _s)
 validloader = adaptdl.torch.AdaptiveDataLoader(validset, batch_size=100, shuffle=False, num_workers=2)
 
 # Model
-print(f"[TIMING] Building model at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 print('==> Building model..')
+_s = _step_begin("Build model")
 net = eval(args.model)()
+_step_end("Build model", _s)
 # net = VGG('VGG19')
 # net = ResNet18()
 # net = PreActResNet18()
@@ -79,19 +104,20 @@ net = eval(args.model)()
 # net = ShuffleNetG2()
 # net = SENet18()
 # net = ShuffleNetV2(1)
-print(f"[TIMING] Moving model to device at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_s = _step_begin("Move model to device")
 net = net.to(device)
 if device == 'cuda':
     cudnn.benchmark = True
+_step_end("Move model to device", _s)
 
-print(f"[TIMING] Creating optimizer and scheduler at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_s = _step_begin("Create optimizer and scheduler")
 criterion = nn.CrossEntropyLoss()
-#optimizer = optim.SGD([{"params": [param]} for param in net.parameters()],
 optimizer = optim.SGD(net.parameters(),
                       lr=args.lr, momentum=0.9, weight_decay=5e-4)
 lr_scheduler = ExponentialLR(optimizer, 0.0133 ** (1.0 / args.epochs))
+_step_end("Create optimizer and scheduler", _s)
 
-# Log environment variables to debug master address
+_s = _step_begin("Log environment variables")
 print(f"[DEBUG] Environment variables at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}", flush=True)
 print(f"[DEBUG] ADAPTDL_MASTER_ADDR: {os.getenv('ADAPTDL_MASTER_ADDR', 'NOT SET')}", flush=True)
 print(f"[DEBUG] ADAPTDL_MASTER_PORT: {os.getenv('ADAPTDL_MASTER_PORT', 'NOT SET')}", flush=True)
@@ -100,14 +126,15 @@ print(f"[DEBUG] ADAPTDL_REPLICA_RANK: {os.getenv('ADAPTDL_REPLICA_RANK', 'NOT SE
 print(f"[DEBUG] ADAPTDL_NUM_REPLICAS: {os.getenv('ADAPTDL_NUM_REPLICAS', 'NOT SET')}", flush=True)
 print(f"[DEBUG] ADAPTDL_JOB_ID: {os.getenv('ADAPTDL_JOB_ID', 'NOT SET')}", flush=True)
 print(f"[DEBUG] ADAPTDL_NUM_RESTARTS: {os.getenv('ADAPTDL_NUM_RESTARTS', 'NOT SET')}", flush=True)
+_step_end("Log environment variables", _s)
 
-print(f"[TIMING] Calling init_process_group at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_s = _step_begin("init_process_group(nccl)")
 adaptdl.torch.init_process_group("nccl")
-print(f"[TIMING] init_process_group completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_step_end("init_process_group(nccl)", _s)
 
-print(f"[TIMING] Creating AdaptiveDataParallel at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_s = _step_begin("Create AdaptiveDataParallel")
 net = adaptdl.torch.AdaptiveDataParallel(net, optimizer, lr_scheduler)
-print(f"[TIMING] AdaptiveDataParallel created at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
+_step_end("Create AdaptiveDataParallel", _s)
 
 # Training
 def train(epoch):
@@ -171,7 +198,7 @@ def valid(epoch):
             # No batches processed this epoch window; skip logging to avoid KeyError.
             print("Valid: skipped (no batches processed)")
 
-
+_print_pretraining_summary()
 print(f"[TIMING] Initialization complete, starting training loop at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} ({time.time()})", flush=True)
 
 with SummaryWriter(os.getenv("ADAPTDL_TENSORBOARD_LOGDIR", "/tmp")) as writer:

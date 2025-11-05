@@ -375,26 +375,28 @@ def _compute_width_iter(application_rates, size_data, speedup_dict, b):
 
 
 def get_width(goodput_dict, b):
-    speedup_dict, size_dict = _get_speedup_and_size(goodput_dict)
-    LOG.info("="*100)
-    # print(speedup_dict)
-    arrival_dict = dict()
-    for app in ARRIVAL_RATE.keys():
-        if ARRIVAL_RATE[app] > 0:
-            arrival_dict[app] = ARRIVAL_RATE[app]
-    LOG.info(f"Arrival dict: {arrival_dict}")
-    LOG.info(f"Budget: {b}")
-    return _get_width_with_rescale(speedup_dict, size_dict, arrival_dict, b)
+    # speedup_dict, size_dict = _get_speedup_and_size(goodput_dict)
+    # LOG.info("="*100)
+    # # print(speedup_dict)
+    # arrival_dict = dict()
+    # for app in ARRIVAL_RATE.keys():
+    #     if ARRIVAL_RATE[app] > 0:
+    #         arrival_dict[app] = ARRIVAL_RATE[app]
+    # LOG.info(f"Arrival dict: {arrival_dict}")
+    # LOG.info(f"Budget: {b}")
+    # return _get_width_with_rescale(speedup_dict, size_dict, arrival_dict, b)
 
     # Below is only for testing
-    # width = dict()
-    # for app in ARRIVAL_RATE.keys():
-    #     width[app] = dict()
-    #     for epoch in range(APPLICATIONS[app].max_epochs):
-    #         width[app][epoch] = 2
-    #         if epoch > 15:
-    #             width[app][epoch] = 4
-    #         if epoch > 30:
-    #             width[app][epoch] = 8
-    # return width
+    width = dict()
+    for app in ARRIVAL_RATE.keys():
+        width[app] = dict()
+        for epoch in range(APPLICATIONS[app].max_epochs):
+            width[app][epoch] = 4
+            if epoch > 15:
+                width[app][epoch] = 8
+            if epoch > 30:
+                width[app][epoch] = 16
+            if epoch > 50:
+                width[app][epoch] = 8
+    return width
 

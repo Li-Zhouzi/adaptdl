@@ -70,6 +70,65 @@ def process_log_file(log_file_path):
             wasted_capacity_hours += wasted_capacity_gpus * time_diff / 3600
             
         
+        # Build quick lookup for current step jobs by name
+        current_jobs_by_name = {j['name']: j for j in log_entry['submitted_jobs']}
+
+        # Attribute queueing/wasted decomposition per time step using previous state
+        if i > 0:
+            prev_jobs = prev_log.get('submitted_jobs', [])
+            for pjob in prev_jobs:
+                pname = pjob['name']
+                pepoch = pjob['epoch']
+                palloc = pjob.get('allocation', []) or []
+                pprogress = pjob.get('progress', None)
+                ppod_status = pjob.get('pod_status', '')
+
+                # Ensure job/epoch exist in our structure starting from prev timestamp
+                if pname not in jobs:
+                    jobs[pname] = {'first_seen': prev_log['timestamp'], 'epochs': {}}
+                if pepoch not in jobs[pname]['epochs']:
+                    jobs[pname]['epochs'][pepoch] = {
+                        'first_seen': prev_log['timestamp'],
+                        'last_seen': prev_log['timestamp'],
+                        'gpu_allocations': [],
+                        'progress_history': [],
+                        'wasted_time': 0,
+                        'queueing_time': 0,
+                        'container_creation_time': 0,
+                        'rescaling_time': 0,
+                        'last_progress': None,
+                        'stuck_start_time': None,
+                        'queueing_start_time': None,
+                        'allocation_pairs': set()
+                    }
+
+                einfo = jobs[pname]['epochs'][pepoch]
+                # Time step length
+                dt = time_diff
+                has_alloc = len(palloc) > 0
+
+                # Determine growth across the interval using current job state
+                cjob = current_jobs_by_name.get(pname)
+                cprogress = cjob.get('progress', None) if cjob is not None else None
+                grew = False
+                if pprogress is not None and cprogress is not None:
+                    try:
+                        grew = float(cprogress) > float(pprogress)
+                    except Exception:
+                        grew = False
+
+                if not has_alloc:
+                    einfo['queueing_time'] += dt
+                else:
+                    # With allocation
+                    if not grew:
+                        # Wasted this interval
+                        einfo['wasted_time'] += dt
+                        if ppod_status == 'pod status normal':
+                            einfo['rescaling_time'] += dt
+                        else:
+                            einfo['container_creation_time'] += dt
+
         for job in log_entry['submitted_jobs']:
             job_name = job['name']
             epoch = job['epoch']
@@ -110,8 +169,12 @@ def process_log_file(log_file_path):
                     'gpu_allocations': [],
                     'progress_history': [],
                     'wasted_time': 0,
+                    'queueing_time': 0,
+                    'container_creation_time': 0,
+                    'rescaling_time': 0,
                     'last_progress': None,
                     'stuck_start_time': None,
+                    'queueing_start_time': None,
                     'allocation_pairs': set()
                 }
             
@@ -128,19 +191,9 @@ def process_log_file(log_file_path):
             gpu_count = len(allocation)
             if gpu_count not in epoch_info['gpu_allocations']:
                 epoch_info['gpu_allocations'].append(gpu_count)
+            has_allocation = gpu_count > 0
             
-            # Track progress and calculate wasted time
-            # Wasted time occurs when: progress is null OR progress is stuck at same value
-            is_wasted = False
-            
-            if progress is None:
-                # Null progress is always wasted time
-                is_wasted = True
-            elif epoch_info['last_progress'] is not None and progress == epoch_info['last_progress']:
-                # Progress stuck at same value
-                # For epoch 0, only count as wasted if progress > 0 (startup time at 0 is normal)
-                if epoch != 0 or progress > 0:
-                    is_wasted = True
+            # Note: time attribution handled per-step above using prev/current states.
 
             # Detect decreasing progress
             if (
@@ -163,25 +216,15 @@ def process_log_file(log_file_path):
                 if drop_amount > 0:
                     job_drop_sums[job_name] = job_drop_sums.get(job_name, 0) + drop_amount
             
-            if is_wasted:
-                if epoch_info['stuck_start_time'] is None:
-                    epoch_info['stuck_start_time'] = timestamp
-            else:
-                # Progress is making progress, end any wasted time period
-                if epoch_info['stuck_start_time'] is not None:
-                    epoch_info['wasted_time'] += timestamp - epoch_info['stuck_start_time']
-                    epoch_info['stuck_start_time'] = None
+            # No start/stop accumulation here; per-step attribution already applied
             
             epoch_info['last_progress'] = progress
             epoch_info['progress_history'].append((timestamp, progress))
     
-    # Calculate final epoch durations and handle any remaining stuck time
+    # Calculate final epoch durations
     for job_name, job_info in jobs.items():
         for epoch_num, epoch_info in job_info['epochs'].items():
             epoch_info['duration'] = epoch_info['last_seen'] - epoch_info['first_seen']
-            # Add any remaining stuck time
-            if epoch_info['stuck_start_time'] is not None:
-                epoch_info['wasted_time'] += epoch_info['last_seen'] - epoch_info['stuck_start_time']
     
     return (
         jobs,
@@ -306,7 +349,12 @@ def print_failed_completed_jobs(completed_jobs_status):
 
 
 def print_mean_rescaling_time(jobs):
-    """Calculate and print mean rescaling time per job type using wasted epochs."""
+    """Calculate and print mean rescaling+container-creation time per job type.
+
+    Uses the same rescaling detection logic, and attributes time as the sum of
+    epoch-level rescaling_time and container_creation_time (falling back to the
+    next epoch if needed as before).
+    """
     rescale_stats = {}
 
     for job_name, job_info in jobs.items():
@@ -335,13 +383,17 @@ def print_mean_rescaling_time(jobs):
 
             if idx == len(epochs) - 1 and rescale_count > 0:
                 rescale_count = 0 # ignore the last epoch's rescaling to 0.
-            if idx == 0 and 0 in gpu_allocations and 1 in gpu_allocations:
-                rescale_count -= 1 # ignore the first epoch's rescaling to 1.
+            # if idx == 0 and 0 in gpu_allocations and 1 in gpu_allocations:
+            #     rescale_count -= 1 # ignore the first epoch's rescaling to 1.
             if rescale_count <= 0:
                 previous_final_alloc = current_final_alloc
                 previous_alloc_len = current_alloc_len
                 continue
-            wasted_time = float(epoch_info.get('wasted_time', 0) or 0)
+            # Sum both components for mean: rescaling + container creation
+            wasted_time = (
+                float(epoch_info.get('rescaling_time', 0) or 0)
+                + float(epoch_info.get('container_creation_time', 0) or 0)
+            )
             if job_name == 'cifar10-46':
                 print(f"Rescaling detected for job {job_name}, epoch {epoch_num}, rescale_count: {rescale_count}")
             if wasted_time <= 0:
@@ -349,7 +401,11 @@ def print_mean_rescaling_time(jobs):
                     raise AssertionError(
                         f"Rescaling detected but no subsequent wasted time for job {job_name}, epoch {epoch_num}"
                     )
-                next_wasted = float(epochs[idx + 1][1].get('wasted_time', 0) or 0)
+                next_epoch = epochs[idx + 1][1]
+                next_wasted = (
+                    float(next_epoch.get('rescaling_time', 0) or 0)
+                    + float(next_epoch.get('container_creation_time', 0) or 0)
+                )
                 assert next_wasted > 0, (
                     f"Expected wasted time after rescaling for job {job_name}, epoch {epoch_num}, got 0"
                 )
@@ -366,7 +422,7 @@ def print_mean_rescaling_time(jobs):
         return
 
     print(f"\n" + "=" * 80)
-    print("MEAN RESCALING TIME BY JOB TYPE")
+    print("MEAN RESCALE+CREATE TIME BY JOB TYPE")
     print("=" * 80)
 
     overall_events = 0
@@ -378,8 +434,8 @@ def print_mean_rescaling_time(jobs):
         total_time = stats['total_time']
         mean_time = (total_time / events) if events > 0 else 0.0
         print(
-            f"{job_type:<15} mean_rescale_time: {mean_time:.1f}s | "
-            f"events: {events}, total_wasted: {total_time:.1f}s"
+            f"{job_type:<15} mean_rescale+create: {mean_time:.1f}s | "
+            f"events: {events}, total_time: {total_time:.1f}s"
         )
         overall_events += events
         overall_time += total_time
@@ -392,6 +448,191 @@ def print_mean_rescaling_time(jobs):
             f"across {overall_events} rescaling events"
         )
 
+
+def plot_rescaling_time_histograms(jobs):
+    """Plot histograms of per-rescaling times for CIFAR10, BERT, and DeepSpeech2.
+
+    This mirrors the rescaling detection logic in `print_mean_rescaling_time`,
+    but collects a per-event time (wasted_time divided by the number of rescalings
+    detected in that epoch) and plots their distributions.
+    """
+    # Collect per-event rescaling times per job type
+    rescale_times_by_type = {
+        'cifar10': [],
+        'bert': [],
+        'deepspeech2': [],
+    }
+
+    for job_name, job_info in jobs.items():
+        job_type = job_name.split('-')[0] if '-' in job_name else job_name
+        # Only track the three requested types
+        if job_type not in rescale_times_by_type:
+            continue
+
+        epochs = sorted(job_info.get('epochs', {}).items())
+        if not epochs:
+            continue
+
+        previous_final_alloc = None
+        previous_alloc_len = 0
+
+        for idx, (epoch_num, epoch_info) in enumerate(epochs):
+            gpu_allocations = epoch_info.get('gpu_allocations', [])
+            current_alloc_len = len(gpu_allocations)
+            current_final_alloc = gpu_allocations[-1] if gpu_allocations else 0
+
+            rescale_count = max(0, current_alloc_len - 1)
+
+            # Handle the case where alloc length is 1 but final alloc changes between epochs
+            if (
+                previous_final_alloc is not None
+                and previous_alloc_len == 1
+                and current_alloc_len == 1
+                and current_final_alloc != previous_final_alloc
+            ):
+                rescale_count += 1
+
+            # Ignore special/residual cases consistent with mean function
+            if idx == len(epochs) - 1 and rescale_count > 0:
+                rescale_count = 0  # ignore the last epoch's rescaling to 0
+            # if idx == 0 and 0 in gpu_allocations and 1 in gpu_allocations:
+            #     rescale_count -= 1  # ignore the first epoch's rescaling to 1
+
+            if rescale_count > 0:
+                wasted_time = float(epoch_info.get('rescaling_time', 0) or 0)
+                if wasted_time <= 0:
+                    if idx + 1 < len(epochs):
+                        next_wasted = float(epochs[idx + 1][1].get('rescaling_time', 0) or 0)
+                        if next_wasted > 0:
+                            wasted_time = next_wasted
+                        else:
+                            # If we cannot attribute wasted time, skip adding to histogram
+                            wasted_time = 0
+                    else:
+                        wasted_time = 0
+
+                if wasted_time > 0:
+                    per_event_time = wasted_time / rescale_count
+                    # Add one entry per rescaling event to build the distribution
+                    rescale_times_by_type[job_type].extend([per_event_time] * rescale_count)
+                    # Warn if CIFAR10 per-event rescaling time is unusually large
+                    if job_type == 'cifar10' and per_event_time > 200:
+                        print(
+                            f"WARNING: CIFAR10 per-event rescale time {per_event_time:.1f}s > 200s "
+                            f"for job {job_name}, epoch {epoch_num} (rescale_count={rescale_count}, total_rescaling={wasted_time:.1f}s)"
+                        )
+
+            previous_final_alloc = current_final_alloc
+            previous_alloc_len = current_alloc_len
+
+    # Create a single figure with 3 subplots, one per job type
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4), sharey=True)
+    types_order = ['cifar10', 'bert', 'deepspeech2']
+
+    for ax, jtype in zip(axes, types_order):
+        data = rescale_times_by_type[jtype]
+        if len(data) > 0:
+            ax.hist(data, bins='auto', color='#1f77b4', alpha=0.8, edgecolor='black')
+        else:
+            # Draw an empty histogram frame if no data
+            ax.hist([], bins=1, color='#1f77b4', alpha=0.8, edgecolor='black')
+        ax.set_title(f"{jtype} (n={len(data)})")
+        ax.set_xlabel("Rescaling time (s)")
+        ax.grid(True, axis='y', linestyle='--', alpha=0.4)
+
+    axes[0].set_ylabel("Count")
+    fig.suptitle("Rescaling Time Distributions by Job Type")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+
+def plot_rescaling_time_breakdown_histograms(jobs):
+    """Plot histograms of per-event rescaling vs container-creation times by job type.
+
+    Figure A: Only rescaling time
+    Figure B: Overlay rescaling and container-creation with different colors
+    """
+    types = ['cifar10', 'bert', 'deepspeech2']
+    per_event_rescale = {t: [] for t in types}
+    per_event_create = {t: [] for t in types}
+
+    for job_name, job_info in jobs.items():
+        job_type = job_name.split('-')[0] if '-' in job_name else job_name
+        if job_type not in types:
+            continue
+        epochs = sorted(job_info.get('epochs', {}).items())
+        if not epochs:
+            continue
+        previous_final_alloc = None
+        previous_alloc_len = 0
+        for idx, (epoch_num, epoch_info) in enumerate(epochs):
+            gpu_allocations = epoch_info.get('gpu_allocations', [])
+            current_alloc_len = len(gpu_allocations)
+            current_final_alloc = gpu_allocations[-1] if gpu_allocations else 0
+            rescale_count = max(0, current_alloc_len - 1)
+            if (
+                previous_final_alloc is not None
+                and previous_alloc_len == 1
+                and current_alloc_len == 1
+                and current_final_alloc != previous_final_alloc
+            ):
+                rescale_count += 1
+            if idx == len(epochs) - 1 and rescale_count > 0:
+                rescale_count = 0
+            # if idx == 0 and 0 in gpu_allocations and 1 in gpu_allocations:
+            #     rescale_count -= 1
+            if rescale_count > 0:
+                rescale_time = float(epoch_info.get('rescaling_time', 0) or 0)
+                create_time = float(epoch_info.get('container_creation_time', 0) or 0)
+                if rescale_time <= 0 and idx + 1 < len(epochs):
+                    nxt = float(epochs[idx + 1][1].get('rescaling_time', 0) or 0)
+                    if nxt > 0:
+                        rescale_time = nxt
+                if create_time <= 0 and idx + 1 < len(epochs):
+                    nxtc = float(epochs[idx + 1][1].get('container_creation_time', 0) or 0)
+                    if nxtc > 0:
+                        create_time = nxtc
+                if rescale_time > 0:
+                    per_event_rescale[job_type].extend([rescale_time / rescale_count] * rescale_count)
+                if create_time > 0:
+                    per_event_create[job_type].extend([create_time / rescale_count] * rescale_count)
+            previous_final_alloc = current_final_alloc
+            previous_alloc_len = current_alloc_len
+
+    # Figure A: rescaling only
+    fig1, axes1 = plt.subplots(1, 3, figsize=(15, 4), sharey=True)
+    for ax, jtype in zip(axes1, types):
+        data = per_event_rescale[jtype]
+        if len(data) > 0:
+            ax.hist(data, bins='auto', color='#1f77b4', alpha=0.8, edgecolor='black')
+        else:
+            ax.hist([], bins=1)
+        ax.set_title(f"{jtype} rescale (n={len(data)})")
+        ax.set_xlabel("Per-event rescale (s)")
+        ax.grid(True, axis='y', linestyle='--', alpha=0.4)
+    axes1[0].set_ylabel("Count")
+    fig1.suptitle("Per-Event Rescaling Time by Job Type")
+    fig1.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    # Figure B: overlay rescaling and container creation
+    fig2, axes2 = plt.subplots(1, 3, figsize=(15, 4), sharey=True)
+    for ax, jtype in zip(axes2, types):
+        rdata = per_event_rescale[jtype]
+        cdata = per_event_create[jtype]
+        if len(rdata) > 0:
+            ax.hist(rdata, bins='auto', color='#1f77b4', alpha=0.6, edgecolor='black', label='Rescale')
+        if len(cdata) > 0:
+            ax.hist(cdata, bins='auto', color='#ff7f0e', alpha=0.6, edgecolor='black', label='Container Creation')
+        ax.set_title(f"{jtype} (r={len(rdata)}, c={len(cdata)})")
+        ax.set_xlabel("Per-event time (s)")
+        ax.grid(True, axis='y', linestyle='--', alpha=0.4)
+    axes2[0].set_ylabel("Count")
+    handles, labels = axes2[0].get_legend_handles_labels()
+    if handles:
+        fig2.legend(handles, labels, loc='upper right')
+    fig2.suptitle("Per-Event Rescaling vs Container Creation Time by Job Type")
+    fig2.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
 
 def print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress):
     """Print warning for jobs where progress decreased, including drop stats."""
@@ -409,12 +650,12 @@ def print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums,
         print(f"{job_name} (occurrences: {occurrences}) | sum_drops: {total_drop:.6f}, total_progress: {total_progress:.6f}, fraction: {fraction:.6f}")
 
 def print_all_jobs_summary(jobs):
-    """Print response time and wasted time for all jobs."""
-    print(f"\n" + "="*60)
+    """Print response time and queueing/wasted time for all jobs."""
+    print(f"\n" + "="*80)
     print("ALL JOBS SUMMARY")
-    print("="*60)
-    print(f"{'Job Name':<20} {'Response Time(s)':<18} {'Total Wasted(s)':<15}")
-    print("-" * 60)
+    print("="*80)
+    print(f"{'Job Name':<20} {'Response Time(s)':<18} {'Queueing(s)':<12} {'Wasted(s)':<12} {'Idle(s)':<12}")
+    print("-" * 80)
     for job_name, job_info in jobs.items():
         # Calculate total response time (from first seen to completion of last epoch)
         if job_info['epochs']:
@@ -422,11 +663,11 @@ def print_all_jobs_summary(jobs):
             response_time = last_epoch_end - job_info['first_seen']
         else:
             response_time = 0
-        
-        # Calculate total wasted time across all epochs
-        total_wasted = sum(epoch_info['wasted_time'] for epoch_info in job_info['epochs'].values())
-        
-        print(f"{job_name:<20} {response_time:<18.1f} {total_wasted:<15.1f}")
+        # Calculate queueing and wasted times across all epochs
+        total_queueing = sum(epoch_info.get('queueing_time', 0) for epoch_info in job_info['epochs'].values())
+        total_wasted = sum(epoch_info.get('wasted_time', 0) for epoch_info in job_info['epochs'].values())
+        total_idle = total_queueing + total_wasted
+        print(f"{job_name:<20} {response_time:<18.1f} {total_queueing:<12.1f} {total_wasted:<12.1f} {total_idle:<12.1f}")
 
 def compute_mean_job_response_time(jobs):
     """Compute mean total response time per job (from first_seen to last epoch end)."""
@@ -659,7 +900,7 @@ def print_epoch_details(job_name, jobs, goodput_function=None):
     print(f"\n" + "="*70)
     print(f"EPOCH DETAILS FOR {job_name}")
     print("="*70)
-    print(f"{'Epoch':<8} {'GPUs Used':<15} {'Duration(s)':<12} {'Wasted(s)':<10} {'Theoretical(s)':<15}")
+    print(f"{'Epoch':<8} {'GPUs Used':<15} {'Duration(s)':<12} {'Queue(s)':<10} {'Wasted(s)':<10} {'Idle(s)':<10} {'Theoretical(s)':<15}")
     print("-" * 70)
     
     for epoch in sorted(job_epochs.keys()):
@@ -670,7 +911,9 @@ def print_epoch_details(job_name, jobs, goodput_function=None):
         gpu_str = str(gpu_list) if len(gpu_list) > 1 else str(gpu_list[0]) if gpu_list else "0"
         
         duration = epoch_info['duration']
-        wasted = epoch_info['wasted_time']
+        queueing = epoch_info.get('queueing_time', 0)
+        wasted = epoch_info.get('wasted_time', 0)
+        idle = queueing + wasted
         
         # Calculate theoretical duration based on final GPU allocation
         if len(gpu_list) > 1:
@@ -679,7 +922,7 @@ def print_epoch_details(job_name, jobs, goodput_function=None):
             final_gpu_count = gpu_list[0]
             theoretical = get_theoretical_duration(application, epoch, final_gpu_count)
         
-        print(f"{epoch:<8} {gpu_str:<15} {duration:<12.1f} {wasted:<10.1f} {theoretical:<15.1f}")
+        print(f"{epoch:<8} {gpu_str:<15} {duration:<12.1f} {queueing:<10.1f} {wasted:<10.1f} {idle:<10.1f} {theoretical:<15.1f}")
 
 def print_job_breakdown(job_name, jobs):
     """Print per-epoch breakdown for a specific job: actual, wasted, theoretical, rescaling, and allocation."""
@@ -697,7 +940,7 @@ def print_job_breakdown(job_name, jobs):
     print(f"\n" + "="*90)
     print(f"PER-EPOCH BREAKDOWN FOR {job_name}")
     print("="*90)
-    print(f"{'Epoch':<6} {'Actual(s)':<12} {'Wasted(s)':<12} {'Theoretical(s)':<15} {'Rescale(s)':<12} {'Allocations':<20}")
+    print(f"{'Epoch':<6} {'Actual(s)':<12} {'Queue(s)':<10} {'Wasted(s)':<12} {'Idle(s)':<12} {'Theoretical(s)':<15} {'Rescale(s)':<12} {'Allocations':<20}")
     print("-" * 90)
 
     previous_final_gpu_count = None
@@ -708,7 +951,9 @@ def print_job_breakdown(job_name, jobs):
     for epoch in sorted(job_epochs.keys()):
         epoch_info = job_epochs[epoch]
         duration = epoch_info.get('duration', 0)
+        queueing = epoch_info.get('queueing_time', 0)
         wasted = epoch_info.get('wasted_time', 0)
+        idle = queueing + wasted
 
         gpu_allocations = epoch_info.get('gpu_allocations', [])
         # Format allocation string (GPU counts) and pairs if available
@@ -757,7 +1002,7 @@ def print_job_breakdown(job_name, jobs):
             sum_theoretical_durations += float(theoretical)
         sum_rescale += float(rescale)
 
-        print(f"{epoch:<6} {duration:<12.1f} {wasted:<12.1f} {theoretical:<15.1f} {rescale:<12.1f} {alloc_str:<20}")
+        print(f"{epoch:<6} {duration:<12.1f} {queueing:<10.1f} {wasted:<12.1f} {idle:<12.1f} {theoretical:<15.1f} {rescale:<12.1f} {alloc_str:<20}")
 
     # Total actual response time for this job (from first_seen to last epoch end)
     last_epoch_end = max(ei['last_seen'] for ei in job_epochs.values())
@@ -768,6 +1013,12 @@ def print_job_breakdown(job_name, jobs):
     print(f"Total Actual Response Time (first->last) (s): {total_response_time:.1f}")
     print(f"Total Actual (sum of epoch durations) (s): {sum_actual_durations:.1f}")
     print(f"Total Theoretical Response Time (s): {total_theoretical_time:.1f}")
+    # Totals for queueing/wasted/idle
+    total_queueing = sum(ei.get('queueing_time', 0) for ei in job_epochs.values())
+    total_wasted = sum(ei.get('wasted_time', 0) for ei in job_epochs.values())
+    print(f"Total Queueing Time (s): {total_queueing:.1f}")
+    print(f"Total Wasted Time (s): {total_wasted:.1f}")
+    print(f"Total Idle Time (s): {total_queueing + total_wasted:.1f}")
 
 def calculate_theoretical_response_time(job_name, job_info):
     """Calculate theoretical response time for a job including rescaling overhead."""
@@ -908,6 +1159,66 @@ def plot_response_time_comparison(jobs, output_filename=None):
 
     
 
+def plot_job_response_time_stacked(jobs, output_filename=None):
+    """Plot per-job total response time as stacked bars of Productive, Wasted, and Queueing.
+
+    - X axis: job names
+    - Y axis: total response time (seconds)
+    - Bar segments: Productive (response - (queueing + wasted)), Wasted, Queueing
+    """
+    job_names = []
+    response_times = []
+    queue_times = []
+    wasted_times = []
+
+    for job_name, job_info in jobs.items():
+        if job_info['epochs']:
+            last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+            response_time = last_epoch_end - job_info['first_seen']
+        else:
+            response_time = 0
+
+        total_queueing = sum(epoch_info.get('queueing_time', 0) for epoch_info in job_info['epochs'].values())
+        total_wasted = sum(epoch_info.get('wasted_time', 0) for epoch_info in job_info['epochs'].values())
+
+        job_names.append(job_name)
+        response_times.append(float(response_time))
+        queue_times.append(float(total_queueing))
+        wasted_times.append(float(total_wasted))
+
+    if not job_names:
+        print("No jobs to plot for stacked response time chart.")
+        return
+
+    response_arr = np.array(response_times)
+    queue_arr = np.array(queue_times)
+    wasted_arr = np.array(wasted_times)
+    productive_arr = response_arr - (queue_arr + wasted_arr)
+    productive_arr = np.maximum(productive_arr, 0.0)  # guard against small negatives
+
+    x = np.arange(len(job_names))
+
+    fig, ax = plt.subplots(figsize=(12, 8))
+    bars_prod = ax.bar(x, productive_arr, color='steelblue', alpha=0.85, label='Productive')
+    bars_wst = ax.bar(x, wasted_arr, bottom=productive_arr, color='indianred', alpha=0.85, label='Wasted')
+    bars_que = ax.bar(x, queue_arr, bottom=productive_arr + wasted_arr, color='goldenrod', alpha=0.85, label='Queueing')
+
+    ax.set_xlabel('Jobs')
+    ax.set_ylabel('Response Time (seconds)')
+    ax.set_title('Per-Job Response Time (Stacked: Productive, Wasted, Queueing)')
+    ax.set_xticks(x)
+    ax.set_xticklabels(job_names, rotation=45, ha='right')
+    ax.legend()
+    ax.grid(True, alpha=0.3, axis='y')
+
+    plt.tight_layout()
+
+    if output_filename:
+        plt.savefig(output_filename, dpi=300, bbox_inches='tight')
+        print(f"Stacked response time plot saved to: {output_filename}")
+    else:
+        plt.show()
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: python manage_monitor_log.py <log_file_path>")
@@ -928,10 +1239,13 @@ def main():
     print_failed_completed_jobs(completed_jobs_status)
 
     # Hardcoded specific job breakdown
-    specific_job_breakdown = 'cifar10-46'
+    specific_job_breakdown = 'deepspeech2-155'
     print_job_breakdown(specific_job_breakdown, jobs)
 
     print_mean_rescaling_time(jobs)
+
+    # plot_rescaling_time_histograms(jobs)
+    # plot_rescaling_time_breakdown_histograms(jobs)
 
     # List of jobs to show detailed epoch information for
     # Modify this list to see details for different jobs
@@ -953,6 +1267,9 @@ def main():
     # Plot response time comparison
     plot_filename = base_name + '_response_time_comparison.png'
     plot_response_time_comparison(jobs, plot_filename)
+    # Also save stacked response time plot
+    stacked_plot_filename = base_name + '_response_time_stacked.png'
+    plot_job_response_time_stacked(jobs, stacked_plot_filename)
     
     metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, first_job_time)
     print_summary(metrics)
@@ -965,6 +1282,16 @@ def main():
 
     # At the very end, warn about any jobs with decreasing progress
     print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress)
+
+    print("response_dict={")
+    for job_name, job_info in jobs.items():
+        if job_info['epochs']:
+            last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+            actual_response_time = last_epoch_end - job_info['first_seen']
+        
+        print(f"    '{job_name}': {actual_response_time:.1f},")
+
+    print("}")
 
 if __name__ == "__main__":
     main()

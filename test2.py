@@ -1,85 +1,187 @@
-cifar10-0            2972.5       3172.8          0.94    
-deepspeech2-1        3934.3       3732.6          1.05    
-deepspeech2-3        4987.2       4180.0          1.19    
-cifar10-4            3048.7       3128.4          0.97    
-cifar10-8            3154.3       3285.1          0.96    
-cifar10-10           2941.3       3043.9          0.97    
-cifar10-12           2812.8       3043.9          0.92    
-cifar10-13           2710.2       3138.8          0.86    
-cifar10-14           2723.9       3021.3          0.90    
-cifar10-15           2765.6       3112.0          0.89    
-cifar10-17           2767.4       3157.9          0.88    
-deepspeech2-22       4954.4       4621.4          1.07    
-cifar10-24           2613.4       3034.6          0.86    
-cifar10-25           2753.1       3263.8          0.84    
-bert-27              6283.1       7884.2          0.80    
-cifar10-28           2732.2       2981.3          0.92    
-cifar10-33           2624.9       3153.1          0.83    
-cifar10-34           2813.4       3004.4          0.94    
-cifar10-35           2797.1       3158.6          0.89    
-cifar10-36           2631.4       3026.2          0.87    
-cifar10-40           2538.9       3010.3          0.84    
-cifar10-41           2557.3       3045.6          0.84    
-cifar10-43           2605.4       3043.9          0.86    
-cifar10-44           2777.5       3210.3          0.87    
-cifar10-46           2784.2       3260.1          0.85    
-cifar10-47           2853.9       3085.3          0.93    
-cifar10-48           2818.4       3150.7          0.89    
-cifar10-49           2764.0       3243.3          0.85    
-cifar10-53           2702.2       3247.3          0.83    
-cifar10-54           2848.9       3078.6          0.93    
-cifar10-56           2991.8       3178.8          0.94    
-cifar10-57           2790.9       2985.9          0.93    
-deepspeech2-60       4515.2       3966.7          1.14    
-cifar10-63           2654.4       3010.3          0.88    
-cifar10-65           2771.0       3001.9          0.92    
-cifar10-67           2880.3       3257.6          0.88    
-cifar10-69           2911.6       3151.2          0.92    
-cifar10-70           2847.9       2985.9          0.95    
-deepspeech2-73       4016.9       4045.4          0.99    
-cifar10-75           2653.4       3018.2          0.88    
-cifar10-77           2979.4       3180.8          0.94    
-bert-78              5988.1       7785.5          0.77    
-cifar10-79           2958.4       3133.7          0.94    
-cifar10-80           2932.0       3063.9          0.96    
-cifar10-83           2741.4       3135.5          0.87    
-cifar10-84           2693.1       3384.2          0.80    
-bert-85              5909.8       7884.2          0.75    
-cifar10-86           2666.3       3141.0          0.85    
-cifar10-90           2596.5       3047.3          0.85    
-cifar10-92           2548.2       3123.1          0.82    
-deepspeech2-94       3557.6       3787.0          0.94    
-deepspeech2-96       3678.5       3788.1          0.97    
-deepspeech2-97       4815.2       4624.9          1.04    
-cifar10-98           2619.3       3001.9          0.87    
-cifar10-101          2996.7       3044.4          0.98    
-bert-102             5988.8       7884.2          0.76    
-deepspeech2-104      4435.3       4415.9          1.00    
-cifar10-105          2868.8       3095.3          0.93    
-cifar10-106          2871.0       2946.7          0.97    
-deepspeech2-110      4077.7       4232.3          0.96    
-cifar10-111          2820.4       3062.7          0.92    
-cifar10-115          2840.0       3021.3          0.94    
-cifar10-116          2707.2       3043.9          0.89    
-deepspeech2-117      3488.4       3791.3          0.92    
-cifar10-118          2721.8       3001.9          0.91    
-bert-119             5847.4       7884.2          0.74    
-cifar10-122          2796.9       3004.1          0.93    
-cifar10-125          2702.8       3044.7          0.89    
-cifar10-128          2588.6       2987.0          0.87    
-cifar10-129          2730.6       3181.8          0.86    
-bert-130             5855.9       7884.2          0.74    
-cifar10-131          2938.8       3178.6          0.92    
-cifar10-132          2684.9       3019.0          0.89    
-cifar10-134          2546.5       3107.2          0.82    
-cifar10-136          2623.6       3021.3          0.87    
-cifar10-138          2586.2       3018.2          0.86    
-cifar10-140          2591.9       3260.1          0.80    
-cifar10-142          2692.6       3085.3          0.87    
-cifar10-145          2694.9       3010.3          0.90    
-cifar10-146          2926.4       3024.0          0.97    
-cifar10-147          2962.9       3045.6          0.97    
-cifar10-151          2744.6       3018.3          0.91    
-bert-152             5459.7       6872.9          0.79    
-cifar10-154          2611.8       3070.4          0.85    
-deepspeech2-155      3315.3       4183.4          0.79    
+
+import sys
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+
+try:
+    # Import the existing log processing function
+    from our_utils.manage_monitor_log import process_log_file
+except Exception as e:
+    raise RuntimeError("Failed to import process_log_file from our_utils.manage_monitor_log") from e
+
+
+def compute_rescaling_times(jobs):
+    """Compute per-event rescaling times from jobs, mirroring manage_monitor_log logic.
+
+    For each epoch where rescaling is detected, we attribute the epoch's wasted_time
+    to the rescaling events (evenly divided when multiple rescalings occur within
+    a single epoch), producing a list of per-event durations in seconds.
+    """
+    per_event_times = []
+
+    for job_name, job_info in jobs.items():
+        epochs = sorted(job_info.get('epochs', {}).items())
+        if not epochs:
+            continue
+
+        previous_final_alloc = None
+        previous_alloc_len = 0
+
+        for idx, (epoch_num, epoch_info) in enumerate(epochs):
+            gpu_allocations = epoch_info.get('gpu_allocations', [])
+            current_alloc_len = len(gpu_allocations)
+            current_final_alloc = gpu_allocations[-1] if gpu_allocations else 0
+
+            rescale_count = max(0, current_alloc_len - 1)
+
+            # Handle alloc length 1 but final alloc changes between epochs
+            if (
+                previous_final_alloc is not None
+                and previous_alloc_len == 1
+                and current_alloc_len == 1
+                and current_final_alloc != previous_final_alloc
+            ):
+                rescale_count += 1
+
+            # Ignore special cases consistent with manage_monitor_log
+            if idx == len(epochs) - 1 and rescale_count > 0:
+                rescale_count = 0  # ignore the last epoch's rescaling to 0
+            if idx == 0 and 0 in gpu_allocations and 1 in gpu_allocations:
+                rescale_count -= 1  # ignore the first epoch's rescaling to 1
+
+            if rescale_count > 0:
+                wasted_time = float(epoch_info.get('wasted_time', 0) or 0)
+                if wasted_time <= 0:
+                    if idx + 1 < len(epochs):
+                        next_wasted = float(epochs[idx + 1][1].get('wasted_time', 0) or 0)
+                        if next_wasted > 0:
+                            wasted_time = next_wasted
+                        else:
+                            wasted_time = 0
+                    else:
+                        wasted_time = 0
+
+                if wasted_time > 0:
+                    per_event_time = wasted_time / rescale_count
+                    per_event_times.extend([per_event_time] * rescale_count)
+
+            previous_final_alloc = current_final_alloc
+            previous_alloc_len = current_alloc_len
+
+    return per_event_times
+
+
+def compute_rescaling_times_by_type(jobs):
+    """Compute per-event rescaling times grouped by job type.
+
+    Returns a dict: { 'cifar10': [...], 'bert': [...], 'deepspeech2': [...] }.
+    """
+    per_type = {
+        'cifar10': [],
+        'bert': [],
+        'deepspeech2': [],
+    }
+
+    for job_name, job_info in jobs.items():
+        job_type = job_name.split('-')[0] if '-' in job_name else job_name
+        if job_type not in per_type:
+            continue
+
+        epochs = sorted(job_info.get('epochs', {}).items())
+        if not epochs:
+            continue
+
+        previous_final_alloc = None
+        previous_alloc_len = 0
+
+        for idx, (epoch_num, epoch_info) in enumerate(epochs):
+            gpu_allocations = epoch_info.get('gpu_allocations', [])
+            current_alloc_len = len(gpu_allocations)
+            current_final_alloc = gpu_allocations[-1] if gpu_allocations else 0
+
+            rescale_count = max(0, current_alloc_len - 1)
+
+            if (
+                previous_final_alloc is not None
+                and previous_alloc_len == 1
+                and current_alloc_len == 1
+                and current_final_alloc != previous_final_alloc
+            ):
+                rescale_count += 1
+
+            if idx == len(epochs) - 1 and rescale_count > 0:
+                rescale_count = 0
+            if idx == 0 and 0 in gpu_allocations and 1 in gpu_allocations:
+                rescale_count -= 1
+
+            if rescale_count > 0:
+                wasted_time = float(epoch_info.get('wasted_time', 0) or 0)
+                if wasted_time <= 0:
+                    if idx + 1 < len(epochs):
+                        next_wasted = float(epochs[idx + 1][1].get('wasted_time', 0) or 0)
+                        if next_wasted > 0:
+                            wasted_time = next_wasted
+                        else:
+                            wasted_time = 0
+                    else:
+                        wasted_time = 0
+
+                if wasted_time > 0:
+                    per_event_time = wasted_time / rescale_count
+                    per_type[job_type].extend([per_event_time] * rescale_count)
+
+            previous_final_alloc = current_final_alloc
+            previous_alloc_len = current_alloc_len
+
+    return per_type
+
+
+def main():
+    # Defaults (can be overridden by CLI args)
+    default_log1 = "./experiment_results/1024-fw-48/monitor_log.txt"
+    default_log2 = "./experiment_results/1026-Pollux-0.5/monitor_log.txt"
+
+    if len(sys.argv) >= 3:
+        log1 = sys.argv[1]
+        log2 = sys.argv[2]
+    else:
+        log1 = default_log1
+        log2 = default_log2
+
+    # Parse logs into jobs
+    jobs1, *_ = process_log_file(log1)
+    jobs2, *_ = process_log_file(log2)
+
+    # Compute per-event rescaling times grouped by job type
+    times_by_type1 = compute_rescaling_times_by_type(jobs1)
+    times_by_type2 = compute_rescaling_times_by_type(jobs2)
+
+    types_order = ['cifar10', 'bert', 'deepspeech2']
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4), sharey=True)
+
+    for ax, t in zip(axes, types_order):
+        data1 = times_by_type1.get(t, [])
+        data2 = times_by_type2.get(t, [])
+        combined = data1 + data2
+        if len(combined) > 0:
+            bin_edges = np.histogram_bin_edges(combined, bins='auto')
+        else:
+            bin_edges = [0, 1]
+
+        ax.hist(data1, bins=bin_edges, color='blue', alpha=0.6, label=os.path.basename(log1), edgecolor='black')
+        ax.hist(data2, bins=bin_edges, color='orange', alpha=0.6, label=os.path.basename(log2), edgecolor='black')
+        ax.set_title(f"{t} (blue={len(data1)}, orange={len(data2)})")
+        ax.set_xlabel('Rescaling time (s)')
+        ax.grid(True, axis='y', linestyle='--', alpha=0.4)
+
+    axes[0].set_ylabel('Count')
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper right')
+    fig.suptitle('Rescaling Time Histograms by Job Type (Overlayed per Log)')
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+
+if __name__ == '__main__':
+    main()
