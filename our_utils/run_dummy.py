@@ -13,8 +13,8 @@ from datetime import datetime
 """4. experiment_results/{DIRECTORY_NAME} directory exists; 5. the nodegroup name is correct 6. Allocator is using dummy"""
 """If PARALLEL is True, make sure workload-test3 consists of len(NUM_GPU_LIST) jobs, and make sure that sum(NUM_GPU_LIST) <= 8"""
 # Configuration - list of GPU counts to test
-NUM_GPU_LIST = [24, 32]
-JOB_TYPE = "deepspeech2"  # Job type (e.g., "cifar10", "imagenet", "bert", etc.)
+NUM_GPU_LIST = [32]
+JOB_TYPE = "cifar10"  # Job type (e.g., "cifar10", "imagenet", "bert", etc.)
 DIRECTORY_NAME = "dummy-cbd-0916-2"  # Directory name under experiment_results/
 PARALLEL = False # If True, use the entire list as input to DummyPolicy; if False, run one by one
 NUM_GPU_PER_NODE = 4

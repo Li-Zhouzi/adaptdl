@@ -1,29 +1,29 @@
-=== Experiment Log Started at 2025-10-26 13:58:23 ===
-[2025-10-26 13:58:23] PARALLEL mode disabled. Running sequential experiments.
-[2025-10-26 13:58:23] Starting experiments for job type 'deepspeech2' with GPU configurations: [24, 32, 48, 64]
-[2025-10-26 13:58:23] 
+=== Experiment Log Started at 2025-11-05 16:49:08 ===
+[2025-11-05 16:49:08] PARALLEL mode disabled. Running sequential experiments.
+[2025-11-05 16:49:08] Starting experiments for job type 'cifar10' with GPU configurations: [32]
+[2025-11-05 16:49:08] 
 ============================================================
-[2025-10-26 13:58:23] Starting experiment with NUM_GPU=24
-[2025-10-26 13:58:23] ============================================================
+[2025-11-05 16:49:08] Starting experiment with NUM_GPU=32
+[2025-11-05 16:49:08] ============================================================
 
-[2025-10-26 13:58:23] 
+[2025-11-05 16:49:08] 
 ✓ Logging into Docker ECR...
-[2025-10-26 13:58:23] Running: ['aws', 'ecr', 'get-login-password', '--region', 'us-east-1', '|', 'docker', 'login', '--username', 'AWS', '--password-stdin', '399790253372.dkr.ecr.us-east-1.amazonaws.com']
-[2025-10-26 13:58:23] Error running command: ['aws', 'ecr', 'get-login-password', '--region', 'us-east-1', '|', 'docker', 'login', '--username', 'AWS', '--password-stdin', '399790253372.dkr.ecr.us-east-1.amazonaws.com']
-[2025-10-26 13:58:23] Error output:
-[2025-10-26 13:58:23]   aws: [ERROR]: the following arguments are required: command
-[2025-10-26 13:58:23]   
-[2025-10-26 13:58:23]   usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]
-[2025-10-26 13:58:23]   To see help text, you can run:
-[2025-10-26 13:58:23]   
-[2025-10-26 13:58:23]     aws help
-[2025-10-26 13:58:23]     aws <command> help
-[2025-10-26 13:58:23]     aws <command> <subcommand> help
-[2025-10-26 13:58:23] ✓ Verified policy is 'dummy'
-[2025-10-26 13:58:23] ✓ Updated DummyPolicy to use 24 GPU(s)
-[2025-10-26 13:58:23] 
+[2025-11-05 16:49:08] Running: ['aws', 'ecr', 'get-login-password', '--region', 'us-east-1', '|', 'docker', 'login', '--username', 'AWS', '--password-stdin', '399790253372.dkr.ecr.us-east-1.amazonaws.com']
+[2025-11-05 16:49:08] Error running command: ['aws', 'ecr', 'get-login-password', '--region', 'us-east-1', '|', 'docker', 'login', '--username', 'AWS', '--password-stdin', '399790253372.dkr.ecr.us-east-1.amazonaws.com']
+[2025-11-05 16:49:08] Error output:
+[2025-11-05 16:49:08]   aws: [ERROR]: the following arguments are required: command
+[2025-11-05 16:49:08]   
+[2025-11-05 16:49:08]   usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]
+[2025-11-05 16:49:08]   To see help text, you can run:
+[2025-11-05 16:49:08]   
+[2025-11-05 16:49:08]     aws help
+[2025-11-05 16:49:08]     aws <command> help
+[2025-11-05 16:49:08]     aws <command> <subcommand> help
+[2025-11-05 16:49:08] ✓ Verified policy is 'dummy'
+[2025-11-05 16:49:08] ✓ Updated DummyPolicy to use 32 GPU(s)
+[2025-11-05 16:49:08] 
 ✓ Running helm update...
-[2025-10-26 13:58:23] Running: ['./helm/update_adaptdl.sh']
+[2025-11-05 16:49:08] Running: ['./helm/update_adaptdl.sh']
 
 --- Real-time output for: ['./helm/update_adaptdl.sh'] ---
 #0 building with "desktop-linux" instance using docker driver
@@ -33,877 +33,647 @@
 #1 DONE 0.0s
 
 #2 [internal] load metadata for docker.io/library/python:3.8
-#2 DONE 0.2s
+#2 DONE 0.6s
 
 #3 [internal] load .dockerignore
 #3 transferring context: 75B done
 #3 DONE 0.0s
 
-#4 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
-#4 resolve docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c done
+#4 [internal] load build context
+#4 transferring context: 469.51kB 0.0s done
 #4 DONE 0.0s
 
-#5 [internal] load build context
-#5 transferring context: 452.41kB 0.0s done
-#5 DONE 0.0s
-
-#6 [ 3/12] COPY adaptdl adaptdl
-#6 CACHED
-
-#7 [ 7/12] RUN cd sched && python3 setup.py bdist_wheel
-#7 CACHED
-
-#8 [ 2/12] WORKDIR /root/adaptdl
-#8 CACHED
-
-#9 [ 4/12] COPY sched sched
-#9 CACHED
-
-#10 [ 5/12] COPY cli/bin/adaptdl cli/bin/adaptdl
-#10 CACHED
-
-#11 [11/12] RUN rm -rf adaptdl/dist
-#11 CACHED
-
-#12 [ 8/12] RUN ADAPTDL_VERSION=0.0.0 pip install adaptdl/dist/*.whl
-#12 CACHED
-
-#13 [ 9/12] RUN ADAPTDL_VERSION=0.0.0 pip install sched/dist/*.whl
-#13 CACHED
-
-#14 [10/12] WORKDIR /root
-#14 CACHED
-
-#15 [ 6/12] RUN cd adaptdl && python3 setup.py bdist_wheel
-#15 CACHED
-
-#16 [12/12] RUN rm -rf sched/dist
-#16 CACHED
-
-#17 [auth] sharing credentials for 399790253372.dkr.ecr.us-east-1.amazonaws.com
-#17 DONE 0.0s
-
-#18 exporting to image
-#18 exporting layers done
-#18 exporting manifest sha256:3a7da02a0bdb14ba6463a23d9397ae283c121496cccde0accc1ee59523c89f4d done
-#18 exporting config sha256:975fede4967b27c4fc37ca7906c5270a58a7110473ec3ba17480418a8cf2c621 done
-#18 exporting attestation manifest sha256:435f885e565d80312082b9cdea2a28b040902d120cb32b13befb0e41a84c7f92 done
-#18 exporting manifest list sha256:7353ac88f6d4fe6c8fc91c62166b083384f34e8dafdddd7f4a0430489c29c117 done
-#18 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest done
-#18 pushing layers
-#18 pushing layers 0.7s done
-#18 pushing manifest for 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest@sha256:7353ac88f6d4fe6c8fc91c62166b083384f34e8dafdddd7f4a0430489c29c117
-#18 pushing manifest for 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest@sha256:7353ac88f6d4fe6c8fc91c62166b083384f34e8dafdddd7f4a0430489c29c117 0.6s done
-#18 DONE 1.4s
-release "adaptdl" uninstalled
-I1026 13:58:27.748393   96542 warnings.go:110] "Warning: spec.template.spec.imagePullSecrets[0].name: invalid empty name \"\""
-I1026 13:58:27.752066   96542 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[1].limits\""
-I1026 13:58:27.752090   96542 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[1].requests\""
-I1026 13:58:27.752104   96542 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[3].limits\""
-I1026 13:58:27.752115   96542 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[3].requests\""
-I1026 13:58:27.752126   96542 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[4].limits\""
-I1026 13:58:27.752136   96542 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[4].requests\""
-I1026 13:58:27.752146   96542 warnings.go:110] "Warning: spec.template.spec.imagePullSecrets[0].name: invalid empty name \"\""
-NAME: adaptdl
-LAST DEPLOYED: Sun Oct 26 13:58:26 2025
-NAMESPACE: adaptdl
-STATUS: deployed
-REVISION: 1
-TEST SUITE: None
-Looking for scheduler pod...
-Found scheduler pod adaptdl-adaptdl-sched-74d64f4476-9pmz7 in namespace adaptdl
-Uploading checkpoint from ./checkpoint/global-profile-state to pod adaptdl-adaptdl-sched-74d64f4476-9pmz7 container global-profiler...
-Successfully uploaded checkpoint.
---- Command completed with return code: 0 ---
-[2025-10-26 13:59:59] 
-✓ Scaling up cluster to 24 nodes...
-[2025-10-26 13:59:59] Running: ['aws', 'autoscaling', 'update-auto-scaling-group', '--auto-scaling-group-name', 'eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084', '--desired-capacity', '6']
-[2025-10-26 14:01:59] 
-✓ Deleting existing job deepspeech2-0...
-[2025-10-26 14:01:59] Running: ['kubectl', 'delete', 'adaptdljob', '--all']
-[2025-10-26 14:02:00] Command output:
-[2025-10-26 14:02:00]   No resources found
-[2025-10-26 14:02:10] 
-✓ Running workload...
-[2025-10-26 14:02:10] Running: ['./benchmark/run_workload.sh']
-
---- Real-time output for: ['./benchmark/run_workload.sh'] ---
-Deleting job checkpoints file from pod: adaptdl-adaptdl-sched-74d64f4476-9pmz7
-#0 building with "desktop-linux" instance using docker driver
-
-#1 [internal] load build definition from Dockerfile
-#1 transferring dockerfile: 685B done
-#1 DONE 0.0s
-
-#2 [internal] load metadata for nvcr.io/nvidia/pytorch:22.12-py3
-#2 DONE 0.8s
-
-#3 [internal] load .dockerignore
-#3 transferring context: 75B done
-#3 DONE 0.0s
-
-#4 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
-#4 resolve nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d done
-#4 DONE 0.0s
-
-#5 [internal] load build context
-#5 transferring context: 68.94kB done
-#5 DONE 0.0s
-
-#6 [11/13] COPY benchmark/download_dataset.sh .
-#6 CACHED
-
-#7 [ 8/13] COPY adaptdl adaptdl
-#7 CACHED
-
-#8 [ 2/13] WORKDIR /root
-#8 CACHED
-
-#9 [ 3/13] COPY adaptdl/requirements.txt requirements.txt
-#9 CACHED
-
-#10 [ 9/13] COPY benchmark/models/cifar10 cifar10
-#10 CACHED
-
-#11 [ 4/13] RUN pip install --no-cache-dir -r requirements.txt
-#11 CACHED
-
-#12 [10/13] COPY benchmark/dataset_map.json .
-#12 CACHED
-
-#13 [ 7/13] RUN pip install --no-cache-dir awscli
-#13 CACHED
-
-#14 [12/13] RUN chmod +x /root/download_dataset.sh
-#14 CACHED
-
-#15 [ 5/13] COPY benchmark/models/cifar10/requirements.txt requirements.txt
-#15 CACHED
-
-#16 [ 6/13] RUN pip install --no-cache-dir -r requirements.txt
-#16 CACHED
-
-#17 [13/13] WORKDIR /root/cifar10
-#17 CACHED
-
-#18 exporting to image
-#18 exporting layers done
-#18 exporting manifest sha256:1e81947389c026c00763be4449e680efe35adaedb552f24790ef0247c2a2ccbe done
-#18 exporting config sha256:2e206eb99780d4d2b174a0d3639fb59f0ffa8c41844eb64bcb1ae21f28375b24 done
-#18 exporting attestation manifest sha256:7b1b4931587c0db93126842f4004657ce82e3e658751f877debae5376ed1e0d8 done
-#18 exporting manifest list sha256:7febf01de86d1d9a018aaacc2f1ae8b4590c69b38d22cea1ec78d99d7f0d60b4 done
-#18 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images:cifar10 done
-#18 DONE 0.1s
-
- [33m1 warning found (use docker --debug to expand):
-[0m - UndefinedVar: Usage of undefined variable '$PYTHONPATH' (line 12)
-The push refers to repository [399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images]
-04712991e393: Waiting
-656347246602: Waiting
-824e6993c2a6: Waiting
-e175a7d4c536: Waiting
-5a30dc6e60f7: Waiting
-f0d07955f406: Waiting
-6856a2e3ed46: Waiting
-4a39c20d2475: Waiting
-03b628ccd951: Waiting
-29ed91f2bc74: Waiting
-38acfe94dbe9: Waiting
-c79b46181ee6: Waiting
-bcd2dfdccd09: Waiting
-4f4fb700ef54: Waiting
-d04d0713d158: Waiting
-856030010aab: Waiting
-d9c77bc172c0: Waiting
-16b5080fc155: Waiting
-60d5906fd80a: Waiting
-499d104c2b1e: Waiting
-2105a5e6a375: Waiting
-597a6c358afc: Waiting
-91b6a7918caa: Waiting
-65bc4e90123e: Waiting
-02148fc97997: Waiting
-06d1766c07ef: Waiting
-846c0b181fff: Waiting
-63edc579ff7d: Waiting
-d9ed1e887990: Waiting
-8bb9583747a2: Waiting
-5550e985500c: Waiting
-79a28dd49356: Waiting
-585bcce97762: Waiting
-66059ebf13c6: Waiting
-9684ed3c7117: Waiting
-dc2d21f56cc3: Waiting
-6471a4765a47: Waiting
-61b1f751e984: Waiting
-5bdc3a280b31: Waiting
-3650c6aa1ac1: Waiting
-a0e571274096: Waiting
-7275c2240c04: Waiting
-4bb75e94b397: Waiting
-2850b7199f2c: Waiting
-120b49f11018: Waiting
-96c54e0e4c1a: Waiting
-dd65b807c637: Waiting
-9f4b7d58d41b: Waiting
-32240762d934: Waiting
-03a691138ef8: Waiting
-e4afdb54f010: Waiting
-ede52db3297f: Waiting
-d3ed2fbe7c33: Waiting
-09a8bd0521b8: Waiting
-8abf5ec0bb13: Waiting
-13e96fedcb8d: Waiting
-120b49f11018: Layer already exists
-96c54e0e4c1a: Layer already exists
-dd65b807c637: Layer already exists
-9f4b7d58d41b: Layer already exists
-32240762d934: Layer already exists
-03a691138ef8: Layer already exists
-e4afdb54f010: Layer already exists
-ede52db3297f: Layer already exists
-d3ed2fbe7c33: Layer already exists
-09a8bd0521b8: Layer already exists
-8abf5ec0bb13: Layer already exists
-13e96fedcb8d: Layer already exists
-04712991e393: Layer already exists
-656347246602: Layer already exists
-824e6993c2a6: Layer already exists
-e175a7d4c536: Layer already exists
-5a30dc6e60f7: Layer already exists
-f0d07955f406: Layer already exists
-6856a2e3ed46: Layer already exists
-4a39c20d2475: Layer already exists
-03b628ccd951: Layer already exists
-29ed91f2bc74: Layer already exists
-38acfe94dbe9: Layer already exists
-c79b46181ee6: Layer already exists
-bcd2dfdccd09: Layer already exists
-4f4fb700ef54: Layer already exists
-d04d0713d158: Layer already exists
-856030010aab: Layer already exists
-d9c77bc172c0: Layer already exists
-16b5080fc155: Layer already exists
-60d5906fd80a: Layer already exists
-499d104c2b1e: Layer already exists
-2105a5e6a375: Layer already exists
-597a6c358afc: Layer already exists
-91b6a7918caa: Layer already exists
-65bc4e90123e: Layer already exists
-02148fc97997: Layer already exists
-06d1766c07ef: Layer already exists
-846c0b181fff: Layer already exists
-63edc579ff7d: Layer already exists
-d9ed1e887990: Layer already exists
-8bb9583747a2: Layer already exists
-5550e985500c: Layer already exists
-79a28dd49356: Layer already exists
-585bcce97762: Waiting
-66059ebf13c6: Layer already exists
-9684ed3c7117: Layer already exists
-dc2d21f56cc3: Layer already exists
-6471a4765a47: Layer already exists
-61b1f751e984: Layer already exists
-5bdc3a280b31: Layer already exists
-3650c6aa1ac1: Layer already exists
-a0e571274096: Layer already exists
-7275c2240c04: Layer already exists
-4bb75e94b397: Layer already exists
-2850b7199f2c: Layer already exists
-585bcce97762: Waiting
-585bcce97762: Pushed
-cifar10: digest: sha256:7febf01de86d1d9a018aaacc2f1ae8b4590c69b38d22cea1ec78d99d7f0d60b4 size: 857
-#0 building with "desktop-linux" instance using docker driver
-
-#1 [internal] load build definition from Dockerfile
-#1 transferring dockerfile: 843B done
-#1 DONE 0.0s
-
-#2 [internal] load metadata for nvcr.io/nvidia/pytorch:20.10-py3
-#2 DONE 0.2s
-
-#3 [internal] load .dockerignore
-#3 transferring context: 75B done
-#3 DONE 0.0s
-
-#4 [ 1/14] FROM nvcr.io/nvidia/pytorch:20.10-py3@sha256:65cf96f16323b2af66abc08ece22f3107477037201de288913cc87b92cbfba36
-#4 resolve nvcr.io/nvidia/pytorch:20.10-py3@sha256:65cf96f16323b2af66abc08ece22f3107477037201de288913cc87b92cbfba36 0.0s done
-#4 DONE 0.0s
-
-#5 [internal] load build context
-#5 transferring context: 38.34kB done
-#5 DONE 0.0s
-
-#6 [ 5/14] COPY benchmark/models/bert/requirements.txt requirements.txt
-#6 CACHED
-
-#7 [ 3/14] COPY adaptdl/requirements.txt requirements.txt
-#7 CACHED
-
-#8 [10/14] COPY benchmark/dataset_map.json .
-#8 CACHED
-
-#9 [ 4/14] RUN pip install --no-cache-dir -r requirements.txt
-#9 CACHED
-
-#10 [ 9/14] COPY benchmark/models/bert bert
-#10 CACHED
-
-#11 [ 7/14] RUN pip install --no-cache-dir awscli
-#11 CACHED
-
-#12 [13/14] RUN curl -o /root/bert/train-v1.1.json https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json &&     curl -o /root/bert/dev-v1.1.json https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json
-#12 CACHED
-
-#13 [ 6/14] RUN pip install --no-cache-dir -r requirements.txt
-#13 CACHED
-
-#14 [ 8/14] COPY adaptdl adaptdl
-#14 CACHED
-
-#15 [12/14] RUN chmod +x /root/download_dataset.sh
-#15 CACHED
-
-#16 [ 2/14] WORKDIR /root
-#16 CACHED
-
-#17 [11/14] COPY benchmark/download_dataset.sh .
-#17 CACHED
-
-#18 [14/14] WORKDIR /root/bert
-#18 CACHED
-
-#19 exporting to image
-#19 exporting layers done
-#19 exporting manifest sha256:7aee73eff6276ab6dcb39b4c9ec371349217909012718460c03a3b26e203d776 done
-#19 exporting config sha256:335e2d8372c4e9e35c24ed17647b20f9a9e2f0bfb190b4c04b141de480afa55e done
-#19 exporting attestation manifest sha256:36f4a3c68cc13d7d97fd645b683566c857d7fa2d461d91b1508ff557c58769bd done
-#19 exporting manifest list sha256:6595fd3330d770a3bcc731dbaf265be8716cffa1fc43ae5f7e3232ea8328ca6d done
-#19 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images:bert done
-#19 DONE 0.1s
-
- [33m1 warning found (use docker --debug to expand):
-[0m - UndefinedVar: Usage of undefined variable '$PYTHONPATH' (line 11)
-The push refers to repository [399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images]
-cac592305824: Waiting
-46e3e8d33436: Waiting
-3e1d75ec1492: Waiting
-0a6fe83c2832: Waiting
-0b52a8e746b5: Waiting
-9443a264051f: Waiting
-23cde8d051bc: Waiting
-4b1d1f66d76f: Waiting
-d2052f8ca70b: Waiting
-b75f9f76e286: Waiting
-d17e664a41c1: Waiting
-6d2529f59bf3: Waiting
-1f3ba0533236: Waiting
-cdd13eafc9da: Waiting
-fc3917a8c1ed: Waiting
-b0c5fa7a349e: Waiting
-0701332afa02: Waiting
-79eebdd88af5: Waiting
-a68caf4d1419: Waiting
-af6436804ee3: Waiting
-7a51e55708e1: Waiting
-77330016a72d: Waiting
-b0c184cc7f58: Waiting
-cf600ee2f72c: Waiting
-9e126323764a: Waiting
-46c068c10f04: Waiting
-70f61e571177: Waiting
-0c6df1647a81: Waiting
-42272bfba0e3: Waiting
-6da8716af321: Waiting
-c0673ca551d6: Waiting
-9299d68426e1: Waiting
-2871b7ed5441: Waiting
-4f4fb700ef54: Waiting
-021ee482f120: Waiting
-0de482750966: Waiting
-878b83e9a23c: Waiting
-1e037e3a34ce: Waiting
-ee4255578256: Waiting
-456157ed8b06: Waiting
-630da9a3a306: Waiting
-b3f0de31ee0f: Waiting
-d7a4bbc77abd: Waiting
-e85df16fe2e0: Waiting
-dddedac67980: Waiting
-572059e11ac0: Waiting
-61e52f862619: Waiting
-7542506f8d1b: Waiting
-fc26e57de8fa: Waiting
-1f539b83ee48: Waiting
-496aa17a4ab6: Waiting
-b333abaddde4: Waiting
-5c395696000a: Waiting
-f999f12f030c: Waiting
-01e93d82852f: Waiting
-4ae11a8d9421: Waiting
-171857c49d0f: Waiting
-419640447d26: Waiting
-b4fd783898fd: Waiting
-9cd8e2a57ae2: Waiting
-0eb9b027f264: Waiting
-ea887e78380f: Waiting
-c6bd830b2184: Waiting
-dd95667f2c29: Waiting
-c1dc6c75d0c4: Waiting
-7058ecf648f8: Waiting
-f6e600738674: Waiting
-23cde8d051bc: Layer already exists
-4b1d1f66d76f: Layer already exists
-d2052f8ca70b: Layer already exists
-b75f9f76e286: Layer already exists
-d17e664a41c1: Layer already exists
-6d2529f59bf3: Layer already exists
-1f3ba0533236: Layer already exists
-cdd13eafc9da: Layer already exists
-fc3917a8c1ed: Layer already exists
-b0c5fa7a349e: Layer already exists
-0701332afa02: Layer already exists
-79eebdd88af5: Layer already exists
-a68caf4d1419: Layer already exists
-af6436804ee3: Layer already exists
-7a51e55708e1: Layer already exists
-77330016a72d: Layer already exists
-b0c184cc7f58: Layer already exists
-cf600ee2f72c: Layer already exists
-9e126323764a: Layer already exists
-46c068c10f04: Layer already exists
-70f61e571177: Layer already exists
-0c6df1647a81: Layer already exists
-42272bfba0e3: Layer already exists
-6da8716af321: Layer already exists
-c0673ca551d6: Layer already exists
-9299d68426e1: Layer already exists
-2871b7ed5441: Layer already exists
-4f4fb700ef54: Layer already exists
-021ee482f120: Layer already exists
-0de482750966: Layer already exists
-878b83e9a23c: Layer already exists
-1e037e3a34ce: Layer already exists
-ee4255578256: Layer already exists
-456157ed8b06: Layer already exists
-630da9a3a306: Layer already exists
-b3f0de31ee0f: Layer already exists
-d7a4bbc77abd: Layer already exists
-e85df16fe2e0: Layer already exists
-dddedac67980: Layer already exists
-572059e11ac0: Waiting
-61e52f862619: Layer already exists
-7542506f8d1b: Layer already exists
-fc26e57de8fa: Layer already exists
-1f539b83ee48: Layer already exists
-496aa17a4ab6: Layer already exists
-b333abaddde4: Layer already exists
-5c395696000a: Layer already exists
-f999f12f030c: Layer already exists
-01e93d82852f: Layer already exists
-4ae11a8d9421: Layer already exists
-171857c49d0f: Layer already exists
-419640447d26: Layer already exists
-b4fd783898fd: Layer already exists
-9cd8e2a57ae2: Layer already exists
-0eb9b027f264: Layer already exists
-ea887e78380f: Layer already exists
-c6bd830b2184: Layer already exists
-dd95667f2c29: Layer already exists
-c1dc6c75d0c4: Layer already exists
-7058ecf648f8: Layer already exists
-f6e600738674: Layer already exists
-cac592305824: Layer already exists
-46e3e8d33436: Layer already exists
-3e1d75ec1492: Layer already exists
-0a6fe83c2832: Layer already exists
-0b52a8e746b5: Layer already exists
-9443a264051f: Layer already exists
-572059e11ac0: Pushed
-bert: digest: sha256:6595fd3330d770a3bcc731dbaf265be8716cffa1fc43ae5f7e3232ea8328ca6d size: 857
-#0 building with "desktop-linux" instance using docker driver
-
-#1 [internal] load build definition from Dockerfile
-#1 transferring dockerfile: 1.58kB done
-#1 DONE 0.0s
-
-#2 [internal] load metadata for nvcr.io/nvidia/pytorch:20.10-py3
-#2 DONE 0.2s
-
-#3 [internal] load .dockerignore
-#3 transferring context: 75B done
-#3 DONE 0.0s
-
-#4 [ 1/14] FROM nvcr.io/nvidia/pytorch:20.10-py3@sha256:65cf96f16323b2af66abc08ece22f3107477037201de288913cc87b92cbfba36
-#4 resolve nvcr.io/nvidia/pytorch:20.10-py3@sha256:65cf96f16323b2af66abc08ece22f3107477037201de288913cc87b92cbfba36 done
-#4 DONE 0.0s
-
-#5 [internal] load build context
-#5 transferring context: 908.08kB 0.0s done
-#5 DONE 0.0s
-
-#6 [10/14] COPY benchmark/models/deepspeech2 deepspeech2
-#6 CACHED
-
-#7 [12/14] COPY benchmark/download_dataset.sh .
-#7 CACHED
-
-#8 [ 5/14] COPY benchmark/models/deepspeech2/requirements.txt requirements.txt
-#8 CACHED
-
-#9 [ 9/14] COPY adaptdl adaptdl
-#9 CACHED
-
-#10 [ 6/14] RUN pip install --no-cache-dir -r requirements.txt
-#10 CACHED
-
-#11 [ 8/14] RUN pip install --no-cache-dir awscli
-#11 CACHED
-
-#12 [11/14] COPY benchmark/dataset_map.json .
-#12 CACHED
-
-#13 [ 2/14] WORKDIR /root
-#13 CACHED
-
-#14 [ 4/14] RUN pip install --no-cache-dir -r requirements.txt
-#14 CACHED
-
-#15 [13/14] RUN chmod +x /root/download_dataset.sh
-#15 CACHED
-
-#16 [ 3/14] COPY adaptdl/requirements.txt requirements.txt
-#16 CACHED
-
-#17 [ 7/14] RUN apt-get update &&     apt-get install -y sox libsox-dev libsox-fmt-all wget bzip2 &&     apt-get clean && rm -rf /var/lib/apt/lists/*
-#17 CACHED
-
-#18 [14/14] WORKDIR /root/deepspeech2
-#18 CACHED
-
-#19 exporting to image
-#19 exporting layers done
-#19 exporting manifest sha256:c863c47a8eab97cc8f623aa2b53037ffa0fb82748162d1ed02f9bf89db5b867e done
-#19 exporting config sha256:ef011391cfc542c5eb0476288df88c29c8dd29dd9e8970d381a33b4bfa0587af done
-#19 exporting attestation manifest sha256:69fa8757c90638dd9835e030a94eca848c5be2b07bb86f3eda183c34bcabe555 done
-#19 exporting manifest list sha256:8887970b1b2fb25631a463283b7b1373a484040cca222689fba97bc253950fa3 done
-#19 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images:deepspeech2 done
-#19 DONE 0.1s
-
- [33m1 warning found (use docker --debug to expand):
-[0m - UndefinedVar: Usage of undefined variable '$PYTHONPATH' (line 21)
-The push refers to repository [399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images]
-dddedac67980: Waiting
-5c395696000a: Waiting
-3e1d75ec1492: Waiting
-ea887e78380f: Waiting
-0a6fe83c2832: Waiting
-fb17b2c330d9: Waiting
-8c16aff0cdd3: Waiting
-ee4255578256: Waiting
-171857c49d0f: Waiting
-630da9a3a306: Waiting
-9cd8e2a57ae2: Waiting
-cac592305824: Waiting
-c1dc6c75d0c4: Waiting
-e85df16fe2e0: Waiting
-01e93d82852f: Waiting
-7a51e55708e1: Waiting
-9299d68426e1: Waiting
-b3f0de31ee0f: Waiting
-d17e664a41c1: Waiting
-1e037e3a34ce: Waiting
-cdd13eafc9da: Waiting
-c6b321a0c736: Waiting
-b0c184cc7f58: Waiting
-0c6df1647a81: Waiting
-419640447d26: Waiting
-23cde8d051bc: Waiting
-46e3e8d33436: Waiting
-878b83e9a23c: Waiting
-c57fd719a4d6: Waiting
-b333abaddde4: Waiting
-b4fd783898fd: Waiting
-c0673ca551d6: Waiting
-ba979137c665: Waiting
-021ee482f120: Waiting
-61e52f862619: Waiting
-0701332afa02: Waiting
-a68caf4d1419: Waiting
-f337029a43d7: Waiting
-1f3ba0533236: Waiting
-d7a4bbc77abd: Waiting
-a5546f7bdecc: Waiting
-79eebdd88af5: Waiting
-4ae11a8d9421: Waiting
-c6bd830b2184: Waiting
-54626d8b14f7: Waiting
-cf600ee2f72c: Waiting
-7542506f8d1b: Waiting
-fc3917a8c1ed: Waiting
-46c068c10f04: Waiting
-3fec15201e98: Waiting
-0de482750966: Waiting
-496aa17a4ab6: Waiting
-d2052f8ca70b: Waiting
-f6e600738674: Waiting
-4f4fb700ef54: Waiting
-dd95667f2c29: Waiting
-9e126323764a: Waiting
-77330016a72d: Waiting
-b75f9f76e286: Waiting
-7058ecf648f8: Waiting
-456157ed8b06: Waiting
-0eb9b027f264: Waiting
-6d2529f59bf3: Waiting
-6da8716af321: Waiting
-70f61e571177: Waiting
-0b52a8e746b5: Waiting
-af6436804ee3: Waiting
-3e1d75ec1492: Layer already exists
-ea887e78380f: Layer already exists
-0a6fe83c2832: Layer already exists
-fb17b2c330d9: Layer already exists
-8c16aff0cdd3: Layer already exists
-ee4255578256: Layer already exists
-171857c49d0f: Layer already exists
-630da9a3a306: Layer already exists
-9cd8e2a57ae2: Layer already exists
-cac592305824: Layer already exists
-c1dc6c75d0c4: Layer already exists
-e85df16fe2e0: Layer already exists
-01e93d82852f: Layer already exists
-7a51e55708e1: Layer already exists
-9299d68426e1: Layer already exists
-b3f0de31ee0f: Layer already exists
-d17e664a41c1: Layer already exists
-1e037e3a34ce: Layer already exists
-cdd13eafc9da: Layer already exists
-c6b321a0c736: Layer already exists
-b0c184cc7f58: Layer already exists
-0c6df1647a81: Layer already exists
-419640447d26: Layer already exists
-23cde8d051bc: Layer already exists
-46e3e8d33436: Layer already exists
-878b83e9a23c: Layer already exists
-c57fd719a4d6: Layer already exists
-b333abaddde4: Layer already exists
-b4fd783898fd: Layer already exists
-c0673ca551d6: Layer already exists
-ba979137c665: Layer already exists
-021ee482f120: Layer already exists
-61e52f862619: Layer already exists
-0701332afa02: Layer already exists
-a68caf4d1419: Layer already exists
-f337029a43d7: Layer already exists
-1f3ba0533236: Layer already exists
-d7a4bbc77abd: Layer already exists
-a5546f7bdecc: Waiting
-79eebdd88af5: Layer already exists
-4ae11a8d9421: Layer already exists
-c6bd830b2184: Layer already exists
-54626d8b14f7: Layer already exists
-cf600ee2f72c: Layer already exists
-7542506f8d1b: Layer already exists
-fc3917a8c1ed: Layer already exists
-46c068c10f04: Layer already exists
-3fec15201e98: Layer already exists
-0de482750966: Layer already exists
-496aa17a4ab6: Layer already exists
-d2052f8ca70b: Layer already exists
-f6e600738674: Layer already exists
-4f4fb700ef54: Layer already exists
-dd95667f2c29: Layer already exists
-9e126323764a: Layer already exists
-77330016a72d: Layer already exists
-b75f9f76e286: Layer already exists
-7058ecf648f8: Layer already exists
-456157ed8b06: Layer already exists
-0eb9b027f264: Layer already exists
-6d2529f59bf3: Layer already exists
-6da8716af321: Layer already exists
-70f61e571177: Layer already exists
-0b52a8e746b5: Layer already exists
-af6436804ee3: Layer already exists
-dddedac67980: Layer already exists
-5c395696000a: Layer already exists
-a5546f7bdecc: Pushed
-deepspeech2: digest: sha256:8887970b1b2fb25631a463283b7b1373a484040cca222689fba97bc253950fa3 size: 857
-Deleted existing 'images' DaemonSet.
-caching images on all nodes: 0/0
-caching images on all nodes: 2/6
-caching images on all nodes: 2/6
-caching images on all nodes: 2/6
-caching images on all nodes: 2/6
-caching images on all nodes: 2/6
-caching images on all nodes: 2/6
-caching images on all nodes: 2/6
-caching images on all nodes: 2/6
-caching images on all nodes: 6/6
-start workload
-submit job Pandas(Index=0, name='deepspeech2-0', time=2, application='deepspeech2', num_replicas=12, batch_size=640) at time 2.0092029571533203
-Set readOnly=False for volumeMount: data
-apiVersion: adaptdl.petuum.com/v1
-kind: AdaptDLJob
-metadata:
-  name: deepspeech2-0
-spec:
-  application: deepspeech2
-  targetBatchSize: 640
-  targetNumReplicas: 12
-  template:
-    spec:
-      containers:
-      - command:
-        - /root/download_dataset.sh
-        - deepspeech2
-        - python
-        - /root/deepspeech2/train.py
-        - --cuda
-        - --train-manifest=/mnt/deepspeech2_data/voxforge_cmu_us_train_manifest_part1.csv
-        - --val-manifest=/mnt/deepspeech2_data/voxforge_cmu_us_train_manifest_part2.csv
-        - --max-norm=1
-        - --batch-size=20
-        - --lr=0.12
-        - --learning-anneal=1.02
-        - --momentum=0.95
-        - --epochs=80
-        env:
-        - name: PYTHONUNBUFFERED
-          value: 'true'
-        - name: ADAPTDL_CHECKPOINT_PATH
-          value: /pollux/checkpoint
-        - name: ADAPTDL_TENSORBOARD_LOGDIR
-          value: /pollux/tensorboard
-        - name: APPLICATION
-          value: deepspeech2
-        image: 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images@sha256:8887970b1b2fb25631a463283b7b1373a484040cca222689fba97bc253950fa3
-        name: main
-        resources:
-          limits:
-            cpu: 10
-            memory: 40G
-            nvidia.com/gpu: 1
-          requests:
-            cpu: 10
-            memory: 40G
-            nvidia.com/gpu: 1
-        volumeMounts:
-        - mountPath: /mnt
-          name: data
-          readOnly: false
-        - mountPath: /pollux/checkpoint
-          name: pollux
-          subPath: pollux/checkpoint/deepspeech2-0
-        - mountPath: /pollux/tensorboard
-          name: pollux
-          subPath: pollux/tensorboard/deepspeech2-0
-        - mountPath: /pollux/global-checkpoint
-          name: pollux
-          readOnly: true
-      imagePullSecrets:
-      - name: regcred
-      volumes:
-      - hostPath:
-          path: /
-          type: Directory
-        name: data
-      - name: pollux
-        persistentVolumeClaim:
-          claimName: pollux
-
---- Command completed with return code: 0 ---
-[2025-10-26 14:03:57] 
-✓ Starting monitor, output to: ./experiment_results/dummy-cbd-0916-2/deepspeech2/24gpu.txt
-[2025-10-26 14:36:57] 
-✅ Job completed!
-[2025-10-26 14:36:59] 
-=== Experiment with 24 GPU(s) Completed at 2025-10-26 14:36:59 ===
-[2025-10-26 14:36:59] 
-============================================================
-[2025-10-26 14:36:59] Starting experiment with NUM_GPU=32
-[2025-10-26 14:36:59] ============================================================
-
-[2025-10-26 14:36:59] 
-✓ Logging into Docker ECR...
-[2025-10-26 14:36:59] Running: ['aws', 'ecr', 'get-login-password', '--region', 'us-east-1', '|', 'docker', 'login', '--username', 'AWS', '--password-stdin', '399790253372.dkr.ecr.us-east-1.amazonaws.com']
-[2025-10-26 14:37:00] Error running command: ['aws', 'ecr', 'get-login-password', '--region', 'us-east-1', '|', 'docker', 'login', '--username', 'AWS', '--password-stdin', '399790253372.dkr.ecr.us-east-1.amazonaws.com']
-[2025-10-26 14:37:00] Error output:
-[2025-10-26 14:37:00]   aws: [ERROR]: the following arguments are required: command
-[2025-10-26 14:37:00]   
-[2025-10-26 14:37:00]   usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]
-[2025-10-26 14:37:00]   To see help text, you can run:
-[2025-10-26 14:37:00]   
-[2025-10-26 14:37:00]     aws help
-[2025-10-26 14:37:00]     aws <command> help
-[2025-10-26 14:37:00]     aws <command> <subcommand> help
-[2025-10-26 14:37:00] ✓ Verified policy is 'dummy'
-[2025-10-26 14:37:00] ✓ Updated DummyPolicy to use 32 GPU(s)
-[2025-10-26 14:37:00] 
-✓ Running helm update...
-[2025-10-26 14:37:00] Running: ['./helm/update_adaptdl.sh']
-
---- Real-time output for: ['./helm/update_adaptdl.sh'] ---
-#0 building with "desktop-linux" instance using docker driver
-
-#1 [internal] load build definition from Dockerfile
-#1 transferring dockerfile: 1.11kB done
-#1 DONE 0.0s
-
-#2 [internal] load metadata for docker.io/library/python:3.8
-#2 DONE 0.3s
-
-#3 [internal] load .dockerignore
-#3 transferring context: 75B done
-#3 DONE 0.0s
-
-#4 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
-#4 resolve docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c done
-#4 DONE 0.0s
-
-#5 [internal] load build context
-#5 transferring context: 452.41kB 0.0s done
-#5 DONE 0.0s
-
-#6 [ 9/12] RUN ADAPTDL_VERSION=0.0.0 pip install sched/dist/*.whl
-#6 CACHED
-
-#7 [11/12] RUN rm -rf adaptdl/dist
-#7 CACHED
+#5 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
+#5 resolve docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c 0.0s done
+#5 extracting sha256:cdd62bf39133c498a16f7a7b1b6555ba43d02b2511c508fa4c0a9b1975ffe20e
+#5 extracting sha256:cdd62bf39133c498a16f7a7b1b6555ba43d02b2511c508fa4c0a9b1975ffe20e 0.6s done
+#5 DONE 0.6s
+
+#5 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
+#5 extracting sha256:a47cff7f31e941e78bf63ca19f0811b675283e2c00ddea10c57f78d93b2bc343
+#5 extracting sha256:a47cff7f31e941e78bf63ca19f0811b675283e2c00ddea10c57f78d93b2bc343 0.2s done
+#5 DONE 0.8s
+
+#5 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
+#5 extracting sha256:a173f2aee8e962ea19db1e418ae84a0c9f71480b51f768a19332dfa83d7722a5
+#5 extracting sha256:a173f2aee8e962ea19db1e418ae84a0c9f71480b51f768a19332dfa83d7722a5 0.7s done
+#5 DONE 1.5s
+
+#5 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
+#5 extracting sha256:01272fe8adbacc44afd2b92994b31c40a151f4324ca392050d9e8d580927dd32
+#5 extracting sha256:01272fe8adbacc44afd2b92994b31c40a151f4324ca392050d9e8d580927dd32 2.3s done
+#5 DONE 3.8s
+
+#5 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
+#5 extracting sha256:cddc73e4e6c704bfa2325e53c32ddb3553c8fc3a91dab6c092bb353f82098b09 0.1s done
+#5 extracting sha256:cc48f13b5f0f44b2e298de83a94a99fe7abdfb3335fe9b7811b8f764abb1a4ac
+#5 extracting sha256:cc48f13b5f0f44b2e298de83a94a99fe7abdfb3335fe9b7811b8f764abb1a4ac 0.4s done
+#5 DONE 4.2s
+
+#5 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
+#5 extracting sha256:5a98c896c047f960c5fd29d44fa778899a68e7ebfb6a6a4f2a3fbf7baa902f6a 0.0s done
+#5 DONE 4.2s
+
+#6 [ 2/12] WORKDIR /root/adaptdl
+#6 DONE 0.3s
+
+#7 [ 3/12] COPY adaptdl adaptdl
+#7 DONE 0.0s
 
 #8 [ 4/12] COPY sched sched
-#8 CACHED
+#8 DONE 0.0s
 
-#9 [10/12] WORKDIR /root
-#9 CACHED
+#9 [ 5/12] COPY cli/bin/adaptdl cli/bin/adaptdl
+#9 DONE 0.0s
 
-#10 [ 2/12] WORKDIR /root/adaptdl
-#10 CACHED
+#10 [ 6/12] RUN cd adaptdl && python3 setup.py bdist_wheel
+#10 3.002 running bdist_wheel
+#10 3.114 running build
+#10 3.114 running build_py
+#10 3.314 creating build
+#10 3.318 creating build/lib
+#10 3.318 creating build/lib/adaptdl
+#10 3.319 copying adaptdl/reducer_test.py -> build/lib/adaptdl
+#10 3.320 copying adaptdl/collective_test.py -> build/lib/adaptdl
+#10 3.320 copying adaptdl/utils.py -> build/lib/adaptdl
+#10 3.320 copying adaptdl/checkpoint.py -> build/lib/adaptdl
+#10 3.321 copying adaptdl/goodput.py -> build/lib/adaptdl
+#10 3.322 copying adaptdl/conftest.py -> build/lib/adaptdl
+#10 3.322 copying adaptdl/sched_hints.py -> build/lib/adaptdl
+#10 3.323 copying adaptdl/global_profile_state.py -> build/lib/adaptdl
+#10 3.323 copying adaptdl/fit_test.py -> build/lib/adaptdl
+#10 3.324 copying adaptdl/_signal.py -> build/lib/adaptdl
+#10 3.324 copying adaptdl/reducer.py -> build/lib/adaptdl
+#10 3.324 copying adaptdl/checkpoint_test.py -> build/lib/adaptdl
+#10 3.325 copying adaptdl/goodput_test.py -> build/lib/adaptdl
+#10 3.325 copying adaptdl/__init__.py -> build/lib/adaptdl
+#10 3.326 copying adaptdl/collective.py -> build/lib/adaptdl
+#10 3.326 copying adaptdl/env.py -> build/lib/adaptdl
+#10 3.328 creating build/lib/adaptdl/torch
+#10 3.328 copying adaptdl/torch/scaling_rules_test.py -> build/lib/adaptdl/torch
+#10 3.329 copying adaptdl/torch/gradient_noise_scale_test.py -> build/lib/adaptdl/torch
+#10 3.329 copying adaptdl/torch/_metrics.py -> build/lib/adaptdl/torch
+#10 3.330 copying adaptdl/torch/adascale_test.py -> build/lib/adaptdl/torch
+#10 3.330 copying adaptdl/torch/parallel_test.py -> build/lib/adaptdl/torch
+#10 3.330 copying adaptdl/torch/data.py -> build/lib/adaptdl/torch
+#10 3.331 copying adaptdl/torch/parallel.py -> build/lib/adaptdl/torch
+#10 3.331 copying adaptdl/torch/data_test.py -> build/lib/adaptdl/torch
+#10 3.332 copying adaptdl/torch/epoch_test.py -> build/lib/adaptdl/torch
+#10 3.332 copying adaptdl/torch/iterator.py -> build/lib/adaptdl/torch
+#10 3.333 copying adaptdl/torch/_metrics_test.py -> build/lib/adaptdl/torch
+#10 3.333 copying adaptdl/torch/gradient_noise_scale.py -> build/lib/adaptdl/torch
+#10 3.333 copying adaptdl/torch/adascale.py -> build/lib/adaptdl/torch
+#10 3.334 copying adaptdl/torch/__init__.py -> build/lib/adaptdl/torch
+#10 3.334 copying adaptdl/torch/scaling_rules.py -> build/lib/adaptdl/torch
+#10 3.334 copying adaptdl/torch/accumulator.py -> build/lib/adaptdl/torch
+#10 3.335 copying adaptdl/torch/accumulator_test.py -> build/lib/adaptdl/torch
+#10 3.335 copying adaptdl/torch/epoch.py -> build/lib/adaptdl/torch
+#10 3.360 installing to build/bdist.linux-x86_64/wheel
+#10 3.360 running install
+#10 3.362 running install_lib
+#10 3.370 creating build/bdist.linux-x86_64
+#10 3.370 creating build/bdist.linux-x86_64/wheel
+#10 3.370 creating build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.371 copying build/lib/adaptdl/reducer_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.371 copying build/lib/adaptdl/collective_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.372 copying build/lib/adaptdl/utils.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.372 copying build/lib/adaptdl/checkpoint.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.372 copying build/lib/adaptdl/goodput.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.373 copying build/lib/adaptdl/conftest.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.373 copying build/lib/adaptdl/sched_hints.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.374 copying build/lib/adaptdl/global_profile_state.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.374 copying build/lib/adaptdl/fit_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.374 copying build/lib/adaptdl/_signal.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.375 copying build/lib/adaptdl/reducer.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.375 copying build/lib/adaptdl/checkpoint_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.375 copying build/lib/adaptdl/goodput_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.376 copying build/lib/adaptdl/__init__.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.376 copying build/lib/adaptdl/collective.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.376 copying build/lib/adaptdl/env.py -> build/bdist.linux-x86_64/wheel/adaptdl
+#10 3.377 creating build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.377 copying build/lib/adaptdl/torch/scaling_rules_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.378 copying build/lib/adaptdl/torch/gradient_noise_scale_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.378 copying build/lib/adaptdl/torch/_metrics.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.378 copying build/lib/adaptdl/torch/adascale_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.379 copying build/lib/adaptdl/torch/parallel_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.379 copying build/lib/adaptdl/torch/data.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.379 copying build/lib/adaptdl/torch/parallel.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.380 copying build/lib/adaptdl/torch/data_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.380 copying build/lib/adaptdl/torch/epoch_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.380 copying build/lib/adaptdl/torch/iterator.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.381 copying build/lib/adaptdl/torch/_metrics_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.381 copying build/lib/adaptdl/torch/gradient_noise_scale.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.382 copying build/lib/adaptdl/torch/adascale.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.382 copying build/lib/adaptdl/torch/__init__.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.382 copying build/lib/adaptdl/torch/scaling_rules.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.383 copying build/lib/adaptdl/torch/accumulator.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.383 copying build/lib/adaptdl/torch/accumulator_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.384 copying build/lib/adaptdl/torch/epoch.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
+#10 3.384 running install_egg_info
+#10 3.453 running egg_info
+#10 3.454 creating adaptdl.egg-info
+#10 3.454 writing adaptdl.egg-info/PKG-INFO
+#10 3.455 writing dependency_links to adaptdl.egg-info/dependency_links.txt
+#10 3.456 writing requirements to adaptdl.egg-info/requires.txt
+#10 3.456 writing top-level names to adaptdl.egg-info/top_level.txt
+#10 3.457 writing manifest file 'adaptdl.egg-info/SOURCES.txt'
+#10 3.462 reading manifest file 'adaptdl.egg-info/SOURCES.txt'
+#10 3.466 writing manifest file 'adaptdl.egg-info/SOURCES.txt'
+#10 3.467 Copying adaptdl.egg-info to build/bdist.linux-x86_64/wheel/adaptdl-0.0.0-py3.8.egg-info
+#10 3.469 running install_scripts
+#10 3.799 creating build/bdist.linux-x86_64/wheel/adaptdl-0.0.0.dist-info/WHEEL
+#10 3.802 creating 'dist/adaptdl-0.0.0-py3-none-any.whl' and adding 'build/bdist.linux-x86_64/wheel' to it
+#10 3.807 adding 'adaptdl/__init__.py'
+#10 3.810 adding 'adaptdl/_signal.py'
+#10 3.812 adding 'adaptdl/checkpoint.py'
+#10 3.813 adding 'adaptdl/checkpoint_test.py'
+#10 3.814 adding 'adaptdl/collective.py'
+#10 3.815 adding 'adaptdl/collective_test.py'
+#10 3.816 adding 'adaptdl/conftest.py'
+#10 3.818 adding 'adaptdl/env.py'
+#10 3.819 adding 'adaptdl/fit_test.py'
+#10 3.821 adding 'adaptdl/global_profile_state.py'
+#10 3.823 adding 'adaptdl/goodput.py'
+#10 3.824 adding 'adaptdl/goodput_test.py'
+#10 3.825 adding 'adaptdl/reducer.py'
+#10 3.826 adding 'adaptdl/reducer_test.py'
+#10 3.827 adding 'adaptdl/sched_hints.py'
+#10 3.828 adding 'adaptdl/utils.py'
+#10 3.830 adding 'adaptdl/torch/__init__.py'
+#10 3.831 adding 'adaptdl/torch/_metrics.py'
+#10 3.833 adding 'adaptdl/torch/_metrics_test.py'
+#10 3.834 adding 'adaptdl/torch/accumulator.py'
+#10 3.836 adding 'adaptdl/torch/accumulator_test.py'
+#10 3.837 adding 'adaptdl/torch/adascale.py'
+#10 3.839 adding 'adaptdl/torch/adascale_test.py'
+#10 3.841 adding 'adaptdl/torch/data.py'
+#10 3.843 adding 'adaptdl/torch/data_test.py'
+#10 3.844 adding 'adaptdl/torch/epoch.py'
+#10 3.845 adding 'adaptdl/torch/epoch_test.py'
+#10 3.846 adding 'adaptdl/torch/gradient_noise_scale.py'
+#10 3.848 adding 'adaptdl/torch/gradient_noise_scale_test.py'
+#10 3.849 adding 'adaptdl/torch/iterator.py'
+#10 3.850 adding 'adaptdl/torch/parallel.py'
+#10 3.851 adding 'adaptdl/torch/parallel_test.py'
+#10 3.853 adding 'adaptdl/torch/scaling_rules.py'
+#10 3.854 adding 'adaptdl/torch/scaling_rules_test.py'
+#10 3.856 adding 'adaptdl-0.0.0.dist-info/METADATA'
+#10 3.857 adding 'adaptdl-0.0.0.dist-info/WHEEL'
+#10 3.858 adding 'adaptdl-0.0.0.dist-info/top_level.txt'
+#10 3.859 adding 'adaptdl-0.0.0.dist-info/RECORD'
+#10 3.861 removing build/bdist.linux-x86_64/wheel
+#10 DONE 3.9s
 
 #11 [ 7/12] RUN cd sched && python3 setup.py bdist_wheel
-#11 CACHED
+#11 1.174 running bdist_wheel
+#11 1.200 running build
+#11 1.200 running build_py
+#11 1.267 creating build
+#11 1.270 creating build/lib
+#11 1.270 creating build/lib/adaptdl_sched
+#11 1.271 copying adaptdl_sched/supervisor.py -> build/lib/adaptdl_sched
+#11 1.272 copying adaptdl_sched/global_profiler.py -> build/lib/adaptdl_sched
+#11 1.272 copying adaptdl_sched/utils.py -> build/lib/adaptdl_sched
+#11 1.273 copying adaptdl_sched/validator.py -> build/lib/adaptdl_sched
+#11 1.273 copying adaptdl_sched/validator_test.py -> build/lib/adaptdl_sched
+#11 1.273 copying adaptdl_sched/resources_test.py -> build/lib/adaptdl_sched
+#11 1.274 copying adaptdl_sched/_compute_width.py -> build/lib/adaptdl_sched
+#11 1.274 copying adaptdl_sched/allocator.py -> build/lib/adaptdl_sched
+#11 1.275 copying adaptdl_sched/width_calculator.py -> build/lib/adaptdl_sched
+#11 1.275 copying adaptdl_sched/cluster_expander.py -> build/lib/adaptdl_sched
+#11 1.276 copying adaptdl_sched/_configs.py -> build/lib/adaptdl_sched
+#11 1.277 copying adaptdl_sched/__main__.py -> build/lib/adaptdl_sched
+#11 1.277 copying adaptdl_sched/k8s_templates.py -> build/lib/adaptdl_sched
+#11 1.278 copying adaptdl_sched/__init__.py -> build/lib/adaptdl_sched
+#11 1.278 copying adaptdl_sched/config.py -> build/lib/adaptdl_sched
+#11 1.279 copying adaptdl_sched/controller.py -> build/lib/adaptdl_sched
+#11 1.279 copying adaptdl_sched/resources.py -> build/lib/adaptdl_sched
+#11 1.281 creating build/lib/adaptdl_sched/policy
+#11 1.281 copying adaptdl_sched/policy/utils.py -> build/lib/adaptdl_sched/policy
+#11 1.281 copying adaptdl_sched/policy/speedup_test.py -> build/lib/adaptdl_sched/policy
+#11 1.282 copying adaptdl_sched/policy/speedup.py -> build/lib/adaptdl_sched/policy
+#11 1.282 copying adaptdl_sched/policy/pollux.py -> build/lib/adaptdl_sched/policy
+#11 1.283 copying adaptdl_sched/policy/fixed_width.py -> build/lib/adaptdl_sched/policy
+#11 1.284 copying adaptdl_sched/policy/pollux_test.py -> build/lib/adaptdl_sched/policy
+#11 1.284 copying adaptdl_sched/policy/dummy.py -> build/lib/adaptdl_sched/policy
+#11 1.284 copying adaptdl_sched/policy/non_preemptible_test.py -> build/lib/adaptdl_sched/policy
+#11 1.285 copying adaptdl_sched/policy/__init__.py -> build/lib/adaptdl_sched/policy
+#11 1.294 installing to build/bdist.linux-x86_64/wheel
+#11 1.294 running install
+#11 1.295 running install_lib
+#11 1.298 creating build/bdist.linux-x86_64
+#11 1.298 creating build/bdist.linux-x86_64/wheel
+#11 1.299 creating build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.299 copying build/lib/adaptdl_sched/supervisor.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.299 copying build/lib/adaptdl_sched/global_profiler.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.300 copying build/lib/adaptdl_sched/utils.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.300 copying build/lib/adaptdl_sched/validator.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.300 copying build/lib/adaptdl_sched/validator_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.301 copying build/lib/adaptdl_sched/resources_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.301 copying build/lib/adaptdl_sched/_compute_width.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.301 copying build/lib/adaptdl_sched/allocator.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.302 copying build/lib/adaptdl_sched/width_calculator.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.302 copying build/lib/adaptdl_sched/cluster_expander.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.303 creating build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.303 copying build/lib/adaptdl_sched/policy/utils.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.303 copying build/lib/adaptdl_sched/policy/speedup_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.304 copying build/lib/adaptdl_sched/policy/speedup.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.304 copying build/lib/adaptdl_sched/policy/pollux.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.305 copying build/lib/adaptdl_sched/policy/fixed_width.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.305 copying build/lib/adaptdl_sched/policy/pollux_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.305 copying build/lib/adaptdl_sched/policy/dummy.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.306 copying build/lib/adaptdl_sched/policy/non_preemptible_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.306 copying build/lib/adaptdl_sched/policy/__init__.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
+#11 1.306 copying build/lib/adaptdl_sched/_configs.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.307 copying build/lib/adaptdl_sched/__main__.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.307 copying build/lib/adaptdl_sched/k8s_templates.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.308 copying build/lib/adaptdl_sched/__init__.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.308 copying build/lib/adaptdl_sched/config.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.308 copying build/lib/adaptdl_sched/controller.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.309 copying build/lib/adaptdl_sched/resources.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
+#11 1.309 running install_egg_info
+#11 1.317 running egg_info
+#11 1.317 creating adaptdl_sched.egg-info
+#11 1.318 writing adaptdl_sched.egg-info/PKG-INFO
+#11 1.319 writing dependency_links to adaptdl_sched.egg-info/dependency_links.txt
+#11 1.320 writing requirements to adaptdl_sched.egg-info/requires.txt
+#11 1.320 writing top-level names to adaptdl_sched.egg-info/top_level.txt
+#11 1.320 writing manifest file 'adaptdl_sched.egg-info/SOURCES.txt'
+#11 1.325 reading manifest file 'adaptdl_sched.egg-info/SOURCES.txt'
+#11 1.329 writing manifest file 'adaptdl_sched.egg-info/SOURCES.txt'
+#11 1.330 Copying adaptdl_sched.egg-info to build/bdist.linux-x86_64/wheel/adaptdl_sched-0.0.0-py3.8.egg-info
+#11 1.332 running install_scripts
+#11 1.420 creating build/bdist.linux-x86_64/wheel/adaptdl_sched-0.0.0.dist-info/WHEEL
+#11 1.423 creating 'dist/adaptdl_sched-0.0.0-py3-none-any.whl' and adding 'build/bdist.linux-x86_64/wheel' to it
+#11 1.426 adding 'adaptdl_sched/__init__.py'
+#11 1.430 adding 'adaptdl_sched/__main__.py'
+#11 1.432 adding 'adaptdl_sched/_compute_width.py'
+#11 1.434 adding 'adaptdl_sched/_configs.py'
+#11 1.436 adding 'adaptdl_sched/allocator.py'
+#11 1.437 adding 'adaptdl_sched/cluster_expander.py'
+#11 1.438 adding 'adaptdl_sched/config.py'
+#11 1.441 adding 'adaptdl_sched/controller.py'
+#11 1.445 adding 'adaptdl_sched/global_profiler.py'
+#11 1.447 adding 'adaptdl_sched/k8s_templates.py'
+#11 1.449 adding 'adaptdl_sched/resources.py'
+#11 1.450 adding 'adaptdl_sched/resources_test.py'
+#11 1.451 adding 'adaptdl_sched/supervisor.py'
+#11 1.452 adding 'adaptdl_sched/utils.py'
+#11 1.453 adding 'adaptdl_sched/validator.py'
+#11 1.454 adding 'adaptdl_sched/validator_test.py'
+#11 1.456 adding 'adaptdl_sched/width_calculator.py'
+#11 1.457 adding 'adaptdl_sched/policy/__init__.py'
+#11 1.458 adding 'adaptdl_sched/policy/dummy.py'
+#11 1.460 adding 'adaptdl_sched/policy/fixed_width.py'
+#11 1.461 adding 'adaptdl_sched/policy/non_preemptible_test.py'
+#11 1.468 adding 'adaptdl_sched/policy/pollux.py'
+#11 1.470 adding 'adaptdl_sched/policy/pollux_test.py'
+#11 1.471 adding 'adaptdl_sched/policy/speedup.py'
+#11 1.472 adding 'adaptdl_sched/policy/speedup_test.py'
+#11 1.473 adding 'adaptdl_sched/policy/utils.py'
+#11 1.475 adding 'adaptdl_sched-0.0.0.dist-info/METADATA'
+#11 1.475 adding 'adaptdl_sched-0.0.0.dist-info/WHEEL'
+#11 1.476 adding 'adaptdl_sched-0.0.0.dist-info/top_level.txt'
+#11 1.478 adding 'adaptdl_sched-0.0.0.dist-info/RECORD'
+#11 1.479 removing build/bdist.linux-x86_64/wheel
+#11 DONE 1.5s
 
 #12 [ 8/12] RUN ADAPTDL_VERSION=0.0.0 pip install adaptdl/dist/*.whl
-#12 CACHED
+#12 4.637 Processing ./adaptdl/dist/adaptdl-0.0.0-py3-none-any.whl
+#12 5.485 Collecting redis>=3.3.8
+#12 5.706   Downloading redis-6.1.1-py3-none-any.whl (273 kB)
+#12 5.807      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 273.9/273.9 kB 3.3 MB/s eta 0:00:00
+#12 5.910 Collecting portpicker>=1.3.1
+#12 5.929   Downloading portpicker-1.6.0-py3-none-any.whl (16 kB)
+#12 6.031 Collecting autograd>=1.3
+#12 6.052   Downloading autograd-1.7.0-py3-none-any.whl (52 kB)
+#12 6.070      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 52.5/52.5 kB 6.7 MB/s eta 0:00:00
+#12 8.264 Collecting scipy>=1.3.0
+#12 8.286   Downloading scipy-1.10.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (34.5 MB)
+#12 9.802      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 34.5/34.5 MB 18.5 MB/s eta 0:00:00
+#12 12.24 Collecting pandas>=0.24.2
+#12 12.26   Downloading pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.4 MB)
+#12 12.76      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.4/12.4 MB 24.6 MB/s eta 0:00:00
+#12 16.31 Collecting numpy
+#12 16.33   Downloading numpy-1.24.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (17.3 MB)
+#12 17.04      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 17.3/17.3 MB 22.6 MB/s eta 0:00:00
+#12 17.90 Collecting tzdata>=2022.1
+#12 17.92   Downloading tzdata-2025.2-py2.py3-none-any.whl (347 kB)
+#12 17.95      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 347.8/347.8 kB 20.4 MB/s eta 0:00:00
+#12 18.12 Collecting python-dateutil>=2.8.2
+#12 18.14   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+#12 18.16      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 229.9/229.9 kB 16.3 MB/s eta 0:00:00
+#12 18.64 Collecting pytz>=2020.1
+#12 18.66   Downloading pytz-2025.2-py2.py3-none-any.whl (509 kB)
+#12 18.70      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 509.2/509.2 kB 21.1 MB/s eta 0:00:00
+#12 19.97 Collecting psutil
+#12 19.99   Downloading psutil-7.1.3-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (263 kB)
+#12 20.02      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 263.3/263.3 kB 17.1 MB/s eta 0:00:00
+#12 20.18 Collecting async-timeout>=4.0.3
+#12 20.20   Downloading async_timeout-5.0.1-py3-none-any.whl (6.2 kB)
+#12 20.57 Collecting six>=1.5
+#12 20.59   Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+#12 22.10 Installing collected packages: pytz, tzdata, six, psutil, numpy, async-timeout, scipy, redis, python-dateutil, portpicker, autograd, pandas, adaptdl
+#12 56.87 Successfully installed adaptdl-0.0.0 async-timeout-5.0.1 autograd-1.7.0 numpy-1.24.4 pandas-2.0.3 portpicker-1.6.0 psutil-7.1.3 python-dateutil-2.9.0.post0 pytz-2025.2 redis-6.1.1 scipy-1.10.1 six-1.17.0 tzdata-2025.2
+#12 56.88 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#12 57.58 
+#12 57.58 [notice] A new release of pip is available: 23.0.1 -> 25.0.1
+#12 57.58 [notice] To update, run: pip install --upgrade pip
+#12 DONE 58.0s
 
-#13 [ 5/12] COPY cli/bin/adaptdl cli/bin/adaptdl
-#13 CACHED
+#13 [ 9/12] RUN ADAPTDL_VERSION=0.0.0 pip install sched/dist/*.whl
+#13 1.930 Processing ./sched/dist/adaptdl_sched-0.0.0-py3-none-any.whl
+#13 5.839 Collecting numpy==1.19.5
+#13 6.045   Downloading numpy-1.19.5-cp38-cp38-manylinux2010_x86_64.whl (14.9 MB)
+#13 6.805      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 14.9/14.9 MB 23.0 MB/s eta 0:00:00
+#13 7.226 Collecting jsonpatch>=1.26
+#13 7.247   Downloading jsonpatch-1.33-py2.py3-none-any.whl (12 kB)
+#13 7.261 Requirement already satisfied: adaptdl in /usr/local/lib/python3.8/site-packages (from adaptdl-sched==0.0.0) (0.0.0)
+#13 7.585 Collecting pymoo==0.5.0
+#13 7.608   Downloading pymoo-0.5.0-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl (2.7 MB)
+#13 7.731      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.7/2.7 MB 24.1 MB/s eta 0:00:00
+#13 7.940 Collecting prometheus-client>=0.7.1
+#13 7.959   Downloading prometheus_client-0.21.1-py3-none-any.whl (54 kB)
+#13 7.978      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 54.7/54.7 kB 5.6 MB/s eta 0:00:00
+#13 9.276 Collecting cvxpy
+#13 9.303   Downloading cvxpy-1.5.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.2 MB)
+#13 9.367      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 22.5 MB/s eta 0:00:00
+#13 9.521 Collecting future>=0.17.1
+#13 9.542   Downloading future-1.0.0-py3-none-any.whl (491 kB)
+#13 9.582      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 491.3/491.3 kB 18.8 MB/s eta 0:00:00
+#13 19.46 Collecting aiohttp==3.7.4.post0
+#13 19.49   Downloading aiohttp-3.7.4.post0-cp38-cp38-manylinux2014_x86_64.whl (1.5 MB)
+#13 19.56      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB 23.3 MB/s eta 0:00:00
+#13 19.93 Collecting requests>=2.7.0
+#13 19.95   Downloading requests-2.32.4-py3-none-any.whl (64 kB)
+#13 19.97      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 64.8/64.8 kB 7.6 MB/s eta 0:00:00
+#13 20.12 Collecting kubernetes-asyncio==9.1.0
+#13 20.14   Downloading kubernetes_asyncio-9.1.0.tar.gz (629 kB)
+#13 20.18      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 629.1/629.1 kB 22.8 MB/s eta 0:00:00
+#13 20.94   Preparing metadata (setup.py): started
+#13 22.23   Preparing metadata (setup.py): finished with status 'done'
+#13 22.24 Requirement already satisfied: python-dateutil>=2.7.3 in /usr/local/lib/python3.8/site-packages (from adaptdl-sched==0.0.0) (2.9.0.post0)
+#13 27.43 Collecting yarl<2.0,>=1.0
+#13 27.45   Downloading yarl-1.15.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (319 kB)
+#13 27.48      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 319.0/319.0 kB 16.9 MB/s eta 0:00:00
+#13 27.67 Collecting attrs>=17.3.0
+#13 27.69   Downloading attrs-25.3.0-py3-none-any.whl (63 kB)
+#13 27.71      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 63.8/63.8 kB 7.1 MB/s eta 0:00:00
+#13 27.84 Collecting async-timeout<4.0,>=3.0
+#13 27.86   Downloading async_timeout-3.0.1-py3-none-any.whl (8.2 kB)
+#13 27.97 Collecting chardet<5.0,>=2.0
+#13 27.99   Downloading chardet-4.0.0-py2.py3-none-any.whl (178 kB)
+#13 28.01      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 178.7/178.7 kB 15.3 MB/s eta 0:00:00
+#13 28.23 Collecting typing-extensions>=3.6.5
+#13 28.26   Downloading typing_extensions-4.13.2-py3-none-any.whl (45 kB)
+#13 28.27      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 45.8/45.8 kB 4.7 MB/s eta 0:00:00
+#13 32.94 Collecting multidict<7.0,>=4.5
+#13 32.97   Downloading multidict-6.1.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (129 kB)
+#13 33.00      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 129.7/129.7 kB 7.5 MB/s eta 0:00:00
+#13 33.27 Collecting certifi>=14.05.14
+#13 33.29   Downloading certifi-2025.10.5-py3-none-any.whl (163 kB)
+#13 33.31      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 163.3/163.3 kB 12.3 MB/s eta 0:00:00
+#13 33.33 Requirement already satisfied: six>=1.9.0 in /usr/local/lib/python3.8/site-packages (from kubernetes-asyncio==9.1.0->adaptdl-sched==0.0.0) (1.17.0)
+#13 33.33 Requirement already satisfied: setuptools>=21.0.0 in /usr/local/lib/python3.8/site-packages (from kubernetes-asyncio==9.1.0->adaptdl-sched==0.0.0) (57.5.0)
+#13 33.73 Collecting urllib3>=1.23
+#13 33.75   Downloading urllib3-2.2.3-py3-none-any.whl (126 kB)
+#13 33.77      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 126.3/126.3 kB 11.8 MB/s eta 0:00:00
+#13 34.43 Collecting pyyaml>=3.12
+#13 34.45   Downloading PyYAML-6.0.3-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (806 kB)
+#13 34.50      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 806.0/806.0 kB 22.9 MB/s eta 0:00:00
+#13 34.75 Collecting cma==2.7
+#13 34.77   Downloading cma-2.7.0-py2.py3-none-any.whl (239 kB)
+#13 34.80      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 239.1/239.1 kB 15.0 MB/s eta 0:00:00
+#13 37.38 Collecting matplotlib>=3
+#13 37.40   Downloading matplotlib-3.7.5-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
+#13 37.79      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 24.9 MB/s eta 0:00:00
+#13 37.97 Requirement already satisfied: scipy>=1.1 in /usr/local/lib/python3.8/site-packages (from pymoo==0.5.0->adaptdl-sched==0.0.0) (1.10.1)
+#13 37.97 Requirement already satisfied: autograd>=1.3 in /usr/local/lib/python3.8/site-packages (from pymoo==0.5.0->adaptdl-sched==0.0.0) (1.7.0)
+#13 38.13 Collecting jsonpointer>=1.9
+#13 38.16   Downloading jsonpointer-3.0.0-py2.py3-none-any.whl (7.6 kB)
+#13 39.89 Collecting charset_normalizer<4,>=2
+#13 39.91   Downloading charset_normalizer-3.4.4-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (147 kB)
+#13 39.93      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 147.6/147.6 kB 10.8 MB/s eta 0:00:00
+#13 40.08 Collecting idna<4,>=2.5
+#13 40.10   Downloading idna-3.11-py3-none-any.whl (71 kB)
+#13 40.12      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 71.0/71.0 kB 7.9 MB/s eta 0:00:00
+#13 40.33 Requirement already satisfied: redis>=3.3.8 in /usr/local/lib/python3.8/site-packages (from adaptdl->adaptdl-sched==0.0.0) (6.1.1)
+#13 40.34 Requirement already satisfied: pandas>=0.24.2 in /usr/local/lib/python3.8/site-packages (from adaptdl->adaptdl-sched==0.0.0) (2.0.3)
+#13 40.34 Requirement already satisfied: portpicker>=1.3.1 in /usr/local/lib/python3.8/site-packages (from adaptdl->adaptdl-sched==0.0.0) (1.6.0)
+#13 40.66 Collecting clarabel>=0.5.0
+#13 40.69   Downloading clarabel-0.9.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.8 MB)
+#13 40.77      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 23.8 MB/s eta 0:00:00
+#13 41.09 Collecting ecos>=2
+#13 41.12   Downloading ecos-2.0.14-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (221 kB)
+#13 41.14      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 221.6/221.6 kB 15.4 MB/s eta 0:00:00
+#13 41.64 Collecting scs>=3.2.4.post1
+#13 41.66   Downloading scs-3.2.7.post2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (10.4 MB)
+#13 42.09      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.4/10.4 MB 25.2 MB/s eta 0:00:00
+#13 43.18 Collecting osqp>=0.6.2
+#13 43.20   Downloading osqp-1.0.5-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (355 kB)
+#13 43.23      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 355.8/355.8 kB 19.0 MB/s eta 0:00:00
+#13 46.74 Collecting fonttools>=4.22.0
+#13 46.77   Downloading fonttools-4.57.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (4.7 MB)
+#13 46.98      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.7/4.7 MB 23.5 MB/s eta 0:00:00
+#13 48.14 Collecting kiwisolver>=1.0.1
+#13 48.16   Downloading kiwisolver-1.4.7-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl (1.2 MB)
+#13 48.23      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 22.6 MB/s eta 0:00:00
+#13 48.46 Collecting packaging>=20.0
+#13 48.48   Downloading packaging-25.0-py3-none-any.whl (66 kB)
+#13 48.50      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 66.5/66.5 kB 7.2 MB/s eta 0:00:00
+#13 51.53 Collecting pillow>=6.2.0
+#13 51.55   Downloading pillow-10.4.0-cp38-cp38-manylinux_2_28_x86_64.whl (4.5 MB)
+#13 51.75      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 25.0 MB/s eta 0:00:00
+#13 52.16 Collecting importlib-resources>=3.2.0
+#13 52.18   Downloading importlib_resources-6.4.5-py3-none-any.whl (36 kB)
+#13 52.27 Collecting cycler>=0.10
+#13 52.30   Downloading cycler-0.12.1-py3-none-any.whl (8.3 kB)
+#13 53.50 Collecting contourpy>=1.0.1
+#13 53.52   Downloading contourpy-1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (301 kB)
+#13 53.55      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 301.1/301.1 kB 17.3 MB/s eta 0:00:00
+#13 53.67 Collecting matplotlib>=3
+#13 53.69   Downloading matplotlib-3.7.4-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
+#13 54.07      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 25.4 MB/s eta 0:00:00
+#13 54.29   Downloading matplotlib-3.7.3-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
+#13 54.66      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 25.6 MB/s eta 0:00:00
+#13 54.88   Downloading matplotlib-3.7.2-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
+#13 55.26      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 24.8 MB/s eta 0:00:00
+#13 55.52   Downloading matplotlib-3.7.1-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
+#13 55.90      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 25.0 MB/s eta 0:00:00
+#13 56.12   Downloading matplotlib-3.7.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
+#13 56.48      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 25.9 MB/s eta 0:00:00
+#13 56.70   Downloading matplotlib-3.6.3-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.4 MB)
+#13 57.07      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.4/9.4 MB 26.1 MB/s eta 0:00:00
+#13 57.55 Collecting pyparsing>=2.2.1
+#13 57.57   Downloading pyparsing-3.1.4-py3-none-any.whl (104 kB)
+#13 57.60      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 104.1/104.1 kB 10.7 MB/s eta 0:00:00
+#13 58.05 Collecting jinja2
+#13 58.07   Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+#13 58.10      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 134.9/134.9 kB 12.6 MB/s eta 0:00:00
+#13 58.32 Collecting joblib
+#13 58.35   Downloading joblib-1.4.2-py3-none-any.whl (301 kB)
+#13 58.37      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 301.8/301.8 kB 18.1 MB/s eta 0:00:00
+#13 61.11 Collecting pandas>=0.24.2
+#13 61.14   Downloading pandas-2.0.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.3 MB)
+#13 61.64      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.3/12.3 MB 25.1 MB/s eta 0:00:00
+#13 62.38   Downloading pandas-2.0.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.3 MB)
+#13 62.89      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.3/12.3 MB 24.0 MB/s eta 0:00:00
+#13 63.64   Downloading pandas-2.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.3 MB)
+#13 64.13      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.3/12.3 MB 25.1 MB/s eta 0:00:00
+#13 64.87   Downloading pandas-1.5.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
+#13 65.36      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 24.8 MB/s eta 0:00:00
+#13 65.67   Downloading pandas-1.5.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
+#13 66.15      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 25.4 MB/s eta 0:00:00
+#13 66.47   Downloading pandas-1.5.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
+#13 66.95      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 25.4 MB/s eta 0:00:00
+#13 67.26   Downloading pandas-1.5.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
+#13 67.76      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 24.5 MB/s eta 0:00:00
+#13 68.07   Downloading pandas-1.4.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (11.7 MB)
+#13 68.53      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 25.8 MB/s eta 0:00:00
+#13 68.89 Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.8/site-packages (from pandas>=0.24.2->adaptdl->adaptdl-sched==0.0.0) (2025.2)
+#13 68.92 Requirement already satisfied: psutil in /usr/local/lib/python3.8/site-packages (from portpicker>=1.3.1->adaptdl->adaptdl-sched==0.0.0) (7.1.3)
+#13 69.47 Collecting redis>=3.3.8
+#13 69.49   Downloading redis-6.1.0-py3-none-any.whl (273 kB)
+#13 69.52      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 273.8/273.8 kB 17.6 MB/s eta 0:00:00
+#13 69.62   Downloading redis-6.0.0-py3-none-any.whl (268 kB)
+#13 69.67      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 268.9/268.9 kB 6.1 MB/s eta 0:00:00
+#13 69.77   Downloading redis-5.3.1-py3-none-any.whl (272 kB)
+#13 69.79      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 272.8/272.8 kB 18.4 MB/s eta 0:00:00
+#13 69.89   Downloading redis-5.3.0-py3-none-any.whl (272 kB)
+#13 69.92      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 272.8/272.8 kB 18.9 MB/s eta 0:00:00
+#13 70.13 Collecting PyJWT~=2.9.0
+#13 70.15   Downloading PyJWT-2.9.0-py3-none-any.whl (22 kB)
+#13 70.20 Collecting redis>=3.3.8
+#13 70.22   Downloading redis-5.2.1-py3-none-any.whl (261 kB)
+#13 70.25      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 261.5/261.5 kB 17.8 MB/s eta 0:00:00
+#13 70.34   Downloading redis-5.2.0-py3-none-any.whl (261 kB)
+#13 70.36      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 261.4/261.4 kB 17.4 MB/s eta 0:00:00
+#13 70.46   Downloading redis-5.1.1-py3-none-any.whl (261 kB)
+#13 70.48      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 261.3/261.3 kB 17.2 MB/s eta 0:00:00
+#13 70.58   Downloading redis-5.1.0-py3-none-any.whl (261 kB)
+#13 70.61      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 261.2/261.2 kB 17.6 MB/s eta 0:00:00
+#13 70.70   Downloading redis-5.0.8-py3-none-any.whl (255 kB)
+#13 70.73      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 255.6/255.6 kB 16.9 MB/s eta 0:00:00
+#13 70.83   Downloading redis-5.0.7-py3-none-any.whl (252 kB)
+#13 70.85      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 252.1/252.1 kB 17.3 MB/s eta 0:00:00
+#13 70.96   Downloading redis-5.0.6-py3-none-any.whl (252 kB)
+#13 70.98      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 252.0/252.0 kB 17.2 MB/s eta 0:00:00
+#13 71.08   Downloading redis-5.0.5-py3-none-any.whl (251 kB)
+#13 71.11      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 252.0/252.0 kB 18.0 MB/s eta 0:00:00
+#13 71.21   Downloading redis-5.0.4-py3-none-any.whl (251 kB)
+#13 71.23      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 252.0/252.0 kB 17.8 MB/s eta 0:00:00
+#13 71.33   Downloading redis-5.0.3-py3-none-any.whl (251 kB)
+#13 71.36      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 251.8/251.8 kB 17.6 MB/s eta 0:00:00
+#13 71.46   Downloading redis-5.0.2-py3-none-any.whl (251 kB)
+#13 71.49      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 251.7/251.7 kB 18.2 MB/s eta 0:00:00
+#13 71.59   Downloading redis-5.0.1-py3-none-any.whl (250 kB)
+#13 71.61      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 250.3/250.3 kB 16.7 MB/s eta 0:00:00
+#13 71.73   Downloading redis-5.0.0-py3-none-any.whl (250 kB)
+#13 71.76      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 250.1/250.1 kB 17.7 MB/s eta 0:00:00
+#13 71.85   Downloading redis-4.6.0-py3-none-any.whl (241 kB)
+#13 71.88      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 241.1/241.1 kB 18.9 MB/s eta 0:00:00
+#13 71.98   Downloading redis-4.5.5-py3-none-any.whl (240 kB)
+#13 72.00      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 240.3/240.3 kB 18.3 MB/s eta 0:00:00
+#13 72.10   Downloading redis-4.5.4-py3-none-any.whl (238 kB)
+#13 72.13      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.9/238.9 kB 17.0 MB/s eta 0:00:00
+#13 72.24   Downloading redis-4.5.3-py3-none-any.whl (238 kB)
+#13 72.26      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.6/238.6 kB 16.6 MB/s eta 0:00:00
+#13 72.37   Downloading redis-4.5.2-py3-none-any.whl (238 kB)
+#13 72.39      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.5/238.5 kB 17.2 MB/s eta 0:00:00
+#13 72.50   Downloading redis-4.5.1-py3-none-any.whl (238 kB)
+#13 72.52      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.5/238.5 kB 17.1 MB/s eta 0:00:00
+#13 72.62   Downloading redis-4.5.0-py3-none-any.whl (238 kB)
+#13 72.65      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.5/238.5 kB 16.2 MB/s eta 0:00:00
+#13 72.75   Downloading redis-4.4.4-py3-none-any.whl (238 kB)
+#13 72.77      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.0/238.0 kB 17.8 MB/s eta 0:00:00
+#13 72.87   Downloading redis-4.4.3-py3-none-any.whl (237 kB)
+#13 72.90      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 237.9/237.9 kB 17.3 MB/s eta 0:00:00
+#13 72.99   Downloading redis-4.4.2-py3-none-any.whl (237 kB)
+#13 73.02      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 237.8/237.8 kB 17.3 MB/s eta 0:00:00
+#13 73.11   Downloading redis-4.4.1-py3-none-any.whl (237 kB)
+#13 73.14      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 237.6/237.6 kB 17.3 MB/s eta 0:00:00
+#13 73.24   Downloading redis-4.4.0-py3-none-any.whl (236 kB)
+#13 73.26      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 236.4/236.4 kB 16.9 MB/s eta 0:00:00
+#13 73.36   Downloading redis-4.3.6-py3-none-any.whl (248 kB)
+#13 73.39      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 248.8/248.8 kB 17.7 MB/s eta 0:00:00
+#13 73.50   Downloading redis-4.3.5-py3-none-any.whl (248 kB)
+#13 73.53      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 248.7/248.7 kB 17.4 MB/s eta 0:00:00
+#13 73.64   Downloading redis-4.3.4-py3-none-any.whl (246 kB)
+#13 73.67      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 246.2/246.2 kB 17.1 MB/s eta 0:00:00
+#13 73.90 Collecting deprecated>=1.2.3
+#13 73.92   Downloading deprecated-1.3.1-py2.py3-none-any.whl (11 kB)
+#13 73.96 Collecting redis>=3.3.8
+#13 73.98   Downloading redis-4.3.3-py3-none-any.whl (244 kB)
+#13 74.01      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 244.6/244.6 kB 18.0 MB/s eta 0:00:00
+#13 74.12   Downloading redis-4.3.2-py3-none-any.whl (244 kB)
+#13 74.15      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 244.6/244.6 kB 16.0 MB/s eta 0:00:00
+#13 74.26   Downloading redis-4.3.1-py3-none-any.whl (241 kB)
+#13 74.29      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 241.2/241.2 kB 17.9 MB/s eta 0:00:00
+#13 74.40   Downloading redis-4.3.0-py3-none-any.whl (241 kB)
+#13 74.43      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 241.2/241.2 kB 17.7 MB/s eta 0:00:00
+#13 74.54   Downloading redis-4.2.2-py3-none-any.whl (226 kB)
+#13 74.57      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 226.4/226.4 kB 17.1 MB/s eta 0:00:00
+#13 74.68   Downloading redis-4.2.1-py3-none-any.whl (225 kB)
+#13 74.71      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 225.6/225.6 kB 16.3 MB/s eta 0:00:00
+#13 74.82   Downloading redis-4.2.0-py3-none-any.whl (225 kB)
+#13 74.85      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 225.5/225.5 kB 16.8 MB/s eta 0:00:00
+#13 74.96   Downloading redis-4.1.4-py3-none-any.whl (175 kB)
+#13 74.98      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 175.8/175.8 kB 14.2 MB/s eta 0:00:00
+#13 76.50 Collecting propcache>=0.2.0
+#13 76.52   Downloading propcache-0.2.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (213 kB)
+#13 76.54      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 213.6/213.6 kB 15.2 MB/s eta 0:00:00
+#13 79.62 Collecting wrapt<3,>=1.10
+#13 79.64   Downloading wrapt-2.0.0-cp38-cp38-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (118 kB)
+#13 79.67      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 118.5/118.5 kB 9.0 MB/s eta 0:00:00
+#13 81.28 Collecting MarkupSafe>=2.0
+#13 81.30   Downloading MarkupSafe-2.1.5-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (26 kB)
+#13 81.89 Building wheels for collected packages: kubernetes-asyncio
+#13 81.89   Building wheel for kubernetes-asyncio (setup.py): started
+#13 85.27   Building wheel for kubernetes-asyncio (setup.py): finished with status 'done'
+#13 85.29   Created wheel for kubernetes-asyncio: filename=kubernetes_asyncio-9.1.0-py3-none-any.whl size=1394949 sha256=eadfecbe2f3c73418abf1aff102d3138c627a62a76fca94886af3528ce2f2069
+#13 85.29   Stored in directory: /root/.cache/pip/wheels/78/cb/4a/b845a255eb57319512ad2af15ba9333b27caa1f64825b1b700
+#13 85.33 Successfully built kubernetes-asyncio
+#13 86.90 Installing collected packages: cma, wrapt, urllib3, typing-extensions, pyyaml, pyparsing, propcache, prometheus-client, pillow, packaging, numpy, MarkupSafe, kiwisolver, jsonpointer, joblib, idna, future, fonttools, cycler, charset_normalizer, chardet, certifi, attrs, async-timeout, requests, pandas, multidict, jsonpatch, jinja2, deprecated, contourpy, yarl, scs, redis, osqp, matplotlib, ecos, clarabel, pymoo, cvxpy, aiohttp, kubernetes-asyncio, adaptdl-sched
+#13 89.41   Attempting uninstall: numpy
+#13 89.42     Found existing installation: numpy 1.24.4
+#13 90.24     Uninstalling numpy-1.24.4:
+#13 90.81       Successfully uninstalled numpy-1.24.4
+#13 101.9   Attempting uninstall: async-timeout
+#13 101.9     Found existing installation: async-timeout 5.0.1
+#13 101.9     Uninstalling async-timeout-5.0.1:
+#13 101.9       Successfully uninstalled async-timeout-5.0.1
+#13 102.0   Attempting uninstall: pandas
+#13 102.0     Found existing installation: pandas 2.0.3
+#13 104.1     Uninstalling pandas-2.0.3:
+#13 105.3       Successfully uninstalled pandas-2.0.3
+#13 119.3   Attempting uninstall: redis
+#13 119.3     Found existing installation: redis 6.1.1
+#13 119.4     Uninstalling redis-6.1.1:
+#13 119.5       Successfully uninstalled redis-6.1.1
+#13 132.5 Successfully installed MarkupSafe-2.1.5 adaptdl-sched-0.0.0 aiohttp-3.7.4.post0 async-timeout-3.0.1 attrs-25.3.0 certifi-2025.10.5 chardet-4.0.0 charset_normalizer-3.4.4 clarabel-0.9.0 cma-2.7.0 contourpy-1.1.1 cvxpy-1.5.2 cycler-0.12.1 deprecated-1.3.1 ecos-2.0.14 fonttools-4.57.0 future-1.0.0 idna-3.11 jinja2-3.1.6 joblib-1.4.2 jsonpatch-1.33 jsonpointer-3.0.0 kiwisolver-1.4.7 kubernetes-asyncio-9.1.0 matplotlib-3.6.3 multidict-6.1.0 numpy-1.19.5 osqp-1.0.5 packaging-25.0 pandas-1.4.4 pillow-10.4.0 prometheus-client-0.21.1 propcache-0.2.0 pymoo-0.5.0 pyparsing-3.1.4 pyyaml-6.0.3 redis-4.1.4 requests-2.32.4 scs-3.2.7.post2 typing-extensions-4.13.2 urllib3-2.2.3 wrapt-2.0.0 yarl-1.15.2
+#13 132.5 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#13 132.6 
+#13 132.6 [notice] A new release of pip is available: 23.0.1 -> 25.0.1
+#13 132.6 [notice] To update, run: pip install --upgrade pip
+#13 DONE 133.4s
 
-#14 [ 6/12] RUN cd adaptdl && python3 setup.py bdist_wheel
-#14 CACHED
+#14 [10/12] WORKDIR /root
+#14 DONE 0.0s
 
-#15 [ 3/12] COPY adaptdl adaptdl
-#15 CACHED
+#15 [11/12] RUN rm -rf adaptdl/dist
+#15 DONE 0.1s
 
 #16 [12/12] RUN rm -rf sched/dist
-#16 CACHED
+#16 DONE 0.1s
 
 #17 exporting to image
-#17 exporting layers done
-#17 exporting manifest sha256:fac7b84b40538f3453542bf50ee3cc26b451e3c02531e504616b1695a9384f74 done
-#17 exporting config sha256:277e8ba2676c7c52511d295b0f8fdafcae2fceef9b93797a17def3aa34f60d86 done
-#17 exporting attestation manifest sha256:d07f993f8a94d0cecc6d3836ba55bdd9b233e85e1452f2cb15aad7e97d1079f6 done
-#17 exporting manifest list sha256:c96ea24f98ee20fa715e755b1df1938d06d84a49cc2d85f4297bb4cc5ae29461 done
+#17 exporting layers
+#17 exporting layers 10.9s done
+#17 exporting manifest sha256:5dfc2be87b511b4c7ecad1bd8f996e70c5614b0d460427a0f3e890c49d30229c
+#17 exporting manifest sha256:5dfc2be87b511b4c7ecad1bd8f996e70c5614b0d460427a0f3e890c49d30229c 0.0s done
+#17 exporting config sha256:10cbfcfea04d7cbb7a7f279644e29cf204508ba295f634bbd7fac01621eeb697 done
+#17 exporting attestation manifest sha256:2efc281667db5f156c5ce0d3e986a2313c8e2aede606bdfd41cb454df218eafe done
+#17 exporting manifest list sha256:d1f2364f04e57249551e2135d33c9299781137fd028a10796b526c26e5fd6d41 done
 #17 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest done
 #17 pushing layers
 #17 ...
@@ -912,44 +682,44 @@ spec:
 #18 DONE 0.0s
 
 #17 exporting to image
-#17 pushing layers 0.8s done
-#17 pushing manifest for 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest@sha256:c96ea24f98ee20fa715e755b1df1938d06d84a49cc2d85f4297bb4cc5ae29461
-#17 pushing manifest for 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest@sha256:c96ea24f98ee20fa715e755b1df1938d06d84a49cc2d85f4297bb4cc5ae29461 0.6s done
-#17 DONE 1.5s
+#17 pushing layers 8.8s done
+#17 pushing manifest for 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest@sha256:d1f2364f04e57249551e2135d33c9299781137fd028a10796b526c26e5fd6d41
+#17 pushing manifest for 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest@sha256:d1f2364f04e57249551e2135d33c9299781137fd028a10796b526c26e5fd6d41 0.8s done
+#17 DONE 20.7s
 release "adaptdl" uninstalled
-I1026 14:37:06.061843   97254 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[1].limits\""
-I1026 14:37:06.061895   97254 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[1].requests\""
-I1026 14:37:06.061910   97254 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[3].limits\""
-I1026 14:37:06.061921   97254 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[3].requests\""
-I1026 14:37:06.061932   97254 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[4].limits\""
-I1026 14:37:06.061942   97254 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[4].requests\""
-I1026 14:37:06.061952   97254 warnings.go:110] "Warning: spec.template.spec.imagePullSecrets[0].name: invalid empty name \"\""
-I1026 14:37:06.062775   97254 warnings.go:110] "Warning: spec.template.spec.imagePullSecrets[0].name: invalid empty name \"\""
+I1105 16:52:56.832050   76248 warnings.go:110] "Warning: spec.template.spec.imagePullSecrets[0].name: invalid empty name \"\""
+I1105 16:52:56.833039   76248 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[1].limits\""
+I1105 16:52:56.833065   76248 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[1].requests\""
+I1105 16:52:56.833075   76248 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[3].limits\""
+I1105 16:52:56.833081   76248 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[3].requests\""
+I1105 16:52:56.833087   76248 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[4].limits\""
+I1105 16:52:56.833093   76248 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[4].requests\""
+I1105 16:52:56.833104   76248 warnings.go:110] "Warning: spec.template.spec.imagePullSecrets[0].name: invalid empty name \"\""
 NAME: adaptdl
-LAST DEPLOYED: Sun Oct 26 14:37:05 2025
+LAST DEPLOYED: Wed Nov  5 16:52:55 2025
 NAMESPACE: adaptdl
 STATUS: deployed
 REVISION: 1
 TEST SUITE: None
 Looking for scheduler pod...
-Found scheduler pod adaptdl-adaptdl-sched-74d64f4476-6drhm in namespace adaptdl
-Uploading checkpoint from ./checkpoint/global-profile-state to pod adaptdl-adaptdl-sched-74d64f4476-6drhm container global-profiler...
+Found scheduler pod adaptdl-adaptdl-sched-74d64f4476-rrfl9 in namespace adaptdl
+Uploading checkpoint from ./checkpoint/global-profile-state to pod adaptdl-adaptdl-sched-74d64f4476-rrfl9 container global-profiler...
 Successfully uploaded checkpoint.
 --- Command completed with return code: 0 ---
-[2025-10-26 14:38:37] 
+[2025-11-05 16:54:28] 
 ✓ Scaling up cluster to 32 nodes...
-[2025-10-26 14:38:37] Running: ['aws', 'autoscaling', 'update-auto-scaling-group', '--auto-scaling-group-name', 'eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084', '--desired-capacity', '8']
-[2025-10-26 14:40:38] 
-✓ Deleting existing job deepspeech2-0...
-[2025-10-26 14:40:38] Running: ['kubectl', 'delete', 'adaptdljob', '--all']
-[2025-10-26 14:40:38] Command output:
-[2025-10-26 14:40:38]   No resources found
-[2025-10-26 14:40:48] 
+[2025-11-05 16:54:28] Running: ['aws', 'autoscaling', 'update-auto-scaling-group', '--auto-scaling-group-name', 'eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084', '--desired-capacity', '8']
+[2025-11-05 16:56:29] 
+✓ Deleting existing job cifar10-0...
+[2025-11-05 16:56:29] Running: ['kubectl', 'delete', 'adaptdljob', '--all']
+[2025-11-05 16:56:29] Command output:
+[2025-11-05 16:56:29]   No resources found
+[2025-11-05 16:56:39] 
 ✓ Running workload...
-[2025-10-26 14:40:48] Running: ['./benchmark/run_workload.sh']
+[2025-11-05 16:56:39] Running: ['./benchmark/run_workload.sh']
 
 --- Real-time output for: ['./benchmark/run_workload.sh'] ---
-Deleting job checkpoints file from pod: adaptdl-adaptdl-sched-74d64f4476-6drhm
+Deleting job checkpoints file from pod: adaptdl-adaptdl-sched-74d64f4476-rrfl9
 #0 building with "desktop-linux" instance using docker driver
 
 #1 [internal] load build definition from Dockerfile
@@ -957,182 +727,371 @@ Deleting job checkpoints file from pod: adaptdl-adaptdl-sched-74d64f4476-6drhm
 #1 DONE 0.0s
 
 #2 [internal] load metadata for nvcr.io/nvidia/pytorch:22.12-py3
-#2 DONE 0.8s
+#2 DONE 1.2s
 
 #3 [internal] load .dockerignore
 #3 transferring context: 75B done
 #3 DONE 0.0s
 
-#4 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
-#4 resolve nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d 0.0s done
+#4 [internal] load build context
+#4 transferring context: 69.23kB 0.0s done
 #4 DONE 0.0s
 
-#5 [internal] load build context
-#5 transferring context: 68.94kB 0.0s done
-#5 DONE 0.0s
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 resolve nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d 0.0s done
+#5 DONE 0.1s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:e175a7d4c536680a5adc4b2a151fc9fdd64529b5208ab835359e195ccd0ac532
+#5 extracting sha256:e175a7d4c536680a5adc4b2a151fc9fdd64529b5208ab835359e195ccd0ac532 7.0s done
+#5 DONE 7.1s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:06d1766c07ef0f6689b1ac5b5c3594f2a27833885996bb67f9dd00644197ae25
+#5 extracting sha256:06d1766c07ef0f6689b1ac5b5c3594f2a27833885996bb67f9dd00644197ae25 3.9s done
+#5 DONE 11.0s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:ede52db3297f9c3e92ed0c6160ed6db31827c0a8e8cd93275cdb84c340b2d608
+#5 extracting sha256:ede52db3297f9c3e92ed0c6160ed6db31827c0a8e8cd93275cdb84c340b2d608 0.3s done
+#5 DONE 11.4s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:09a8bd0521b81c29af569e067de08f690d968d1d5935d13b7e41f5e80870e1d7 0.0s done
+#5 extracting sha256:856030010aab64cd002e6f1b47b414f54bfc32c707cf61f4c823429fea18da04
+#5 extracting sha256:856030010aab64cd002e6f1b47b414f54bfc32c707cf61f4c823429fea18da04 1.7s done
+#5 DONE 13.1s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:9f4b7d58d41b339f5b7106129aa54887218a0830f07e7524e0f4ede9e373194e 0.0s done
+#5 extracting sha256:7275c2240c04e9c507c7d55c3495a2c41d2fa7691c2a1fab9aebfc8b03afc3d8 0.0s done
+#5 extracting sha256:3650c6aa1ac1923b4d7ecb4f8ff47946967ff43dd46ec16ff9697208497489d0
+#5 extracting sha256:3650c6aa1ac1923b4d7ecb4f8ff47946967ff43dd46ec16ff9697208497489d0 15.0s done
+#5 DONE 28.2s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:597a6c358afc5a2115173cbe119820ee422e7ddeae5f6a095bbed8019936d95b 0.0s done
+#5 extracting sha256:8bb9583747a242aa775cac8a5ba0c8cde7d72ed527769c7d66004abe7e294fa7 0.0s done
+#5 extracting sha256:13e96fedcb8d1beb4ee9962bf5e5c54e34ccfbb5364d9bab591aa0d327e99169 0.1s done
+#5 DONE 28.3s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:d9ed1e887990918854a429d592561eb9abee16b6d7ffb0728bd3c0733b1e2e14 0.1s done
+#5 DONE 28.4s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:66059ebf13c6cc61a4d91d44886fcbbde9f8f85cf6b6d5e92693ef12ba6256d7
+#5 extracting sha256:66059ebf13c6cc61a4d91d44886fcbbde9f8f85cf6b6d5e92693ef12ba6256d7 0.2s done
+#5 DONE 28.6s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:96c54e0e4c1a642a61932c6164f3352305cfa81848fcccf74d7552755d6940cf 0.0s done
+#5 extracting sha256:d04d0713d15840beb755ce096503afb3ab2ebb0b6c59fc0c12a02ff76eecf682 0.1s done
+#5 extracting sha256:5bdc3a280b31868241ed3e1558ef1742d97d7d42a77912134d77d3897a06cf70
+#5 extracting sha256:5bdc3a280b31868241ed3e1558ef1742d97d7d42a77912134d77d3897a06cf70 0.6s done
+#5 DONE 29.3s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:d9c77bc172c0003cdbbc277c766e76b913b02798f407d9d523bc554460bb9b8a
+#5 extracting sha256:d9c77bc172c0003cdbbc277c766e76b913b02798f407d9d523bc554460bb9b8a 0.2s done
+#5 DONE 29.4s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:f0d07955f406a98d2a3ef5cd3cb1c559339dc6cbbbe209914ad33ad7141df159
+#5 extracting sha256:f0d07955f406a98d2a3ef5cd3cb1c559339dc6cbbbe209914ad33ad7141df159 0.5s done
+#5 DONE 29.9s
+
+#5 [ 1/13] FROM nvcr.io/nvidia/pytorch:22.12-py3@sha256:09a80f272dd173c9d8f28c23a1985aebe2bd3edd41a184ee9634f6e3f8a1f63d
+#5 extracting sha256:63edc579ff7da32c44f2ecbb8cebdb8c0bc75afea5c55bfc40ca0faa1f25b971 done
+#5 extracting sha256:8abf5ec0bb1316cac46570b2bc2d49b8628ce20f17ca13f7e77b260e5fc3da6c done
+#5 DONE 29.9s
 
 #6 [ 2/13] WORKDIR /root
-#6 CACHED
+#6 DONE 0.3s
 
-#7 [ 7/13] RUN pip install --no-cache-dir awscli
-#7 CACHED
+#7 [ 3/13] COPY adaptdl/requirements.txt requirements.txt
+#7 DONE 0.1s
 
-#8 [ 5/13] COPY benchmark/models/cifar10/requirements.txt requirements.txt
-#8 CACHED
+#8 [ 4/13] RUN pip install --no-cache-dir -r requirements.txt
+#8 1.660 Looking in indexes: https://pypi.org/simple, https://pypi.ngc.nvidia.com
+#8 3.001 Collecting autograd>=1.3
+#8 3.124   Downloading autograd-1.7.0-py3-none-any.whl (52 kB)
+#8 3.160 Requirement already satisfied: pandas>=0.24.2 in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 2)) (1.5.2)
+#8 3.800 Collecting portpicker>=1.3.1
+#8 3.832   Downloading portpicker-1.6.0-py3-none-any.whl (16 kB)
+#8 4.879 Collecting redis>=3.3.8
+#8 4.905   Downloading redis-6.1.1-py3-none-any.whl (273 kB)
+#8 4.963 Requirement already satisfied: scipy>=1.3.0 in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 5)) (1.6.3)
+#8 4.976 Requirement already satisfied: numpy in /usr/local/lib/python3.8/dist-packages (from autograd>=1.3->-r requirements.txt (line 1)) (1.22.2)
+#8 5.011 Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.8/dist-packages (from pandas>=0.24.2->-r requirements.txt (line 2)) (2022.6)
+#8 5.014 Requirement already satisfied: python-dateutil>=2.8.1 in /usr/local/lib/python3.8/dist-packages (from pandas>=0.24.2->-r requirements.txt (line 2)) (2.8.2)
+#8 5.021 Requirement already satisfied: psutil in /usr/local/lib/python3.8/dist-packages (from portpicker>=1.3.1->-r requirements.txt (line 3)) (5.9.4)
+#8 5.854 Collecting async-timeout>=4.0.3
+#8 5.883   Downloading async_timeout-5.0.1-py3-none-any.whl (6.2 kB)
+#8 5.920 Requirement already satisfied: six>=1.5 in /usr/local/lib/python3.8/dist-packages (from python-dateutil>=2.8.1->pandas>=0.24.2->-r requirements.txt (line 2)) (1.16.0)
+#8 10.81 Installing collected packages: async-timeout, redis, portpicker, autograd
+#8 11.69 Successfully installed async-timeout-5.0.1 autograd-1.7.0 portpicker-1.6.0 redis-6.1.1
+#8 11.69 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#8 12.83 WARNING: You are using pip version 21.2.4; however, version 25.0.1 is available.
+#8 12.83 You should consider upgrading via the '/usr/bin/python -m pip install --upgrade pip' command.
+#8 DONE 13.0s
 
-#9 [12/13] RUN chmod +x /root/download_dataset.sh
-#9 CACHED
+#9 [ 5/13] COPY benchmark/models/cifar10/requirements.txt requirements.txt
+#9 DONE 0.0s
 
-#10 [11/13] COPY benchmark/download_dataset.sh .
-#10 CACHED
+#10 [ 6/13] RUN pip install --no-cache-dir -r requirements.txt
+#10 1.482 Looking in indexes: https://pypi.org/simple, https://pypi.ngc.nvidia.com
+#10 2.558 Collecting future
+#10 2.646   Downloading future-1.0.0-py3-none-any.whl (491 kB)
+#10 2.744 Requirement already satisfied: numpy in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 2)) (1.22.2)
+#10 2.746 Requirement already satisfied: pandas in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 3)) (1.5.2)
+#10 2.749 Requirement already satisfied: prometheus_client in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 4)) (0.15.0)
+#10 2.751 Requirement already satisfied: redis in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 5)) (6.1.1)
+#10 2.754 Requirement already satisfied: scipy in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 6)) (1.6.3)
+#10 4.196 Collecting statsmodels
+#10 4.223   Downloading statsmodels-0.14.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (10.9 MB)
+#10 4.862 Requirement already satisfied: tensorboard in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 8)) (2.9.0)
+#10 4.865 Requirement already satisfied: torchvision in /usr/local/lib/python3.8/dist-packages (from -r requirements.txt (line 9)) (0.15.0a0)
+#10 4.909 Requirement already satisfied: python-dateutil>=2.8.1 in /usr/local/lib/python3.8/dist-packages (from pandas->-r requirements.txt (line 3)) (2.8.2)
+#10 4.912 Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.8/dist-packages (from pandas->-r requirements.txt (line 3)) (2022.6)
+#10 4.948 Requirement already satisfied: async-timeout>=4.0.3 in /usr/local/lib/python3.8/dist-packages (from redis->-r requirements.txt (line 5)) (5.0.1)
+#10 5.050 Requirement already satisfied: packaging>=21.3 in /usr/local/lib/python3.8/dist-packages (from statsmodels->-r requirements.txt (line 7)) (22.0)
+#10 5.590 Collecting patsy>=0.5.4
+#10 5.616   Downloading patsy-1.0.2-py2.py3-none-any.whl (233 kB)
+#10 5.682 Requirement already satisfied: tensorboard-data-server<0.7.0,>=0.6.0 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (0.6.1)
+#10 5.685 Requirement already satisfied: grpcio>=1.24.3 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (1.51.1)
+#10 5.689 Requirement already satisfied: google-auth-oauthlib<0.5,>=0.4.1 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (0.4.6)
+#10 5.693 Requirement already satisfied: requests<3,>=2.21.0 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (2.28.1)
+#10 5.696 Requirement already satisfied: werkzeug>=1.0.1 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (2.2.2)
+#10 5.699 Requirement already satisfied: wheel>=0.26 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (0.38.4)
+#10 5.702 Requirement already satisfied: setuptools>=41.0.0 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (59.5.0)
+#10 5.705 Requirement already satisfied: markdown>=2.6.8 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (3.4.1)
+#10 5.709 Requirement already satisfied: tensorboard-plugin-wit>=1.6.0 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (1.8.1)
+#10 5.712 Requirement already satisfied: google-auth<3,>=1.6.3 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (2.15.0)
+#10 5.715 Requirement already satisfied: absl-py>=0.4 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (1.3.0)
+#10 5.718 Requirement already satisfied: protobuf>=3.9.2 in /usr/local/lib/python3.8/dist-packages (from tensorboard->-r requirements.txt (line 8)) (3.20.1)
+#10 5.739 Requirement already satisfied: pillow!=8.3.*,>=5.3.0 in /usr/local/lib/python3.8/dist-packages (from torchvision->-r requirements.txt (line 9)) (9.2.0)
+#10 5.744 Requirement already satisfied: torch==1.14.0a0+410ce96 in /usr/local/lib/python3.8/dist-packages (from torchvision->-r requirements.txt (line 9)) (1.14.0a0+410ce96)
+#10 5.747 Requirement already satisfied: typing-extensions in /usr/local/lib/python3.8/dist-packages (from torchvision->-r requirements.txt (line 9)) (4.4.0)
+#10 5.763 Requirement already satisfied: sympy in /usr/local/lib/python3.8/dist-packages (from torch==1.14.0a0+410ce96->torchvision->-r requirements.txt (line 9)) (1.11.1)
+#10 5.766 Requirement already satisfied: networkx in /usr/local/lib/python3.8/dist-packages (from torch==1.14.0a0+410ce96->torchvision->-r requirements.txt (line 9)) (2.6.3)
+#10 5.830 Requirement already satisfied: six>=1.9.0 in /usr/local/lib/python3.8/dist-packages (from google-auth<3,>=1.6.3->tensorboard->-r requirements.txt (line 8)) (1.16.0)
+#10 5.833 Requirement already satisfied: pyasn1-modules>=0.2.1 in /usr/local/lib/python3.8/dist-packages (from google-auth<3,>=1.6.3->tensorboard->-r requirements.txt (line 8)) (0.2.8)
+#10 5.837 Requirement already satisfied: cachetools<6.0,>=2.0.0 in /usr/local/lib/python3.8/dist-packages (from google-auth<3,>=1.6.3->tensorboard->-r requirements.txt (line 8)) (5.2.0)
+#10 5.841 Requirement already satisfied: rsa<5,>=3.1.4 in /usr/local/lib/python3.8/dist-packages (from google-auth<3,>=1.6.3->tensorboard->-r requirements.txt (line 8)) (4.9)
+#10 5.934 Requirement already satisfied: requests-oauthlib>=0.7.0 in /usr/local/lib/python3.8/dist-packages (from google-auth-oauthlib<0.5,>=0.4.1->tensorboard->-r requirements.txt (line 8)) (1.3.1)
+#10 5.979 Requirement already satisfied: importlib-metadata>=4.4 in /usr/local/lib/python3.8/dist-packages (from markdown>=2.6.8->tensorboard->-r requirements.txt (line 8)) (5.1.0)
+#10 6.062 Requirement already satisfied: zipp>=0.5 in /usr/local/lib/python3.8/dist-packages (from importlib-metadata>=4.4->markdown>=2.6.8->tensorboard->-r requirements.txt (line 8)) (3.11.0)
+#10 6.164 Requirement already satisfied: pyasn1<0.5.0,>=0.4.6 in /usr/local/lib/python3.8/dist-packages (from pyasn1-modules>=0.2.1->google-auth<3,>=1.6.3->tensorboard->-r requirements.txt (line 8)) (0.4.8)
+#10 6.224 Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.8/dist-packages (from requests<3,>=2.21.0->tensorboard->-r requirements.txt (line 8)) (2022.12.7)
+#10 6.228 Requirement already satisfied: urllib3<1.27,>=1.21.1 in /usr/local/lib/python3.8/dist-packages (from requests<3,>=2.21.0->tensorboard->-r requirements.txt (line 8)) (1.26.13)
+#10 6.231 Requirement already satisfied: charset-normalizer<3,>=2 in /usr/local/lib/python3.8/dist-packages (from requests<3,>=2.21.0->tensorboard->-r requirements.txt (line 8)) (2.1.1)
+#10 6.235 Requirement already satisfied: idna<4,>=2.5 in /usr/local/lib/python3.8/dist-packages (from requests<3,>=2.21.0->tensorboard->-r requirements.txt (line 8)) (3.4)
+#10 6.287 Requirement already satisfied: oauthlib>=3.0.0 in /usr/local/lib/python3.8/dist-packages (from requests-oauthlib>=0.7.0->google-auth-oauthlib<0.5,>=0.4.1->tensorboard->-r requirements.txt (line 8)) (3.2.2)
+#10 6.435 Requirement already satisfied: MarkupSafe>=2.1.1 in /usr/local/lib/python3.8/dist-packages (from werkzeug>=1.0.1->tensorboard->-r requirements.txt (line 8)) (2.1.1)
+#10 6.612 Requirement already satisfied: mpmath>=0.19 in /usr/local/lib/python3.8/dist-packages (from sympy->torch==1.14.0a0+410ce96->torchvision->-r requirements.txt (line 9)) (1.2.1)
+#10 11.09 Installing collected packages: patsy, statsmodels, future
+#10 19.15 Successfully installed future-1.0.0 patsy-1.0.2 statsmodels-0.14.1
+#10 19.15 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#10 19.93 WARNING: You are using pip version 21.2.4; however, version 25.0.1 is available.
+#10 19.93 You should consider upgrading via the '/usr/bin/python -m pip install --upgrade pip' command.
+#10 DONE 20.2s
 
-#11 [ 6/13] RUN pip install --no-cache-dir -r requirements.txt
-#11 CACHED
+#11 [ 7/13] RUN pip install --no-cache-dir awscli
+#11 1.443 Looking in indexes: https://pypi.org/simple, https://pypi.ngc.nvidia.com
+#11 8.545 Collecting awscli
+#11 8.637   Downloading awscli-1.38.38-py3-none-any.whl (4.7 MB)
+#11 10.07 Collecting docutils<=0.19,>=0.18.1
+#11 10.10   Downloading docutils-0.19-py3-none-any.whl (570 kB)
+#11 10.14 Requirement already satisfied: PyYAML<6.1,>=3.10 in /usr/local/lib/python3.8/dist-packages (from awscli) (6.0)
+#11 10.74 Collecting rsa<4.8,>=3.1.2
+#11 10.77   Downloading rsa-4.7.2-py3-none-any.whl (34 kB)
+#11 17.65 Collecting botocore==1.37.38
+#11 17.67   Downloading botocore-1.37.38-py3-none-any.whl (13.5 MB)
+#11 19.06 Collecting s3transfer<0.12.0,>=0.11.0
+#11 19.09   Downloading s3transfer-0.11.5-py3-none-any.whl (84 kB)
+#11 20.03 Collecting colorama<0.4.7,>=0.2.5
+#11 20.06   Downloading colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+#11 21.07 Collecting jmespath<2.0.0,>=0.7.1
+#11 21.10   Downloading jmespath-1.0.1-py3-none-any.whl (20 kB)
+#11 21.11 Requirement already satisfied: urllib3<1.27,>=1.25.4 in /usr/local/lib/python3.8/dist-packages (from botocore==1.37.38->awscli) (1.26.13)
+#11 21.11 Requirement already satisfied: python-dateutil<3.0.0,>=2.1 in /usr/local/lib/python3.8/dist-packages (from botocore==1.37.38->awscli) (2.8.2)
+#11 21.15 Requirement already satisfied: six>=1.5 in /usr/local/lib/python3.8/dist-packages (from python-dateutil<3.0.0,>=2.1->botocore==1.37.38->awscli) (1.16.0)
+#11 21.16 Requirement already satisfied: pyasn1>=0.1.3 in /usr/local/lib/python3.8/dist-packages (from rsa<4.8,>=3.1.2->awscli) (0.4.8)
+#11 26.83 Installing collected packages: jmespath, botocore, s3transfer, rsa, docutils, colorama, awscli
+#11 28.52   Attempting uninstall: rsa
+#11 28.52     Found existing installation: rsa 4.9
+#11 28.54     Uninstalling rsa-4.9:
+#11 28.57       Successfully uninstalled rsa-4.9
+#11 33.16 Successfully installed awscli-1.38.38 botocore-1.37.38 colorama-0.4.6 docutils-0.19 jmespath-1.0.1 rsa-4.7.2 s3transfer-0.11.5
+#11 33.16 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#11 33.90 WARNING: You are using pip version 21.2.4; however, version 25.0.1 is available.
+#11 33.90 You should consider upgrading via the '/usr/bin/python -m pip install --upgrade pip' command.
+#11 DONE 34.1s
 
 #12 [ 8/13] COPY adaptdl adaptdl
-#12 CACHED
+#12 DONE 0.0s
 
-#13 [ 3/13] COPY adaptdl/requirements.txt requirements.txt
-#13 CACHED
+#13 [ 9/13] COPY benchmark/models/cifar10 cifar10
+#13 DONE 0.0s
 
-#14 [ 9/13] COPY benchmark/models/cifar10 cifar10
-#14 CACHED
+#14 [10/13] COPY benchmark/dataset_map.json .
+#14 DONE 0.0s
 
-#15 [10/13] COPY benchmark/dataset_map.json .
-#15 CACHED
+#15 [11/13] COPY benchmark/download_dataset.sh .
+#15 DONE 0.0s
 
-#16 [ 4/13] RUN pip install --no-cache-dir -r requirements.txt
-#16 CACHED
+#16 [12/13] RUN chmod +x /root/download_dataset.sh
+#16 DONE 0.2s
 
 #17 [13/13] WORKDIR /root/cifar10
-#17 CACHED
+#17 DONE 0.0s
 
 #18 exporting to image
-#18 exporting layers done
-#18 exporting manifest sha256:1e81947389c026c00763be4449e680efe35adaedb552f24790ef0247c2a2ccbe done
-#18 exporting config sha256:2e206eb99780d4d2b174a0d3639fb59f0ffa8c41844eb64bcb1ae21f28375b24 done
-#18 exporting attestation manifest sha256:5079cb73dabb3250391754520db06644b77de7f4e3b84b378ec01567761dc631 done
-#18 exporting manifest list sha256:688264132335c85c3008b5f16ddaf32df1c0eee1910ed8679b61938ea31ba053 done
+#18 exporting layers
+#18 exporting layers 1.5s done
+#18 exporting manifest sha256:e54edaf34db06600e1563c823aaffffbcbc3d6b6ed08ef3304ccf75ee1dc18f6 done
+#18 exporting config sha256:45b50b83c1743da4e6e8d2adca6c9902526a90db072e6f95f78854c4f6fceceb done
+#18 exporting attestation manifest sha256:9c49729689907483371f968c0de9c0cb2d9bfa67d5acd722eeba9d69f7733866 done
+#18 exporting manifest list sha256:dbd8d1ee44e309b8ddfeb58b051f11011052dc521287584ba7e5ed4ee0a7d6a6 done
 #18 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images:cifar10 done
-#18 DONE 0.1s
+#18 DONE 1.5s
 
  [33m1 warning found (use docker --debug to expand):
 [0m - UndefinedVar: Usage of undefined variable '$PYTHONPATH' (line 12)
 The push refers to repository [399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images]
-66059ebf13c6: Waiting
-60d5906fd80a: Waiting
-2850b7199f2c: Waiting
-d885191f1937: Waiting
-846c0b181fff: Waiting
-91b6a7918caa: Waiting
-79a28dd49356: Waiting
-8abf5ec0bb13: Waiting
-d04d0713d158: Waiting
-38acfe94dbe9: Waiting
-856030010aab: Waiting
-13e96fedcb8d: Waiting
-6856a2e3ed46: Waiting
-d9ed1e887990: Waiting
-32240762d934: Waiting
 96c54e0e4c1a: Waiting
-f0d07955f406: Waiting
-656347246602: Waiting
-03a691138ef8: Waiting
-6471a4765a47: Waiting
-8bb9583747a2: Waiting
-824e6993c2a6: Waiting
-d9c77bc172c0: Waiting
-bcd2dfdccd09: Waiting
-4bb75e94b397: Waiting
-ede52db3297f: Waiting
-61b1f751e984: Waiting
-dd65b807c637: Waiting
-4a39c20d2475: Waiting
-16b5080fc155: Waiting
-06d1766c07ef: Waiting
-5a30dc6e60f7: Waiting
-09a8bd0521b8: Waiting
-3650c6aa1ac1: Waiting
-9684ed3c7117: Waiting
-d3ed2fbe7c33: Waiting
-499d104c2b1e: Waiting
-7275c2240c04: Waiting
-2105a5e6a375: Waiting
-e4afdb54f010: Waiting
-65bc4e90123e: Waiting
-9f4b7d58d41b: Waiting
-04712991e393: Waiting
-a0e571274096: Waiting
-02148fc97997: Waiting
-03b628ccd951: Waiting
-597a6c358afc: Waiting
-dc2d21f56cc3: Waiting
 5550e985500c: Waiting
+79a28dd49356: Waiting
+5bdc3a280b31: Waiting
+d9ed1e887990: Waiting
+66059ebf13c6: Waiting
+824e6993c2a6: Waiting
+9684ed3c7117: Waiting
+2850b7199f2c: Waiting
+e4afdb54f010: Waiting
+13e96fedcb8d: Waiting
+8205b09b3447: Waiting
+776dd0fd6a9f: Waiting
+8abf5ec0bb13: Waiting
 c79b46181ee6: Waiting
-120b49f11018: Waiting
-29ed91f2bc74: Waiting
+8bb9583747a2: Waiting
+ec8ef49e3159: Waiting
+06d1766c07ef: Waiting
+6471a4765a47: Waiting
+bb4458271227: Waiting
 e175a7d4c536: Waiting
 4f4fb700ef54: Waiting
-5bdc3a280b31: Waiting
+66abd21c5d04: Waiting
+499d104c2b1e: Waiting
+57cf9e2669b4: Waiting
+9f4b7d58d41b: Waiting
+ae21f08eac8e: Waiting
+5a30dc6e60f7: Waiting
+846c0b181fff: Waiting
+61b1f751e984: Waiting
+03a691138ef8: Waiting
+5d0e804778d8: Waiting
+856030010aab: Waiting
+120b49f11018: Waiting
+3650c6aa1ac1: Waiting
+bcd2dfdccd09: Waiting
+d04d0713d158: Waiting
+597a6c358afc: Waiting
 63edc579ff7d: Waiting
+02148fc97997: Waiting
+ede52db3297f: Waiting
+65bc4e90123e: Waiting
+7275c2240c04: Waiting
+2c67e347e293: Waiting
+38acfe94dbe9: Waiting
+d3ed2fbe7c33: Waiting
+f0d07955f406: Waiting
+04712991e393: Waiting
+09a8bd0521b8: Waiting
+29ed91f2bc74: Waiting
+91b6a7918caa: Waiting
+dd65b807c637: Waiting
+d9c77bc172c0: Waiting
+58222a0749b8: Waiting
+2105a5e6a375: Waiting
+a0e571274096: Waiting
+91b6a7918caa: Layer already exists
+dd65b807c637: Layer already exists
+d9c77bc172c0: Layer already exists
+58222a0749b8: Waiting
+2105a5e6a375: Layer already exists
+a0e571274096: Layer already exists
+96c54e0e4c1a: Layer already exists
 5550e985500c: Layer already exists
+79a28dd49356: Waiting
+5bdc3a280b31: Layer already exists
+d9ed1e887990: Layer already exists
+66059ebf13c6: Layer already exists
+824e6993c2a6: Layer already exists
+9684ed3c7117: Layer already exists
+2850b7199f2c: Layer already exists
+e4afdb54f010: Layer already exists
+13e96fedcb8d: Layer already exists
+8205b09b3447: Waiting
+776dd0fd6a9f: Waiting
+8abf5ec0bb13: Layer already exists
 c79b46181ee6: Layer already exists
-120b49f11018: Layer already exists
-29ed91f2bc74: Layer already exists
+8bb9583747a2: Layer already exists
+ec8ef49e3159: Waiting
+06d1766c07ef: Layer already exists
+6471a4765a47: Layer already exists
+bb4458271227: Waiting
 e175a7d4c536: Layer already exists
 4f4fb700ef54: Layer already exists
-5bdc3a280b31: Layer already exists
-63edc579ff7d: Layer already exists
-66059ebf13c6: Layer already exists
-60d5906fd80a: Layer already exists
-2850b7199f2c: Layer already exists
-d885191f1937: Waiting
-846c0b181fff: Layer already exists
-91b6a7918caa: Layer already exists
-79a28dd49356: Layer already exists
-8abf5ec0bb13: Layer already exists
-d04d0713d158: Layer already exists
-38acfe94dbe9: Layer already exists
-856030010aab: Layer already exists
-13e96fedcb8d: Layer already exists
-6856a2e3ed46: Layer already exists
-d9ed1e887990: Layer already exists
-32240762d934: Layer already exists
-96c54e0e4c1a: Layer already exists
-f0d07955f406: Layer already exists
-656347246602: Layer already exists
-03a691138ef8: Layer already exists
-6471a4765a47: Layer already exists
-8bb9583747a2: Layer already exists
-824e6993c2a6: Layer already exists
-d9c77bc172c0: Layer already exists
-bcd2dfdccd09: Layer already exists
-4bb75e94b397: Layer already exists
-ede52db3297f: Layer already exists
-61b1f751e984: Layer already exists
-dd65b807c637: Layer already exists
-4a39c20d2475: Layer already exists
-16b5080fc155: Layer already exists
-06d1766c07ef: Layer already exists
-5a30dc6e60f7: Layer already exists
-09a8bd0521b8: Layer already exists
-3650c6aa1ac1: Layer already exists
-9684ed3c7117: Layer already exists
-d3ed2fbe7c33: Layer already exists
+66abd21c5d04: Waiting
 499d104c2b1e: Layer already exists
-7275c2240c04: Layer already exists
-2105a5e6a375: Layer already exists
-e4afdb54f010: Layer already exists
-65bc4e90123e: Layer already exists
+57cf9e2669b4: Waiting
 9f4b7d58d41b: Layer already exists
-04712991e393: Layer already exists
-a0e571274096: Layer already exists
-02148fc97997: Layer already exists
-03b628ccd951: Layer already exists
+ae21f08eac8e: Waiting
+5a30dc6e60f7: Layer already exists
+846c0b181fff: Layer already exists
+61b1f751e984: Layer already exists
+03a691138ef8: Layer already exists
+5d0e804778d8: Waiting
+856030010aab: Layer already exists
+120b49f11018: Layer already exists
+3650c6aa1ac1: Layer already exists
+bcd2dfdccd09: Layer already exists
+d04d0713d158: Layer already exists
 597a6c358afc: Layer already exists
-dc2d21f56cc3: Layer already exists
-d885191f1937: Pushed
-cifar10: digest: sha256:688264132335c85c3008b5f16ddaf32df1c0eee1910ed8679b61938ea31ba053 size: 857
+63edc579ff7d: Layer already exists
+02148fc97997: Waiting
+ede52db3297f: Layer already exists
+65bc4e90123e: Layer already exists
+7275c2240c04: Layer already exists
+2c67e347e293: Waiting
+38acfe94dbe9: Layer already exists
+d3ed2fbe7c33: Layer already exists
+f0d07955f406: Layer already exists
+04712991e393: Layer already exists
+09a8bd0521b8: Layer already exists
+29ed91f2bc74: Waiting
+79a28dd49356: Layer already exists
+ec8ef49e3159: Waiting
+66abd21c5d04: Waiting
+57cf9e2669b4: Waiting
+ae21f08eac8e: Waiting
+5d0e804778d8: Waiting
+02148fc97997: Layer already exists
+29ed91f2bc74: Layer already exists
+58222a0749b8: Waiting
+bb4458271227: Pushed
+ae21f08eac8e: Pushed
+5d0e804778d8: Pushed
+2c67e347e293: Pushed
+58222a0749b8: Pushed
+8205b09b3447: Pushed
+776dd0fd6a9f: Pushed
+66abd21c5d04: Pushed
+57cf9e2669b4: Pushed
+ec8ef49e3159: Pushed
+cifar10: digest: sha256:dbd8d1ee44e309b8ddfeb58b051f11011052dc521287584ba7e5ed4ee0a7d6a6 size: 857
 #0 building with "desktop-linux" instance using docker driver
 
 #1 [internal] load build definition from Dockerfile
@@ -1140,7 +1099,7 @@ cifar10: digest: sha256:688264132335c85c3008b5f16ddaf32df1c0eee1910ed8679b61938e
 #1 DONE 0.0s
 
 #2 [internal] load metadata for nvcr.io/nvidia/pytorch:20.10-py3
-#2 DONE 0.2s
+#2 DONE 0.4s
 
 #3 [internal] load .dockerignore
 #3 transferring context: 75B done
@@ -1157,37 +1116,37 @@ cifar10: digest: sha256:688264132335c85c3008b5f16ddaf32df1c0eee1910ed8679b61938e
 #6 [10/14] COPY benchmark/dataset_map.json .
 #6 CACHED
 
-#7 [ 3/14] COPY adaptdl/requirements.txt requirements.txt
+#7 [ 2/14] WORKDIR /root
 #7 CACHED
 
-#8 [ 6/14] RUN pip install --no-cache-dir -r requirements.txt
+#8 [ 3/14] COPY adaptdl/requirements.txt requirements.txt
 #8 CACHED
 
-#9 [11/14] COPY benchmark/download_dataset.sh .
+#9 [ 4/14] RUN pip install --no-cache-dir -r requirements.txt
 #9 CACHED
 
-#10 [13/14] RUN curl -o /root/bert/train-v1.1.json https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json &&     curl -o /root/bert/dev-v1.1.json https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json
+#10 [ 8/14] COPY adaptdl adaptdl
 #10 CACHED
 
-#11 [ 8/14] COPY adaptdl adaptdl
+#11 [ 6/14] RUN pip install --no-cache-dir -r requirements.txt
 #11 CACHED
 
-#12 [ 2/14] WORKDIR /root
+#12 [ 9/14] COPY benchmark/models/bert bert
 #12 CACHED
 
-#13 [ 7/14] RUN pip install --no-cache-dir awscli
+#13 [13/14] RUN curl -o /root/bert/train-v1.1.json https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v1.1.json &&     curl -o /root/bert/dev-v1.1.json https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v1.1.json
 #13 CACHED
 
-#14 [ 9/14] COPY benchmark/models/bert bert
+#14 [ 5/14] COPY benchmark/models/bert/requirements.txt requirements.txt
 #14 CACHED
 
-#15 [ 4/14] RUN pip install --no-cache-dir -r requirements.txt
+#15 [12/14] RUN chmod +x /root/download_dataset.sh
 #15 CACHED
 
-#16 [12/14] RUN chmod +x /root/download_dataset.sh
+#16 [11/14] COPY benchmark/download_dataset.sh .
 #16 CACHED
 
-#17 [ 5/14] COPY benchmark/models/bert/requirements.txt requirements.txt
+#17 [ 7/14] RUN pip install --no-cache-dir awscli
 #17 CACHED
 
 #18 [14/14] WORKDIR /root/bert
@@ -1197,150 +1156,150 @@ cifar10: digest: sha256:688264132335c85c3008b5f16ddaf32df1c0eee1910ed8679b61938e
 #19 exporting layers done
 #19 exporting manifest sha256:7aee73eff6276ab6dcb39b4c9ec371349217909012718460c03a3b26e203d776 done
 #19 exporting config sha256:335e2d8372c4e9e35c24ed17647b20f9a9e2f0bfb190b4c04b141de480afa55e done
-#19 exporting attestation manifest sha256:47112acc226c79ce5ca5d5d76ed6d18df69dc9388bf073a21a697c42ebae2f98 done
-#19 exporting manifest list sha256:1ee1fb4ad3cd85a7aa0b25057b5cbdd20f2b6c37db6950ac4a084c6fe1f905e2 done
+#19 exporting attestation manifest sha256:28e1ea1eebf4836e0b6ac73c8d7627b9b8c80343ac453bf9cf3b4731bda7fc92 done
+#19 exporting manifest list sha256:a57b7d5312677ef3a4c66a30ff0c0ce1d9c6684ea656d954ed21a98a9b780143 done
 #19 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images:bert done
 #19 DONE 0.1s
 
  [33m1 warning found (use docker --debug to expand):
 [0m - UndefinedVar: Usage of undefined variable '$PYTHONPATH' (line 11)
 The push refers to repository [399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images]
-4b1d1f66d76f: Waiting
-9e126323764a: Waiting
-021ee482f120: Waiting
-d2052f8ca70b: Waiting
-46e3e8d33436: Waiting
-79eebdd88af5: Waiting
-ea887e78380f: Waiting
-42272bfba0e3: Waiting
-fc3917a8c1ed: Waiting
+171857c49d0f: Waiting
+70f61e571177: Waiting
+2c1b0de2ba0b: Waiting
+7058ecf648f8: Waiting
+0c6df1647a81: Waiting
+b0c184cc7f58: Waiting
+1e037e3a34ce: Waiting
 b333abaddde4: Waiting
-e85df16fe2e0: Waiting
-419640447d26: Waiting
-b4fd783898fd: Waiting
-1f539b83ee48: Waiting
+dd95667f2c29: Waiting
+46e3e8d33436: Waiting
+c6bd830b2184: Waiting
+ee4255578256: Waiting
+4ae11a8d9421: Waiting
+2871b7ed5441: Waiting
+630da9a3a306: Waiting
 0a6fe83c2832: Waiting
-f999f12f030c: Waiting
-c0673ca551d6: Waiting
+9cd8e2a57ae2: Waiting
 6da8716af321: Waiting
+cf600ee2f72c: Waiting
+d7a4bbc77abd: Waiting
+c0673ca551d6: Waiting
+4f4fb700ef54: Waiting
+a68caf4d1419: Waiting
+b0c5fa7a349e: Waiting
+1f3ba0533236: Waiting
+456157ed8b06: Waiting
+9299d68426e1: Waiting
+b3f0de31ee0f: Waiting
+3e1d75ec1492: Waiting
+9e126323764a: Waiting
+af6436804ee3: Waiting
+f999f12f030c: Waiting
+fc3917a8c1ed: Waiting
+1f539b83ee48: Waiting
+e85df16fe2e0: Waiting
+021ee482f120: Waiting
+c1dc6c75d0c4: Waiting
+0de482750966: Waiting
+9443a264051f: Waiting
+419640447d26: Waiting
+79eebdd88af5: Waiting
+77330016a72d: Waiting
+496aa17a4ab6: Waiting
+d2052f8ca70b: Waiting
+6d2529f59bf3: Waiting
+46c068c10f04: Waiting
+878b83e9a23c: Waiting
+cac592305824: Waiting
+4b1d1f66d76f: Waiting
+61e52f862619: Waiting
+7542506f8d1b: Waiting
+0eb9b027f264: Waiting
 7a51e55708e1: Waiting
 d17e664a41c1: Waiting
-2871b7ed5441: Waiting
-b0c5fa7a349e: Waiting
-0de482750966: Waiting
-cac592305824: Waiting
-d7a4bbc77abd: Waiting
-6d2529f59bf3: Waiting
-a1cee4585a9a: Waiting
-1f3ba0533236: Waiting
-4f4fb700ef54: Waiting
-cf600ee2f72c: Waiting
-0701332afa02: Waiting
-1e037e3a34ce: Waiting
-c6bd830b2184: Waiting
-171857c49d0f: Waiting
-9443a264051f: Waiting
-9cd8e2a57ae2: Waiting
-0c6df1647a81: Waiting
-b3f0de31ee0f: Waiting
-23cde8d051bc: Waiting
-46c068c10f04: Waiting
-01e93d82852f: Waiting
-c1dc6c75d0c4: Waiting
-fc26e57de8fa: Waiting
-4ae11a8d9421: Waiting
-77330016a72d: Waiting
-dd95667f2c29: Waiting
-a68caf4d1419: Waiting
-61e52f862619: Waiting
-cdd13eafc9da: Waiting
-456157ed8b06: Waiting
-dddedac67980: Waiting
-7542506f8d1b: Waiting
-b0c184cc7f58: Waiting
 5c395696000a: Waiting
-ee4255578256: Waiting
-9299d68426e1: Waiting
-af6436804ee3: Waiting
-7058ecf648f8: Waiting
-630da9a3a306: Waiting
+b4fd783898fd: Waiting
+42272bfba0e3: Waiting
+ea887e78380f: Waiting
+dddedac67980: Waiting
 b75f9f76e286: Waiting
-3e1d75ec1492: Waiting
-496aa17a4ab6: Waiting
 f6e600738674: Waiting
-0eb9b027f264: Waiting
-70f61e571177: Waiting
-878b83e9a23c: Waiting
+fc26e57de8fa: Waiting
+cdd13eafc9da: Waiting
+01e93d82852f: Waiting
 0b52a8e746b5: Waiting
-496aa17a4ab6: Layer already exists
-f6e600738674: Layer already exists
-0eb9b027f264: Layer already exists
-70f61e571177: Layer already exists
-878b83e9a23c: Layer already exists
-0b52a8e746b5: Layer already exists
-4b1d1f66d76f: Layer already exists
-9e126323764a: Layer already exists
-021ee482f120: Layer already exists
-d2052f8ca70b: Layer already exists
-46e3e8d33436: Layer already exists
-79eebdd88af5: Layer already exists
-ea887e78380f: Layer already exists
-42272bfba0e3: Layer already exists
-fc3917a8c1ed: Layer already exists
-b333abaddde4: Layer already exists
-e85df16fe2e0: Layer already exists
-419640447d26: Layer already exists
-b4fd783898fd: Layer already exists
-1f539b83ee48: Layer already exists
-0a6fe83c2832: Layer already exists
-f999f12f030c: Layer already exists
+23cde8d051bc: Waiting
+0701332afa02: Waiting
+d7a4bbc77abd: Layer already exists
 c0673ca551d6: Layer already exists
-6da8716af321: Layer already exists
+4f4fb700ef54: Layer already exists
+a68caf4d1419: Layer already exists
+b0c5fa7a349e: Layer already exists
+1f3ba0533236: Layer already exists
+456157ed8b06: Layer already exists
+9299d68426e1: Layer already exists
+b3f0de31ee0f: Layer already exists
+3e1d75ec1492: Layer already exists
+9e126323764a: Layer already exists
+af6436804ee3: Layer already exists
+f999f12f030c: Layer already exists
+fc3917a8c1ed: Layer already exists
+1f539b83ee48: Layer already exists
+e85df16fe2e0: Layer already exists
+021ee482f120: Layer already exists
+c1dc6c75d0c4: Layer already exists
+0de482750966: Layer already exists
+9443a264051f: Layer already exists
+419640447d26: Layer already exists
+79eebdd88af5: Layer already exists
+77330016a72d: Layer already exists
+496aa17a4ab6: Layer already exists
+d2052f8ca70b: Layer already exists
+6d2529f59bf3: Layer already exists
+46c068c10f04: Layer already exists
+878b83e9a23c: Layer already exists
+cac592305824: Layer already exists
+4b1d1f66d76f: Layer already exists
+61e52f862619: Layer already exists
+7542506f8d1b: Layer already exists
+0eb9b027f264: Layer already exists
 7a51e55708e1: Layer already exists
 d17e664a41c1: Layer already exists
-2871b7ed5441: Layer already exists
-b0c5fa7a349e: Layer already exists
-0de482750966: Layer already exists
-cac592305824: Layer already exists
-d7a4bbc77abd: Layer already exists
-6d2529f59bf3: Layer already exists
-a1cee4585a9a: Waiting
-1f3ba0533236: Layer already exists
-4f4fb700ef54: Layer already exists
-cf600ee2f72c: Layer already exists
-0701332afa02: Layer already exists
-1e037e3a34ce: Layer already exists
-c6bd830b2184: Layer already exists
-171857c49d0f: Layer already exists
-9443a264051f: Layer already exists
-9cd8e2a57ae2: Layer already exists
-0c6df1647a81: Layer already exists
-b3f0de31ee0f: Layer already exists
-23cde8d051bc: Layer already exists
-46c068c10f04: Layer already exists
-01e93d82852f: Layer already exists
-c1dc6c75d0c4: Layer already exists
-fc26e57de8fa: Layer already exists
-4ae11a8d9421: Layer already exists
-77330016a72d: Layer already exists
-dd95667f2c29: Layer already exists
-a68caf4d1419: Layer already exists
-61e52f862619: Layer already exists
-cdd13eafc9da: Layer already exists
-456157ed8b06: Layer already exists
-dddedac67980: Layer already exists
-7542506f8d1b: Layer already exists
-b0c184cc7f58: Layer already exists
 5c395696000a: Layer already exists
-ee4255578256: Layer already exists
-9299d68426e1: Layer already exists
-af6436804ee3: Layer already exists
-7058ecf648f8: Layer already exists
-630da9a3a306: Layer already exists
+b4fd783898fd: Layer already exists
+42272bfba0e3: Layer already exists
+ea887e78380f: Layer already exists
+dddedac67980: Layer already exists
 b75f9f76e286: Layer already exists
-3e1d75ec1492: Layer already exists
-a1cee4585a9a: Pushed
-bert: digest: sha256:1ee1fb4ad3cd85a7aa0b25057b5cbdd20f2b6c37db6950ac4a084c6fe1f905e2 size: 857
+f6e600738674: Layer already exists
+fc26e57de8fa: Layer already exists
+cdd13eafc9da: Layer already exists
+01e93d82852f: Layer already exists
+0b52a8e746b5: Layer already exists
+23cde8d051bc: Layer already exists
+0701332afa02: Layer already exists
+171857c49d0f: Layer already exists
+70f61e571177: Layer already exists
+2c1b0de2ba0b: Waiting
+7058ecf648f8: Layer already exists
+0c6df1647a81: Layer already exists
+b0c184cc7f58: Layer already exists
+1e037e3a34ce: Layer already exists
+b333abaddde4: Layer already exists
+dd95667f2c29: Layer already exists
+46e3e8d33436: Layer already exists
+c6bd830b2184: Layer already exists
+ee4255578256: Layer already exists
+4ae11a8d9421: Layer already exists
+2871b7ed5441: Layer already exists
+630da9a3a306: Layer already exists
+0a6fe83c2832: Layer already exists
+9cd8e2a57ae2: Layer already exists
+6da8716af321: Layer already exists
+cf600ee2f72c: Layer already exists
+2c1b0de2ba0b: Pushed
+bert: digest: sha256:a57b7d5312677ef3a4c66a30ff0c0ce1d9c6684ea656d954ed21a98a9b780143 size: 857
 #0 building with "desktop-linux" instance using docker driver
 
 #1 [internal] load build definition from Dockerfile
@@ -1348,54 +1307,54 @@ bert: digest: sha256:1ee1fb4ad3cd85a7aa0b25057b5cbdd20f2b6c37db6950ac4a084c6fe1f
 #1 DONE 0.0s
 
 #2 [internal] load metadata for nvcr.io/nvidia/pytorch:20.10-py3
-#2 DONE 0.2s
+#2 DONE 0.4s
 
 #3 [internal] load .dockerignore
 #3 transferring context: 75B done
 #3 DONE 0.0s
 
 #4 [ 1/14] FROM nvcr.io/nvidia/pytorch:20.10-py3@sha256:65cf96f16323b2af66abc08ece22f3107477037201de288913cc87b92cbfba36
-#4 resolve nvcr.io/nvidia/pytorch:20.10-py3@sha256:65cf96f16323b2af66abc08ece22f3107477037201de288913cc87b92cbfba36 done
+#4 resolve nvcr.io/nvidia/pytorch:20.10-py3@sha256:65cf96f16323b2af66abc08ece22f3107477037201de288913cc87b92cbfba36 0.0s done
 #4 DONE 0.0s
 
 #5 [internal] load build context
 #5 transferring context: 908.08kB 0.0s done
 #5 DONE 0.0s
 
-#6 [ 4/14] RUN pip install --no-cache-dir -r requirements.txt
+#6 [ 5/14] COPY benchmark/models/deepspeech2/requirements.txt requirements.txt
 #6 CACHED
 
-#7 [ 3/14] COPY adaptdl/requirements.txt requirements.txt
+#7 [ 9/14] COPY adaptdl adaptdl
 #7 CACHED
 
-#8 [11/14] COPY benchmark/dataset_map.json .
+#8 [ 3/14] COPY adaptdl/requirements.txt requirements.txt
 #8 CACHED
 
-#9 [ 2/14] WORKDIR /root
+#9 [ 7/14] RUN apt-get update &&     apt-get install -y sox libsox-dev libsox-fmt-all wget bzip2 &&     apt-get clean && rm -rf /var/lib/apt/lists/*
 #9 CACHED
 
-#10 [ 6/14] RUN pip install --no-cache-dir -r requirements.txt
+#10 [ 4/14] RUN pip install --no-cache-dir -r requirements.txt
 #10 CACHED
 
-#11 [ 9/14] COPY adaptdl adaptdl
+#11 [13/14] RUN chmod +x /root/download_dataset.sh
 #11 CACHED
 
-#12 [ 8/14] RUN pip install --no-cache-dir awscli
+#12 [10/14] COPY benchmark/models/deepspeech2 deepspeech2
 #12 CACHED
 
-#13 [ 5/14] COPY benchmark/models/deepspeech2/requirements.txt requirements.txt
+#13 [11/14] COPY benchmark/dataset_map.json .
 #13 CACHED
 
-#14 [12/14] COPY benchmark/download_dataset.sh .
+#14 [ 2/14] WORKDIR /root
 #14 CACHED
 
-#15 [ 7/14] RUN apt-get update &&     apt-get install -y sox libsox-dev libsox-fmt-all wget bzip2 &&     apt-get clean && rm -rf /var/lib/apt/lists/*
+#15 [12/14] COPY benchmark/download_dataset.sh .
 #15 CACHED
 
-#16 [10/14] COPY benchmark/models/deepspeech2 deepspeech2
+#16 [ 6/14] RUN pip install --no-cache-dir -r requirements.txt
 #16 CACHED
 
-#17 [13/14] RUN chmod +x /root/download_dataset.sh
+#17 [ 8/14] RUN pip install --no-cache-dir awscli
 #17 CACHED
 
 #18 [14/14] WORKDIR /root/deepspeech2
@@ -1405,190 +1364,173 @@ bert: digest: sha256:1ee1fb4ad3cd85a7aa0b25057b5cbdd20f2b6c37db6950ac4a084c6fe1f
 #19 exporting layers done
 #19 exporting manifest sha256:c863c47a8eab97cc8f623aa2b53037ffa0fb82748162d1ed02f9bf89db5b867e done
 #19 exporting config sha256:ef011391cfc542c5eb0476288df88c29c8dd29dd9e8970d381a33b4bfa0587af done
-#19 exporting attestation manifest sha256:ad3c38347c134bef636458170593043e8a7d0ae8311c64e38d08db49a458776f done
-#19 exporting manifest list sha256:13feb35f234196071a87de7aab1e5f3b2307518c3501ce8bd36e942ca7d2039b done
+#19 exporting attestation manifest sha256:e11109608009d91eb467f99255d4a204c7123a4401e22f3ebcbd0f00f0cbd727 done
+#19 exporting manifest list sha256:8f845be7853431026e72c2dee9808a60e3b6006041d558fad667c40416d4d3d5 done
 #19 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images:deepspeech2 done
 #19 DONE 0.1s
 
  [33m1 warning found (use docker --debug to expand):
 [0m - UndefinedVar: Usage of undefined variable '$PYTHONPATH' (line 21)
 The push refers to repository [399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images]
-b4fd783898fd: Waiting
-cf600ee2f72c: Waiting
-419640447d26: Waiting
-9e126323764a: Waiting
-b40395c331b2: Waiting
-ee4255578256: Waiting
+6d2529f59bf3: Waiting
+fc3917a8c1ed: Waiting
+d7a4bbc77abd: Waiting
+6da8716af321: Waiting
+cac592305824: Waiting
+0701332afa02: Waiting
 f6e600738674: Waiting
-61e52f862619: Waiting
-fb17b2c330d9: Waiting
-54626d8b14f7: Waiting
-878b83e9a23c: Waiting
+23cde8d051bc: Waiting
+ba979137c665: Waiting
 630da9a3a306: Waiting
-5c395696000a: Waiting
+f337029a43d7: Waiting
+8c16aff0cdd3: Waiting
+496aa17a4ab6: Waiting
+7542506f8d1b: Waiting
+b4fd783898fd: Waiting
+70f61e571177: Waiting
+ea887e78380f: Waiting
+9cd8e2a57ae2: Waiting
+c6b321a0c736: Waiting
+9299d68426e1: Waiting
 af6436804ee3: Waiting
 c57fd719a4d6: Waiting
-6da8716af321: Waiting
-0c6df1647a81: Waiting
-d7a4bbc77abd: Waiting
-ea887e78380f: Waiting
-79eebdd88af5: Waiting
-496aa17a4ab6: Waiting
-3e1d75ec1492: Waiting
-8c16aff0cdd3: Waiting
-021ee482f120: Waiting
-9299d68426e1: Waiting
-cdd13eafc9da: Waiting
-4f4fb700ef54: Waiting
 3fec15201e98: Waiting
-23cde8d051bc: Waiting
-46e3e8d33436: Waiting
+c6bd830b2184: Waiting
+e85df16fe2e0: Waiting
+7a51e55708e1: Waiting
+456157ed8b06: Waiting
+4f4fb700ef54: Waiting
+a68caf4d1419: Waiting
+d2052f8ca70b: Waiting
+cdd13eafc9da: Waiting
+171857c49d0f: Waiting
 0a6fe83c2832: Waiting
-dddedac67980: Waiting
-4ae11a8d9421: Waiting
-c0673ca551d6: Waiting
-77330016a72d: Waiting
-0eb9b027f264: Waiting
-6d2529f59bf3: Waiting
+0b52a8e746b5: Waiting
+1e037e3a34ce: Waiting
+b3f0de31ee0f: Waiting
+5c395696000a: Waiting
 d17e664a41c1: Waiting
+4ae11a8d9421: Waiting
+0eb9b027f264: Waiting
+1f3ba0533236: Waiting
+878b83e9a23c: Waiting
+77330016a72d: Waiting
+79eebdd88af5: Waiting
+0c6df1647a81: Waiting
+dd95667f2c29: Waiting
+3e1d75ec1492: Waiting
 01e93d82852f: Waiting
 0de482750966: Waiting
-d2052f8ca70b: Waiting
-1e037e3a34ce: Waiting
 b0c184cc7f58: Waiting
-cac592305824: Waiting
-ba979137c665: Waiting
-171857c49d0f: Waiting
-7058ecf648f8: Waiting
-dd95667f2c29: Waiting
+021ee482f120: Waiting
 c1dc6c75d0c4: Waiting
-fc3917a8c1ed: Waiting
-c6bd830b2184: Waiting
-7542506f8d1b: Waiting
-70f61e571177: Waiting
-9cd8e2a57ae2: Waiting
-46c068c10f04: Waiting
+419640447d26: Waiting
+cf600ee2f72c: Waiting
+9e126323764a: Waiting
+ee4255578256: Waiting
+7058ecf648f8: Waiting
 b75f9f76e286: Waiting
+eeeda48dd4fa: Waiting
+61e52f862619: Waiting
+dddedac67980: Waiting
+c0673ca551d6: Waiting
 b333abaddde4: Waiting
-a68caf4d1419: Waiting
-f337029a43d7: Waiting
-b3f0de31ee0f: Waiting
-0b52a8e746b5: Waiting
-456157ed8b06: Waiting
-e85df16fe2e0: Waiting
-0701332afa02: Waiting
-c6b321a0c736: Waiting
-7a51e55708e1: Waiting
-1f3ba0533236: Waiting
-ba979137c665: Layer already exists
-171857c49d0f: Layer already exists
-7058ecf648f8: Layer already exists
-dd95667f2c29: Layer already exists
+46c068c10f04: Waiting
+54626d8b14f7: Waiting
+fb17b2c330d9: Waiting
+46e3e8d33436: Waiting
 c1dc6c75d0c4: Layer already exists
-fc3917a8c1ed: Layer already exists
-c6bd830b2184: Layer already exists
-7542506f8d1b: Layer already exists
-70f61e571177: Layer already exists
-9cd8e2a57ae2: Layer already exists
-46c068c10f04: Layer already exists
-b75f9f76e286: Layer already exists
-b333abaddde4: Layer already exists
-a68caf4d1419: Layer already exists
-f337029a43d7: Layer already exists
-b3f0de31ee0f: Layer already exists
-0b52a8e746b5: Layer already exists
-456157ed8b06: Layer already exists
-e85df16fe2e0: Layer already exists
-0701332afa02: Layer already exists
-c6b321a0c736: Layer already exists
-7a51e55708e1: Layer already exists
-1f3ba0533236: Layer already exists
-b4fd783898fd: Layer already exists
-cf600ee2f72c: Layer already exists
 419640447d26: Layer already exists
+cf600ee2f72c: Layer already exists
 9e126323764a: Layer already exists
-b40395c331b2: Waiting
 ee4255578256: Layer already exists
-f6e600738674: Layer already exists
+7058ecf648f8: Layer already exists
+b75f9f76e286: Layer already exists
+eeeda48dd4fa: Waiting
 61e52f862619: Layer already exists
-fb17b2c330d9: Layer already exists
+dddedac67980: Layer already exists
+c0673ca551d6: Layer already exists
+b333abaddde4: Layer already exists
+46c068c10f04: Layer already exists
 54626d8b14f7: Layer already exists
-878b83e9a23c: Layer already exists
+fb17b2c330d9: Layer already exists
+46e3e8d33436: Layer already exists
+6d2529f59bf3: Layer already exists
+fc3917a8c1ed: Layer already exists
+d7a4bbc77abd: Layer already exists
+6da8716af321: Layer already exists
+cac592305824: Layer already exists
+0701332afa02: Layer already exists
+f6e600738674: Layer already exists
+23cde8d051bc: Layer already exists
+ba979137c665: Layer already exists
 630da9a3a306: Layer already exists
-5c395696000a: Layer already exists
+f337029a43d7: Layer already exists
+8c16aff0cdd3: Layer already exists
+496aa17a4ab6: Layer already exists
+7542506f8d1b: Layer already exists
+b4fd783898fd: Layer already exists
+70f61e571177: Layer already exists
+ea887e78380f: Layer already exists
+9cd8e2a57ae2: Layer already exists
+c6b321a0c736: Layer already exists
+9299d68426e1: Layer already exists
 af6436804ee3: Layer already exists
 c57fd719a4d6: Layer already exists
-6da8716af321: Layer already exists
-0c6df1647a81: Layer already exists
-d7a4bbc77abd: Layer already exists
-ea887e78380f: Layer already exists
-79eebdd88af5: Layer already exists
-496aa17a4ab6: Layer already exists
-3e1d75ec1492: Layer already exists
-8c16aff0cdd3: Layer already exists
-021ee482f120: Layer already exists
-9299d68426e1: Layer already exists
-cdd13eafc9da: Layer already exists
-4f4fb700ef54: Layer already exists
 3fec15201e98: Layer already exists
-23cde8d051bc: Layer already exists
-46e3e8d33436: Layer already exists
+c6bd830b2184: Layer already exists
+e85df16fe2e0: Layer already exists
+7a51e55708e1: Layer already exists
+456157ed8b06: Layer already exists
+4f4fb700ef54: Layer already exists
+a68caf4d1419: Layer already exists
+d2052f8ca70b: Layer already exists
+cdd13eafc9da: Layer already exists
+171857c49d0f: Layer already exists
 0a6fe83c2832: Layer already exists
-dddedac67980: Layer already exists
-4ae11a8d9421: Layer already exists
-c0673ca551d6: Layer already exists
-77330016a72d: Layer already exists
-0eb9b027f264: Layer already exists
-6d2529f59bf3: Layer already exists
+0b52a8e746b5: Layer already exists
+1e037e3a34ce: Layer already exists
+b3f0de31ee0f: Layer already exists
+5c395696000a: Layer already exists
 d17e664a41c1: Layer already exists
+4ae11a8d9421: Layer already exists
+0eb9b027f264: Layer already exists
+1f3ba0533236: Layer already exists
+878b83e9a23c: Layer already exists
+77330016a72d: Layer already exists
+79eebdd88af5: Layer already exists
+0c6df1647a81: Layer already exists
+dd95667f2c29: Layer already exists
+3e1d75ec1492: Layer already exists
 01e93d82852f: Layer already exists
 0de482750966: Layer already exists
-d2052f8ca70b: Layer already exists
-1e037e3a34ce: Layer already exists
 b0c184cc7f58: Layer already exists
-cac592305824: Layer already exists
-b40395c331b2: Pushed
-deepspeech2: digest: sha256:13feb35f234196071a87de7aab1e5f3b2307518c3501ce8bd36e942ca7d2039b size: 857
+021ee482f120: Layer already exists
+eeeda48dd4fa: Pushed
+deepspeech2: digest: sha256:8f845be7853431026e72c2dee9808a60e3b6006041d558fad667c40416d4d3d5 size: 857
 Deleted existing 'images' DaemonSet.
 caching images on all nodes: 0/0
-caching images on all nodes: 6/8
-caching images on all nodes: 6/8
-caching images on all nodes: 6/8
-caching images on all nodes: 6/8
-caching images on all nodes: 6/8
-caching images on all nodes: 6/8
-caching images on all nodes: 6/8
-caching images on all nodes: 6/8
-caching images on all nodes: 6/8
-caching images on all nodes: 8/8
+caching images on all nodes: 2/2
 start workload
-submit job Pandas(Index=0, name='deepspeech2-0', time=2, application='deepspeech2', num_replicas=12, batch_size=640) at time 2.0201961994171143
+submit job Pandas(Index=0, name='cifar10-0', time=1, application='cifar10', num_replicas=6, batch_size=2048) at time 1.014707088470459
 Set readOnly=False for volumeMount: data
 apiVersion: adaptdl.petuum.com/v1
 kind: AdaptDLJob
 metadata:
-  name: deepspeech2-0
+  name: cifar10-0
 spec:
-  application: deepspeech2
-  targetBatchSize: 640
-  targetNumReplicas: 12
+  application: cifar10
+  targetBatchSize: 2048
+  targetNumReplicas: 6
   template:
     spec:
       containers:
       - command:
         - /root/download_dataset.sh
-        - deepspeech2
-        - python
-        - /root/deepspeech2/train.py
-        - --cuda
-        - --train-manifest=/mnt/deepspeech2_data/voxforge_cmu_us_train_manifest_part1.csv
-        - --val-manifest=/mnt/deepspeech2_data/voxforge_cmu_us_train_manifest_part2.csv
-        - --max-norm=1
-        - --batch-size=20
-        - --lr=0.12
-        - --learning-anneal=1.02
-        - --momentum=0.95
-        - --epochs=80
+        - cifar10
+        - python3
+        - /root/cifar10/main.py
+        - --model=ResNet18
         env:
         - name: PYTHONUNBUFFERED
           value: 'true'
@@ -1597,8 +1539,8 @@ spec:
         - name: ADAPTDL_TENSORBOARD_LOGDIR
           value: /pollux/tensorboard
         - name: APPLICATION
-          value: deepspeech2
-        image: 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images@sha256:13feb35f234196071a87de7aab1e5f3b2307518c3501ce8bd36e942ca7d2039b
+          value: cifar10
+        image: 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-images@sha256:dbd8d1ee44e309b8ddfeb58b051f11011052dc521287584ba7e5ed4ee0a7d6a6
         name: main
         resources:
           limits:
@@ -1615,10 +1557,10 @@ spec:
           readOnly: false
         - mountPath: /pollux/checkpoint
           name: pollux
-          subPath: pollux/checkpoint/deepspeech2-0
+          subPath: pollux/checkpoint/cifar10-0
         - mountPath: /pollux/tensorboard
           name: pollux
-          subPath: pollux/tensorboard/deepspeech2-0
+          subPath: pollux/tensorboard/cifar10-0
         - mountPath: /pollux/global-checkpoint
           name: pollux
           readOnly: true
@@ -1634,696 +1576,17 @@ spec:
           claimName: pollux
 
 --- Command completed with return code: 0 ---
-[2025-10-26 14:42:45] 
-✓ Starting monitor, output to: ./experiment_results/dummy-cbd-0916-2/deepspeech2/32gpu.txt
-[2025-10-26 15:15:45] 
+[2025-11-05 16:58:49] 
+✓ Starting monitor, output to: ./experiment_results/dummy-cbd-0916-2/cifar10/32gpu.txt
+[2025-11-05 17:18:49] 
 ✅ Job completed!
-[2025-10-26 15:15:47] 
-=== Experiment with 32 GPU(s) Completed at 2025-10-26 15:15:47 ===
-[2025-10-26 15:15:47] 
-============================================================
-[2025-10-26 15:15:47] Starting experiment with NUM_GPU=48
-[2025-10-26 15:15:48] ============================================================
+[2025-11-05 17:18:51] 
+=== Experiment with 32 GPU(s) Completed at 2025-11-05 17:18:51 ===
+[2025-11-05 17:18:51] 
 
-[2025-10-26 15:15:48] 
-✓ Logging into Docker ECR...
-[2025-10-26 15:15:48] Running: ['aws', 'ecr', 'get-login-password', '--region', 'us-east-1', '|', 'docker', 'login', '--username', 'AWS', '--password-stdin', '399790253372.dkr.ecr.us-east-1.amazonaws.com']
-[2025-10-26 15:15:48] Error running command: ['aws', 'ecr', 'get-login-password', '--region', 'us-east-1', '|', 'docker', 'login', '--username', 'AWS', '--password-stdin', '399790253372.dkr.ecr.us-east-1.amazonaws.com']
-[2025-10-26 15:15:48] Error output:
-[2025-10-26 15:15:48]   aws: [ERROR]: the following arguments are required: command
-[2025-10-26 15:15:48]   
-[2025-10-26 15:15:48]   usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]
-[2025-10-26 15:15:48]   To see help text, you can run:
-[2025-10-26 15:15:48]   
-[2025-10-26 15:15:48]     aws help
-[2025-10-26 15:15:48]     aws <command> help
-[2025-10-26 15:15:48]     aws <command> <subcommand> help
-[2025-10-26 15:15:48] ✓ Verified policy is 'dummy'
-[2025-10-26 15:15:48] ✓ Updated DummyPolicy to use 48 GPU(s)
-[2025-10-26 15:15:48] 
-✓ Running helm update...
-[2025-10-26 15:15:48] Running: ['./helm/update_adaptdl.sh']
-
---- Real-time output for: ['./helm/update_adaptdl.sh'] ---
-#0 building with "desktop-linux" instance using docker driver
-
-#1 [internal] load build definition from Dockerfile
-#1 transferring dockerfile: 1.11kB done
-#1 DONE 0.0s
-
-#2 [internal] load metadata for docker.io/library/python:3.8
-#2 DONE 0.3s
-
-#3 [internal] load .dockerignore
-#3 transferring context: 75B done
-#3 DONE 0.0s
-
-#4 [ 1/12] FROM docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c
-#4 resolve docker.io/library/python:3.8@sha256:d411270700143fa2683cc8264d9fa5d3279fd3b6afff62ae81ea2f9d070e390c 0.0s done
-#4 DONE 0.0s
-
-#5 [internal] load build context
-#5 transferring context: 452.41kB 0.0s done
-#5 DONE 0.0s
-
-#6 [ 2/12] WORKDIR /root/adaptdl
-#6 CACHED
-
-#7 [ 3/12] COPY adaptdl adaptdl
-#7 CACHED
-
-#8 [ 4/12] COPY sched sched
-#8 DONE 0.0s
-
-#9 [ 5/12] COPY cli/bin/adaptdl cli/bin/adaptdl
-#9 DONE 0.0s
-
-#10 [ 6/12] RUN cd adaptdl && python3 setup.py bdist_wheel
-#10 2.914 running bdist_wheel
-#10 3.026 running build
-#10 3.026 running build_py
-#10 3.225 creating build
-#10 3.226 creating build/lib
-#10 3.227 creating build/lib/adaptdl
-#10 3.227 copying adaptdl/reducer_test.py -> build/lib/adaptdl
-#10 3.228 copying adaptdl/collective_test.py -> build/lib/adaptdl
-#10 3.229 copying adaptdl/utils.py -> build/lib/adaptdl
-#10 3.229 copying adaptdl/checkpoint.py -> build/lib/adaptdl
-#10 3.230 copying adaptdl/goodput.py -> build/lib/adaptdl
-#10 3.230 copying adaptdl/conftest.py -> build/lib/adaptdl
-#10 3.231 copying adaptdl/sched_hints.py -> build/lib/adaptdl
-#10 3.231 copying adaptdl/global_profile_state.py -> build/lib/adaptdl
-#10 3.232 copying adaptdl/fit_test.py -> build/lib/adaptdl
-#10 3.233 copying adaptdl/_signal.py -> build/lib/adaptdl
-#10 3.233 copying adaptdl/reducer.py -> build/lib/adaptdl
-#10 3.234 copying adaptdl/checkpoint_test.py -> build/lib/adaptdl
-#10 3.234 copying adaptdl/goodput_test.py -> build/lib/adaptdl
-#10 3.235 copying adaptdl/__init__.py -> build/lib/adaptdl
-#10 3.235 copying adaptdl/collective.py -> build/lib/adaptdl
-#10 3.235 copying adaptdl/env.py -> build/lib/adaptdl
-#10 3.237 creating build/lib/adaptdl/torch
-#10 3.238 copying adaptdl/torch/scaling_rules_test.py -> build/lib/adaptdl/torch
-#10 3.238 copying adaptdl/torch/gradient_noise_scale_test.py -> build/lib/adaptdl/torch
-#10 3.239 copying adaptdl/torch/_metrics.py -> build/lib/adaptdl/torch
-#10 3.239 copying adaptdl/torch/adascale_test.py -> build/lib/adaptdl/torch
-#10 3.240 copying adaptdl/torch/parallel_test.py -> build/lib/adaptdl/torch
-#10 3.240 copying adaptdl/torch/data.py -> build/lib/adaptdl/torch
-#10 3.241 copying adaptdl/torch/parallel.py -> build/lib/adaptdl/torch
-#10 3.241 copying adaptdl/torch/data_test.py -> build/lib/adaptdl/torch
-#10 3.242 copying adaptdl/torch/epoch_test.py -> build/lib/adaptdl/torch
-#10 3.242 copying adaptdl/torch/iterator.py -> build/lib/adaptdl/torch
-#10 3.243 copying adaptdl/torch/_metrics_test.py -> build/lib/adaptdl/torch
-#10 3.243 copying adaptdl/torch/gradient_noise_scale.py -> build/lib/adaptdl/torch
-#10 3.244 copying adaptdl/torch/adascale.py -> build/lib/adaptdl/torch
-#10 3.244 copying adaptdl/torch/__init__.py -> build/lib/adaptdl/torch
-#10 3.245 copying adaptdl/torch/scaling_rules.py -> build/lib/adaptdl/torch
-#10 3.245 copying adaptdl/torch/accumulator.py -> build/lib/adaptdl/torch
-#10 3.246 copying adaptdl/torch/accumulator_test.py -> build/lib/adaptdl/torch
-#10 3.246 copying adaptdl/torch/epoch.py -> build/lib/adaptdl/torch
-#10 3.269 installing to build/bdist.linux-x86_64/wheel
-#10 3.269 running install
-#10 3.270 running install_lib
-#10 3.278 creating build/bdist.linux-x86_64
-#10 3.279 creating build/bdist.linux-x86_64/wheel
-#10 3.279 creating build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.279 copying build/lib/adaptdl/reducer_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.280 copying build/lib/adaptdl/collective_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.280 copying build/lib/adaptdl/utils.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.281 copying build/lib/adaptdl/checkpoint.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.281 copying build/lib/adaptdl/goodput.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.281 copying build/lib/adaptdl/conftest.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.282 copying build/lib/adaptdl/sched_hints.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.282 copying build/lib/adaptdl/global_profile_state.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.282 copying build/lib/adaptdl/fit_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.283 copying build/lib/adaptdl/_signal.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.283 copying build/lib/adaptdl/reducer.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.283 copying build/lib/adaptdl/checkpoint_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.284 copying build/lib/adaptdl/goodput_test.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.284 copying build/lib/adaptdl/__init__.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.284 copying build/lib/adaptdl/collective.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.285 copying build/lib/adaptdl/env.py -> build/bdist.linux-x86_64/wheel/adaptdl
-#10 3.285 creating build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.286 copying build/lib/adaptdl/torch/scaling_rules_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.286 copying build/lib/adaptdl/torch/gradient_noise_scale_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.286 copying build/lib/adaptdl/torch/_metrics.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.287 copying build/lib/adaptdl/torch/adascale_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.287 copying build/lib/adaptdl/torch/parallel_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.288 copying build/lib/adaptdl/torch/data.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.288 copying build/lib/adaptdl/torch/parallel.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.288 copying build/lib/adaptdl/torch/data_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.289 copying build/lib/adaptdl/torch/epoch_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.289 copying build/lib/adaptdl/torch/iterator.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.289 copying build/lib/adaptdl/torch/_metrics_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.290 copying build/lib/adaptdl/torch/gradient_noise_scale.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.290 copying build/lib/adaptdl/torch/adascale.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.291 copying build/lib/adaptdl/torch/__init__.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.291 copying build/lib/adaptdl/torch/scaling_rules.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.291 copying build/lib/adaptdl/torch/accumulator.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.292 copying build/lib/adaptdl/torch/accumulator_test.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.292 copying build/lib/adaptdl/torch/epoch.py -> build/bdist.linux-x86_64/wheel/adaptdl/torch
-#10 3.292 running install_egg_info
-#10 3.357 running egg_info
-#10 3.357 creating adaptdl.egg-info
-#10 3.357 writing adaptdl.egg-info/PKG-INFO
-#10 3.358 writing dependency_links to adaptdl.egg-info/dependency_links.txt
-#10 3.359 writing requirements to adaptdl.egg-info/requires.txt
-#10 3.359 writing top-level names to adaptdl.egg-info/top_level.txt
-#10 3.360 writing manifest file 'adaptdl.egg-info/SOURCES.txt'
-#10 3.364 reading manifest file 'adaptdl.egg-info/SOURCES.txt'
-#10 3.368 writing manifest file 'adaptdl.egg-info/SOURCES.txt'
-#10 3.369 Copying adaptdl.egg-info to build/bdist.linux-x86_64/wheel/adaptdl-0.0.0-py3.8.egg-info
-#10 3.371 running install_scripts
-#10 3.682 creating build/bdist.linux-x86_64/wheel/adaptdl-0.0.0.dist-info/WHEEL
-#10 3.685 creating 'dist/adaptdl-0.0.0-py3-none-any.whl' and adding 'build/bdist.linux-x86_64/wheel' to it
-#10 3.689 adding 'adaptdl/__init__.py'
-#10 3.692 adding 'adaptdl/_signal.py'
-#10 3.694 adding 'adaptdl/checkpoint.py'
-#10 3.695 adding 'adaptdl/checkpoint_test.py'
-#10 3.696 adding 'adaptdl/collective.py'
-#10 3.697 adding 'adaptdl/collective_test.py'
-#10 3.698 adding 'adaptdl/conftest.py'
-#10 3.700 adding 'adaptdl/env.py'
-#10 3.701 adding 'adaptdl/fit_test.py'
-#10 3.702 adding 'adaptdl/global_profile_state.py'
-#10 3.704 adding 'adaptdl/goodput.py'
-#10 3.705 adding 'adaptdl/goodput_test.py'
-#10 3.707 adding 'adaptdl/reducer.py'
-#10 3.708 adding 'adaptdl/reducer_test.py'
-#10 3.709 adding 'adaptdl/sched_hints.py'
-#10 3.710 adding 'adaptdl/utils.py'
-#10 3.711 adding 'adaptdl/torch/__init__.py'
-#10 3.713 adding 'adaptdl/torch/_metrics.py'
-#10 3.714 adding 'adaptdl/torch/_metrics_test.py'
-#10 3.716 adding 'adaptdl/torch/accumulator.py'
-#10 3.717 adding 'adaptdl/torch/accumulator_test.py'
-#10 3.718 adding 'adaptdl/torch/adascale.py'
-#10 3.720 adding 'adaptdl/torch/adascale_test.py'
-#10 3.722 adding 'adaptdl/torch/data.py'
-#10 3.724 adding 'adaptdl/torch/data_test.py'
-#10 3.725 adding 'adaptdl/torch/epoch.py'
-#10 3.726 adding 'adaptdl/torch/epoch_test.py'
-#10 3.727 adding 'adaptdl/torch/gradient_noise_scale.py'
-#10 3.729 adding 'adaptdl/torch/gradient_noise_scale_test.py'
-#10 3.730 adding 'adaptdl/torch/iterator.py'
-#10 3.731 adding 'adaptdl/torch/parallel.py'
-#10 3.732 adding 'adaptdl/torch/parallel_test.py'
-#10 3.734 adding 'adaptdl/torch/scaling_rules.py'
-#10 3.735 adding 'adaptdl/torch/scaling_rules_test.py'
-#10 3.736 adding 'adaptdl-0.0.0.dist-info/METADATA'
-#10 3.737 adding 'adaptdl-0.0.0.dist-info/WHEEL'
-#10 3.738 adding 'adaptdl-0.0.0.dist-info/top_level.txt'
-#10 3.740 adding 'adaptdl-0.0.0.dist-info/RECORD'
-#10 3.741 removing build/bdist.linux-x86_64/wheel
-#10 DONE 3.8s
-
-#11 [ 7/12] RUN cd sched && python3 setup.py bdist_wheel
-#11 1.139 running bdist_wheel
-#11 1.162 running build
-#11 1.163 running build_py
-#11 1.222 creating build
-#11 1.227 creating build/lib
-#11 1.227 creating build/lib/adaptdl_sched
-#11 1.227 copying adaptdl_sched/supervisor.py -> build/lib/adaptdl_sched
-#11 1.228 copying adaptdl_sched/global_profiler.py -> build/lib/adaptdl_sched
-#11 1.229 copying adaptdl_sched/utils.py -> build/lib/adaptdl_sched
-#11 1.229 copying adaptdl_sched/validator.py -> build/lib/adaptdl_sched
-#11 1.229 copying adaptdl_sched/validator_test.py -> build/lib/adaptdl_sched
-#11 1.230 copying adaptdl_sched/resources_test.py -> build/lib/adaptdl_sched
-#11 1.230 copying adaptdl_sched/_compute_width.py -> build/lib/adaptdl_sched
-#11 1.231 copying adaptdl_sched/allocator.py -> build/lib/adaptdl_sched
-#11 1.231 copying adaptdl_sched/width_calculator.py -> build/lib/adaptdl_sched
-#11 1.232 copying adaptdl_sched/cluster_expander.py -> build/lib/adaptdl_sched
-#11 1.232 copying adaptdl_sched/_configs.py -> build/lib/adaptdl_sched
-#11 1.233 copying adaptdl_sched/__main__.py -> build/lib/adaptdl_sched
-#11 1.233 copying adaptdl_sched/k8s_templates.py -> build/lib/adaptdl_sched
-#11 1.233 copying adaptdl_sched/__init__.py -> build/lib/adaptdl_sched
-#11 1.234 copying adaptdl_sched/config.py -> build/lib/adaptdl_sched
-#11 1.234 copying adaptdl_sched/controller.py -> build/lib/adaptdl_sched
-#11 1.235 copying adaptdl_sched/resources.py -> build/lib/adaptdl_sched
-#11 1.236 creating build/lib/adaptdl_sched/policy
-#11 1.236 copying adaptdl_sched/policy/utils.py -> build/lib/adaptdl_sched/policy
-#11 1.237 copying adaptdl_sched/policy/speedup_test.py -> build/lib/adaptdl_sched/policy
-#11 1.237 copying adaptdl_sched/policy/speedup.py -> build/lib/adaptdl_sched/policy
-#11 1.238 copying adaptdl_sched/policy/pollux.py -> build/lib/adaptdl_sched/policy
-#11 1.238 copying adaptdl_sched/policy/fixed_width.py -> build/lib/adaptdl_sched/policy
-#11 1.239 copying adaptdl_sched/policy/pollux_test.py -> build/lib/adaptdl_sched/policy
-#11 1.239 copying adaptdl_sched/policy/dummy.py -> build/lib/adaptdl_sched/policy
-#11 1.240 copying adaptdl_sched/policy/non_preemptible_test.py -> build/lib/adaptdl_sched/policy
-#11 1.240 copying adaptdl_sched/policy/__init__.py -> build/lib/adaptdl_sched/policy
-#11 1.247 installing to build/bdist.linux-x86_64/wheel
-#11 1.248 running install
-#11 1.249 running install_lib
-#11 1.251 creating build/bdist.linux-x86_64
-#11 1.251 creating build/bdist.linux-x86_64/wheel
-#11 1.252 creating build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.252 copying build/lib/adaptdl_sched/supervisor.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.253 copying build/lib/adaptdl_sched/global_profiler.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.253 copying build/lib/adaptdl_sched/utils.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.253 copying build/lib/adaptdl_sched/validator.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.254 copying build/lib/adaptdl_sched/validator_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.254 copying build/lib/adaptdl_sched/resources_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.255 copying build/lib/adaptdl_sched/_compute_width.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.255 copying build/lib/adaptdl_sched/allocator.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.255 copying build/lib/adaptdl_sched/width_calculator.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.256 copying build/lib/adaptdl_sched/cluster_expander.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.256 creating build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.256 copying build/lib/adaptdl_sched/policy/utils.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.257 copying build/lib/adaptdl_sched/policy/speedup_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.257 copying build/lib/adaptdl_sched/policy/speedup.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.257 copying build/lib/adaptdl_sched/policy/pollux.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.258 copying build/lib/adaptdl_sched/policy/fixed_width.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.258 copying build/lib/adaptdl_sched/policy/pollux_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.259 copying build/lib/adaptdl_sched/policy/dummy.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.259 copying build/lib/adaptdl_sched/policy/non_preemptible_test.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.259 copying build/lib/adaptdl_sched/policy/__init__.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched/policy
-#11 1.260 copying build/lib/adaptdl_sched/_configs.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.260 copying build/lib/adaptdl_sched/__main__.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.260 copying build/lib/adaptdl_sched/k8s_templates.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.261 copying build/lib/adaptdl_sched/__init__.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.261 copying build/lib/adaptdl_sched/config.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.261 copying build/lib/adaptdl_sched/controller.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.262 copying build/lib/adaptdl_sched/resources.py -> build/bdist.linux-x86_64/wheel/adaptdl_sched
-#11 1.262 running install_egg_info
-#11 1.270 running egg_info
-#11 1.270 creating adaptdl_sched.egg-info
-#11 1.270 writing adaptdl_sched.egg-info/PKG-INFO
-#11 1.271 writing dependency_links to adaptdl_sched.egg-info/dependency_links.txt
-#11 1.272 writing requirements to adaptdl_sched.egg-info/requires.txt
-#11 1.273 writing top-level names to adaptdl_sched.egg-info/top_level.txt
-#11 1.273 writing manifest file 'adaptdl_sched.egg-info/SOURCES.txt'
-#11 1.278 reading manifest file 'adaptdl_sched.egg-info/SOURCES.txt'
-#11 1.282 writing manifest file 'adaptdl_sched.egg-info/SOURCES.txt'
-#11 1.283 Copying adaptdl_sched.egg-info to build/bdist.linux-x86_64/wheel/adaptdl_sched-0.0.0-py3.8.egg-info
-#11 1.286 running install_scripts
-#11 1.379 creating build/bdist.linux-x86_64/wheel/adaptdl_sched-0.0.0.dist-info/WHEEL
-#11 1.381 creating 'dist/adaptdl_sched-0.0.0-py3-none-any.whl' and adding 'build/bdist.linux-x86_64/wheel' to it
-#11 1.385 adding 'adaptdl_sched/__init__.py'
-#11 1.388 adding 'adaptdl_sched/__main__.py'
-#11 1.391 adding 'adaptdl_sched/_compute_width.py'
-#11 1.392 adding 'adaptdl_sched/_configs.py'
-#11 1.394 adding 'adaptdl_sched/allocator.py'
-#11 1.396 adding 'adaptdl_sched/cluster_expander.py'
-#11 1.397 adding 'adaptdl_sched/config.py'
-#11 1.399 adding 'adaptdl_sched/controller.py'
-#11 1.402 adding 'adaptdl_sched/global_profiler.py'
-#11 1.404 adding 'adaptdl_sched/k8s_templates.py'
-#11 1.405 adding 'adaptdl_sched/resources.py'
-#11 1.406 adding 'adaptdl_sched/resources_test.py'
-#11 1.407 adding 'adaptdl_sched/supervisor.py'
-#11 1.408 adding 'adaptdl_sched/utils.py'
-#11 1.409 adding 'adaptdl_sched/validator.py'
-#11 1.410 adding 'adaptdl_sched/validator_test.py'
-#11 1.412 adding 'adaptdl_sched/width_calculator.py'
-#11 1.413 adding 'adaptdl_sched/policy/__init__.py'
-#11 1.414 adding 'adaptdl_sched/policy/dummy.py'
-#11 1.416 adding 'adaptdl_sched/policy/fixed_width.py'
-#11 1.417 adding 'adaptdl_sched/policy/non_preemptible_test.py'
-#11 1.423 adding 'adaptdl_sched/policy/pollux.py'
-#11 1.425 adding 'adaptdl_sched/policy/pollux_test.py'
-#11 1.426 adding 'adaptdl_sched/policy/speedup.py'
-#11 1.427 adding 'adaptdl_sched/policy/speedup_test.py'
-#11 1.428 adding 'adaptdl_sched/policy/utils.py'
-#11 1.430 adding 'adaptdl_sched-0.0.0.dist-info/METADATA'
-#11 1.430 adding 'adaptdl_sched-0.0.0.dist-info/WHEEL'
-#11 1.431 adding 'adaptdl_sched-0.0.0.dist-info/top_level.txt'
-#11 1.433 adding 'adaptdl_sched-0.0.0.dist-info/RECORD'
-#11 1.434 removing build/bdist.linux-x86_64/wheel
-#11 DONE 1.5s
-
-#12 [ 8/12] RUN ADAPTDL_VERSION=0.0.0 pip install adaptdl/dist/*.whl
-#12 4.540 Processing ./adaptdl/dist/adaptdl-0.0.0-py3-none-any.whl
-#12 5.384 Collecting redis>=3.3.8
-#12 5.615   Downloading redis-6.1.1-py3-none-any.whl (273 kB)
-#12 5.726      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 273.9/273.9 kB 3.0 MB/s eta 0:00:00
-#12 7.803 Collecting pandas>=0.24.2
-#12 7.828   Downloading pandas-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.4 MB)
-#12 8.538      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.4/12.4 MB 21.2 MB/s eta 0:00:00
-#12 10.88 Collecting scipy>=1.3.0
-#12 10.90   Downloading scipy-1.10.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (34.5 MB)
-#12 12.28      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 34.5/34.5 MB 19.4 MB/s eta 0:00:00
-#12 12.79 Collecting portpicker>=1.3.1
-#12 12.82   Downloading portpicker-1.6.0-py3-none-any.whl (16 kB)
-#12 12.92 Collecting autograd>=1.3
-#12 12.95   Downloading autograd-1.7.0-py3-none-any.whl (52 kB)
-#12 12.96      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 52.5/52.5 kB 6.6 MB/s eta 0:00:00
-#12 16.38 Collecting numpy
-#12 16.41   Downloading numpy-1.24.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (17.3 MB)
-#12 17.08      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 17.3/17.3 MB 24.0 MB/s eta 0:00:00
-#12 17.95 Collecting tzdata>=2022.1
-#12 17.97   Downloading tzdata-2025.2-py2.py3-none-any.whl (347 kB)
-#12 18.00      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 347.8/347.8 kB 19.5 MB/s eta 0:00:00
-#12 18.23 Collecting python-dateutil>=2.8.2
-#12 18.25   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
-#12 18.28      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 229.9/229.9 kB 15.7 MB/s eta 0:00:00
-#12 18.71 Collecting pytz>=2020.1
-#12 18.74   Downloading pytz-2025.2-py2.py3-none-any.whl (509 kB)
-#12 18.77      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 509.2/509.2 kB 21.7 MB/s eta 0:00:00
-#12 19.96 Collecting psutil
-#12 19.99   Downloading psutil-7.1.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (258 kB)
-#12 20.01      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 258.7/258.7 kB 17.4 MB/s eta 0:00:00
-#12 20.18 Collecting async-timeout>=4.0.3
-#12 20.20   Downloading async_timeout-5.0.1-py3-none-any.whl (6.2 kB)
-#12 20.57 Collecting six>=1.5
-#12 20.59   Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
-#12 22.08 Installing collected packages: pytz, tzdata, six, psutil, numpy, async-timeout, scipy, redis, python-dateutil, portpicker, autograd, pandas, adaptdl
-#12 54.65 Successfully installed adaptdl-0.0.0 async-timeout-5.0.1 autograd-1.7.0 numpy-1.24.4 pandas-2.0.3 portpicker-1.6.0 psutil-7.1.2 python-dateutil-2.9.0.post0 pytz-2025.2 redis-6.1.1 scipy-1.10.1 six-1.17.0 tzdata-2025.2
-#12 54.65 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
-#12 DONE 55.1s
-
-#13 [ 9/12] RUN ADAPTDL_VERSION=0.0.0 pip install sched/dist/*.whl
-#13 1.751 Processing ./sched/dist/adaptdl_sched-0.0.0-py3-none-any.whl
-#13 1.828 Requirement already satisfied: adaptdl in /usr/local/lib/python3.8/site-packages (from adaptdl-sched==0.0.0) (0.0.0)
-#13 2.443 Collecting requests>=2.7.0
-#13 2.645   Downloading requests-2.32.4-py3-none-any.whl (64 kB)
-#13 2.711      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 64.8/64.8 kB 1.2 MB/s eta 0:00:00
-#13 12.09 Collecting aiohttp==3.7.4.post0
-#13 12.12   Downloading aiohttp-3.7.4.post0-cp38-cp38-manylinux2014_x86_64.whl (1.5 MB)
-#13 12.34      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB 7.1 MB/s eta 0:00:00
-#13 12.47 Collecting future>=0.17.1
-#13 12.49   Downloading future-1.0.0-py3-none-any.whl (491 kB)
-#13 12.54      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 491.3/491.3 kB 11.6 MB/s eta 0:00:00
-#13 12.84 Collecting pymoo==0.5.0
-#13 12.86   Downloading pymoo-0.5.0-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl (2.7 MB)
-#13 13.02      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.7/2.7 MB 17.4 MB/s eta 0:00:00
-#13 13.22 Collecting jsonpatch>=1.26
-#13 13.25   Downloading jsonpatch-1.33-py2.py3-none-any.whl (12 kB)
-#13 16.54 Collecting numpy==1.19.5
-#13 16.57   Downloading numpy-1.19.5-cp38-cp38-manylinux2010_x86_64.whl (14.9 MB)
-#13 17.15      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 14.9/14.9 MB 24.5 MB/s eta 0:00:00
-#13 18.56 Collecting cvxpy
-#13 18.59   Downloading cvxpy-1.5.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.2 MB)
-#13 18.64      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 24.9 MB/s eta 0:00:00
-#13 18.83 Collecting prometheus-client>=0.7.1
-#13 18.85   Downloading prometheus_client-0.21.1-py3-none-any.whl (54 kB)
-#13 18.87      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 54.7/54.7 kB 6.6 MB/s eta 0:00:00
-#13 18.88 Requirement already satisfied: python-dateutil>=2.7.3 in /usr/local/lib/python3.8/site-packages (from adaptdl-sched==0.0.0) (2.9.0.post0)
-#13 19.01 Collecting kubernetes-asyncio==9.1.0
-#13 19.04   Downloading kubernetes_asyncio-9.1.0.tar.gz (629 kB)
-#13 19.07      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 629.1/629.1 kB 23.3 MB/s eta 0:00:00
-#13 19.78   Preparing metadata (setup.py): started
-#13 20.88   Preparing metadata (setup.py): finished with status 'done'
-#13 25.35 Collecting multidict<7.0,>=4.5
-#13 25.37   Downloading multidict-6.1.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (129 kB)
-#13 25.39      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 129.7/129.7 kB 13.2 MB/s eta 0:00:00
-#13 25.49 Collecting chardet<5.0,>=2.0
-#13 25.51   Downloading chardet-4.0.0-py2.py3-none-any.whl (178 kB)
-#13 25.54      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 178.7/178.7 kB 15.7 MB/s eta 0:00:00
-#13 30.40 Collecting yarl<2.0,>=1.0
-#13 30.42   Downloading yarl-1.15.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (319 kB)
-#13 30.45      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 319.0/319.0 kB 18.5 MB/s eta 0:00:00
-#13 30.63 Collecting attrs>=17.3.0
-#13 30.65   Downloading attrs-25.3.0-py3-none-any.whl (63 kB)
-#13 30.66      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 63.8/63.8 kB 8.3 MB/s eta 0:00:00
-#13 30.78 Collecting async-timeout<4.0,>=3.0
-#13 30.81   Downloading async_timeout-3.0.1-py3-none-any.whl (8.2 kB)
-#13 31.02 Collecting typing-extensions>=3.6.5
-#13 31.04   Downloading typing_extensions-4.13.2-py3-none-any.whl (45 kB)
-#13 31.05      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 45.8/45.8 kB 5.4 MB/s eta 0:00:00
-#13 31.30 Collecting certifi>=14.05.14
-#13 31.32   Downloading certifi-2025.10.5-py3-none-any.whl (163 kB)
-#13 31.34      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 163.3/163.3 kB 15.0 MB/s eta 0:00:00
-#13 31.35 Requirement already satisfied: six>=1.9.0 in /usr/local/lib/python3.8/site-packages (from kubernetes-asyncio==9.1.0->adaptdl-sched==0.0.0) (1.17.0)
-#13 31.36 Requirement already satisfied: setuptools>=21.0.0 in /usr/local/lib/python3.8/site-packages (from kubernetes-asyncio==9.1.0->adaptdl-sched==0.0.0) (57.5.0)
-#13 31.73 Collecting urllib3>=1.23
-#13 31.75   Downloading urllib3-2.2.3-py3-none-any.whl (126 kB)
-#13 31.77      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 126.3/126.3 kB 13.3 MB/s eta 0:00:00
-#13 32.38 Collecting pyyaml>=3.12
-#13 32.40   Downloading PyYAML-6.0.3-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (806 kB)
-#13 32.45      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 806.0/806.0 kB 23.8 MB/s eta 0:00:00
-#13 32.64 Requirement already satisfied: autograd>=1.3 in /usr/local/lib/python3.8/site-packages (from pymoo==0.5.0->adaptdl-sched==0.0.0) (1.7.0)
-#13 35.08 Collecting matplotlib>=3
-#13 35.10   Downloading matplotlib-3.7.5-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
-#13 35.46      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 26.5 MB/s eta 0:00:00
-#13 35.59 Requirement already satisfied: scipy>=1.1 in /usr/local/lib/python3.8/site-packages (from pymoo==0.5.0->adaptdl-sched==0.0.0) (1.10.1)
-#13 35.70 Collecting cma==2.7
-#13 35.72   Downloading cma-2.7.0-py2.py3-none-any.whl (239 kB)
-#13 35.74      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 239.1/239.1 kB 16.5 MB/s eta 0:00:00
-#13 35.89 Collecting jsonpointer>=1.9
-#13 35.91   Downloading jsonpointer-3.0.0-py2.py3-none-any.whl (7.6 kB)
-#13 37.46 Collecting charset_normalizer<4,>=2
-#13 37.48   Downloading charset_normalizer-3.4.4-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (147 kB)
-#13 37.50      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 147.6/147.6 kB 13.8 MB/s eta 0:00:00
-#13 37.64 Collecting idna<4,>=2.5
-#13 37.67   Downloading idna-3.11-py3-none-any.whl (71 kB)
-#13 37.68      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 71.0/71.0 kB 9.1 MB/s eta 0:00:00
-#13 37.88 Requirement already satisfied: portpicker>=1.3.1 in /usr/local/lib/python3.8/site-packages (from adaptdl->adaptdl-sched==0.0.0) (1.6.0)
-#13 37.88 Requirement already satisfied: redis>=3.3.8 in /usr/local/lib/python3.8/site-packages (from adaptdl->adaptdl-sched==0.0.0) (6.1.1)
-#13 37.89 Requirement already satisfied: pandas>=0.24.2 in /usr/local/lib/python3.8/site-packages (from adaptdl->adaptdl-sched==0.0.0) (2.0.3)
-#13 38.19 Collecting clarabel>=0.5.0
-#13 38.21   Downloading clarabel-0.9.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.8 MB)
-#13 38.29      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 24.3 MB/s eta 0:00:00
-#13 38.60 Collecting ecos>=2
-#13 38.65   Downloading ecos-2.0.14-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (221 kB)
-#13 38.68      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 221.6/221.6 kB 15.3 MB/s eta 0:00:00
-#13 39.64 Collecting osqp>=0.6.2
-#13 39.67   Downloading osqp-1.0.5-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (355 kB)
-#13 39.70      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 355.8/355.8 kB 19.6 MB/s eta 0:00:00
-#13 40.17 Collecting scs>=3.2.4.post1
-#13 40.19   Downloading scs-3.2.7.post2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (10.4 MB)
-#13 40.61      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.4/10.4 MB 26.1 MB/s eta 0:00:00
-#13 42.53 Collecting contourpy>=1.0.1
-#13 42.55   Downloading contourpy-1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (301 kB)
-#13 42.58      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 301.1/301.1 kB 18.3 MB/s eta 0:00:00
-#13 45.29 Collecting fonttools>=4.22.0
-#13 45.31   Downloading fonttools-4.57.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (4.7 MB)
-#13 45.51      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.7/4.7 MB 25.2 MB/s eta 0:00:00
-#13 45.79 Collecting packaging>=20.0
-#13 45.81   Downloading packaging-25.0-py3-none-any.whl (66 kB)
-#13 45.83      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 66.5/66.5 kB 7.9 MB/s eta 0:00:00
-#13 46.14 Collecting pyparsing>=2.3.1
-#13 46.16   Downloading pyparsing-3.1.4-py3-none-any.whl (104 kB)
-#13 46.19      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 104.1/104.1 kB 6.5 MB/s eta 0:00:00
-#13 46.52 Collecting importlib-resources>=3.2.0
-#13 46.55   Downloading importlib_resources-6.4.5-py3-none-any.whl (36 kB)
-#13 46.68 Collecting matplotlib>=3
-#13 46.71   Downloading matplotlib-3.7.4-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
-#13 47.08      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 25.5 MB/s eta 0:00:00
-#13 47.29   Downloading matplotlib-3.7.3-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
-#13 47.65      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 26.1 MB/s eta 0:00:00
-#13 47.86   Downloading matplotlib-3.7.2-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
-#13 48.23      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 25.5 MB/s eta 0:00:00
-#13 48.48 Collecting pyparsing<3.1,>=2.3.1
-#13 48.50   Downloading pyparsing-3.0.9-py3-none-any.whl (98 kB)
-#13 48.52      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 98.3/98.3 kB 11.2 MB/s eta 0:00:00
-#13 48.65 Collecting matplotlib>=3
-#13 48.67   Downloading matplotlib-3.7.1-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
-#13 49.05      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 25.5 MB/s eta 0:00:00
-#13 49.26   Downloading matplotlib-3.7.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.2 MB)
-#13 49.62      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.2/9.2 MB 26.1 MB/s eta 0:00:00
-#13 49.83   Downloading matplotlib-3.6.3-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (9.4 MB)
-#13 50.21      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.4/9.4 MB 25.6 MB/s eta 0:00:00
-#13 53.44 Collecting pillow>=6.2.0
-#13 53.46   Downloading pillow-10.4.0-cp38-cp38-manylinux_2_28_x86_64.whl (4.5 MB)
-#13 53.65      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 26.1 MB/s eta 0:00:00
-#13 54.77 Collecting kiwisolver>=1.0.1
-#13 54.79   Downloading kiwisolver-1.4.7-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl (1.2 MB)
-#13 54.85      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 23.7 MB/s eta 0:00:00
-#13 54.94 Collecting cycler>=0.10
-#13 54.96   Downloading cycler-0.12.1-py3-none-any.whl (8.3 kB)
-#13 55.26 Collecting jinja2
-#13 55.28   Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
-#13 55.30      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 134.9/134.9 kB 14.1 MB/s eta 0:00:00
-#13 55.53 Collecting joblib
-#13 55.55   Downloading joblib-1.4.2-py3-none-any.whl (301 kB)
-#13 55.58      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 301.8/301.8 kB 18.5 MB/s eta 0:00:00
-#13 58.27 Collecting pandas>=0.24.2
-#13 58.29   Downloading pandas-2.0.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.3 MB)
-#13 58.89      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.3/12.3 MB 24.8 MB/s eta 0:00:00
-#13 59.62   Downloading pandas-2.0.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.3 MB)
-#13 60.11      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.3/12.3 MB 25.1 MB/s eta 0:00:00
-#13 60.84   Downloading pandas-2.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.3 MB)
-#13 61.34      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.3/12.3 MB 24.1 MB/s eta 0:00:00
-#13 62.06   Downloading pandas-1.5.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
-#13 62.56      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 24.8 MB/s eta 0:00:00
-#13 62.86   Downloading pandas-1.5.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
-#13 63.34      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 25.2 MB/s eta 0:00:00
-#13 63.64   Downloading pandas-1.5.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
-#13 64.13      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 25.2 MB/s eta 0:00:00
-#13 64.42   Downloading pandas-1.5.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.2 MB)
-#13 64.93      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 24.3 MB/s eta 0:00:00
-#13 65.22   Downloading pandas-1.4.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (11.7 MB)
-#13 65.69      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.7/11.7 MB 25.7 MB/s eta 0:00:00
-#13 65.95 Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.8/site-packages (from pandas>=0.24.2->adaptdl->adaptdl-sched==0.0.0) (2025.2)
-#13 66.09 Requirement already satisfied: psutil in /usr/local/lib/python3.8/site-packages (from portpicker>=1.3.1->adaptdl->adaptdl-sched==0.0.0) (7.1.2)
-#13 66.63 Collecting redis>=3.3.8
-#13 66.65   Downloading redis-6.1.0-py3-none-any.whl (273 kB)
-#13 66.68      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 273.8/273.8 kB 17.4 MB/s eta 0:00:00
-#13 66.79   Downloading redis-6.0.0-py3-none-any.whl (268 kB)
-#13 66.81      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 268.9/268.9 kB 16.0 MB/s eta 0:00:00
-#13 66.91   Downloading redis-5.3.1-py3-none-any.whl (272 kB)
-#13 66.93      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 272.8/272.8 kB 17.6 MB/s eta 0:00:00
-#13 67.14 Collecting PyJWT>=2.9.0
-#13 67.16   Downloading PyJWT-2.9.0-py3-none-any.whl (22 kB)
-#13 67.20 Collecting redis>=3.3.8
-#13 67.23   Downloading redis-5.3.0-py3-none-any.whl (272 kB)
-#13 67.25      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 272.8/272.8 kB 16.9 MB/s eta 0:00:00
-#13 67.37   Downloading redis-5.2.1-py3-none-any.whl (261 kB)
-#13 67.40      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 261.5/261.5 kB 17.2 MB/s eta 0:00:00
-#13 67.49   Downloading redis-5.2.0-py3-none-any.whl (261 kB)
-#13 67.51      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 261.4/261.4 kB 17.3 MB/s eta 0:00:00
-#13 67.60   Downloading redis-5.1.1-py3-none-any.whl (261 kB)
-#13 67.63      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 261.3/261.3 kB 17.2 MB/s eta 0:00:00
-#13 67.72   Downloading redis-5.1.0-py3-none-any.whl (261 kB)
-#13 67.75      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 261.2/261.2 kB 16.9 MB/s eta 0:00:00
-#13 67.85   Downloading redis-5.0.8-py3-none-any.whl (255 kB)
-#13 67.88      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 255.6/255.6 kB 16.2 MB/s eta 0:00:00
-#13 67.98   Downloading redis-5.0.7-py3-none-any.whl (252 kB)
-#13 68.00      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 252.1/252.1 kB 16.4 MB/s eta 0:00:00
-#13 68.10   Downloading redis-5.0.6-py3-none-any.whl (252 kB)
-#13 68.13      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 252.0/252.0 kB 16.3 MB/s eta 0:00:00
-#13 68.23   Downloading redis-5.0.5-py3-none-any.whl (251 kB)
-#13 68.26      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 252.0/252.0 kB 15.3 MB/s eta 0:00:00
-#13 68.36   Downloading redis-5.0.4-py3-none-any.whl (251 kB)
-#13 68.39      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 252.0/252.0 kB 16.6 MB/s eta 0:00:00
-#13 68.48   Downloading redis-5.0.3-py3-none-any.whl (251 kB)
-#13 68.51      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 251.8/251.8 kB 16.5 MB/s eta 0:00:00
-#13 68.61   Downloading redis-5.0.2-py3-none-any.whl (251 kB)
-#13 68.63      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 251.7/251.7 kB 16.3 MB/s eta 0:00:00
-#13 68.73   Downloading redis-5.0.1-py3-none-any.whl (250 kB)
-#13 68.76      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 250.3/250.3 kB 16.4 MB/s eta 0:00:00
-#13 68.87   Downloading redis-5.0.0-py3-none-any.whl (250 kB)
-#13 68.90      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 250.1/250.1 kB 16.8 MB/s eta 0:00:00
-#13 68.99   Downloading redis-4.6.0-py3-none-any.whl (241 kB)
-#13 69.02      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 241.1/241.1 kB 16.1 MB/s eta 0:00:00
-#13 69.12   Downloading redis-4.5.5-py3-none-any.whl (240 kB)
-#13 69.14      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 240.3/240.3 kB 16.0 MB/s eta 0:00:00
-#13 69.24   Downloading redis-4.5.4-py3-none-any.whl (238 kB)
-#13 69.27      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.9/238.9 kB 16.2 MB/s eta 0:00:00
-#13 69.37   Downloading redis-4.5.3-py3-none-any.whl (238 kB)
-#13 69.40      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.6/238.6 kB 15.5 MB/s eta 0:00:00
-#13 69.50   Downloading redis-4.5.2-py3-none-any.whl (238 kB)
-#13 69.52      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.5/238.5 kB 16.0 MB/s eta 0:00:00
-#13 69.62   Downloading redis-4.5.1-py3-none-any.whl (238 kB)
-#13 69.65      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.5/238.5 kB 16.4 MB/s eta 0:00:00
-#13 69.75   Downloading redis-4.5.0-py3-none-any.whl (238 kB)
-#13 69.77      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.5/238.5 kB 16.8 MB/s eta 0:00:00
-#13 69.87   Downloading redis-4.4.4-py3-none-any.whl (238 kB)
-#13 69.90      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 238.0/238.0 kB 16.0 MB/s eta 0:00:00
-#13 69.99   Downloading redis-4.4.3-py3-none-any.whl (237 kB)
-#13 70.02      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 237.9/237.9 kB 16.0 MB/s eta 0:00:00
-#13 70.12   Downloading redis-4.4.2-py3-none-any.whl (237 kB)
-#13 70.14      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 237.8/237.8 kB 15.8 MB/s eta 0:00:00
-#13 70.24   Downloading redis-4.4.1-py3-none-any.whl (237 kB)
-#13 70.26      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 237.6/237.6 kB 16.2 MB/s eta 0:00:00
-#13 70.36   Downloading redis-4.4.0-py3-none-any.whl (236 kB)
-#13 70.38      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 236.4/236.4 kB 16.3 MB/s eta 0:00:00
-#13 70.48   Downloading redis-4.3.6-py3-none-any.whl (248 kB)
-#13 70.51      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 248.8/248.8 kB 16.7 MB/s eta 0:00:00
-#13 70.62   Downloading redis-4.3.5-py3-none-any.whl (248 kB)
-#13 70.64      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 248.7/248.7 kB 16.9 MB/s eta 0:00:00
-#13 70.75   Downloading redis-4.3.4-py3-none-any.whl (246 kB)
-#13 70.77      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 246.2/246.2 kB 17.5 MB/s eta 0:00:00
-#13 70.99 Collecting deprecated>=1.2.3
-#13 71.01   Downloading Deprecated-1.2.18-py2.py3-none-any.whl (10.0 kB)
-#13 71.09 Collecting redis>=3.3.8
-#13 71.11   Downloading redis-4.3.3-py3-none-any.whl (244 kB)
-#13 71.14      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 244.6/244.6 kB 17.5 MB/s eta 0:00:00
-#13 71.25   Downloading redis-4.3.2-py3-none-any.whl (244 kB)
-#13 71.27      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 244.6/244.6 kB 17.0 MB/s eta 0:00:00
-#13 71.39   Downloading redis-4.3.1-py3-none-any.whl (241 kB)
-#13 71.41      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 241.2/241.2 kB 17.9 MB/s eta 0:00:00
-#13 71.52   Downloading redis-4.3.0-py3-none-any.whl (241 kB)
-#13 71.54      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 241.2/241.2 kB 17.5 MB/s eta 0:00:00
-#13 71.66   Downloading redis-4.2.2-py3-none-any.whl (226 kB)
-#13 71.68      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 226.4/226.4 kB 17.1 MB/s eta 0:00:00
-#13 71.79   Downloading redis-4.2.1-py3-none-any.whl (225 kB)
-#13 71.82      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 225.6/225.6 kB 16.7 MB/s eta 0:00:00
-#13 71.93   Downloading redis-4.2.0-py3-none-any.whl (225 kB)
-#13 71.95      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 225.5/225.5 kB 17.0 MB/s eta 0:00:00
-#13 72.06   Downloading redis-4.1.4-py3-none-any.whl (175 kB)
-#13 72.08      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 175.8/175.8 kB 14.3 MB/s eta 0:00:00
-#13 73.53 Collecting propcache>=0.2.0
-#13 73.56   Downloading propcache-0.2.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (213 kB)
-#13 73.58      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 213.6/213.6 kB 16.0 MB/s eta 0:00:00
-#13 76.41 Collecting wrapt<2,>=1.10
-#13 76.43   Downloading wrapt-1.17.3-cp38-cp38-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (84 kB)
-#13 76.45      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 84.9/84.9 kB 10.9 MB/s eta 0:00:00
-#13 78.00 Collecting MarkupSafe>=2.0
-#13 78.02   Downloading MarkupSafe-2.1.5-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (26 kB)
-#13 78.55 Building wheels for collected packages: kubernetes-asyncio
-#13 78.55   Building wheel for kubernetes-asyncio (setup.py): started
-#13 81.60   Building wheel for kubernetes-asyncio (setup.py): finished with status 'done'
-#13 81.61   Created wheel for kubernetes-asyncio: filename=kubernetes_asyncio-9.1.0-py3-none-any.whl size=1394949 sha256=2637d64c8936d264297601616cf09faaa404a8cf8311e93a89420058b0e84bcc
-#13 81.61   Stored in directory: /root/.cache/pip/wheels/78/cb/4a/b845a255eb57319512ad2af15ba9333b27caa1f64825b1b700
-#13 81.65 Successfully built kubernetes-asyncio
-#13 83.17 Installing collected packages: cma, wrapt, urllib3, typing-extensions, pyyaml, pyparsing, propcache, prometheus-client, pillow, packaging, numpy, MarkupSafe, kiwisolver, jsonpointer, joblib, idna, future, fonttools, cycler, charset_normalizer, chardet, certifi, attrs, async-timeout, requests, pandas, multidict, jsonpatch, jinja2, deprecated, contourpy, yarl, scs, redis, osqp, matplotlib, ecos, clarabel, pymoo, cvxpy, aiohttp, kubernetes-asyncio, adaptdl-sched
-#13 85.64   Attempting uninstall: numpy
-#13 85.65     Found existing installation: numpy 1.24.4
-#13 86.44     Uninstalling numpy-1.24.4:
-#13 87.00       Successfully uninstalled numpy-1.24.4
-#13 97.73   Attempting uninstall: async-timeout
-#13 97.73     Found existing installation: async-timeout 5.0.1
-#13 97.74     Uninstalling async-timeout-5.0.1:
-#13 97.75       Successfully uninstalled async-timeout-5.0.1
-#13 97.88   Attempting uninstall: pandas
-#13 97.88     Found existing installation: pandas 2.0.3
-#13 99.94     Uninstalling pandas-2.0.3:
-#13 101.1       Successfully uninstalled pandas-2.0.3
-#13 114.7   Attempting uninstall: redis
-#13 114.7     Found existing installation: redis 6.1.1
-#13 114.8     Uninstalling redis-6.1.1:
-#13 114.9       Successfully uninstalled redis-6.1.1
-#13 127.9 Successfully installed MarkupSafe-2.1.5 adaptdl-sched-0.0.0 aiohttp-3.7.4.post0 async-timeout-3.0.1 attrs-25.3.0 certifi-2025.10.5 chardet-4.0.0 charset_normalizer-3.4.4 clarabel-0.9.0 cma-2.7.0 contourpy-1.1.1 cvxpy-1.5.2 cycler-0.12.1 deprecated-1.2.18 ecos-2.0.14 fonttools-4.57.0 future-1.0.0 idna-3.11 jinja2-3.1.6 joblib-1.4.2 jsonpatch-1.33 jsonpointer-3.0.0 kiwisolver-1.4.7 kubernetes-asyncio-9.1.0 matplotlib-3.6.3 multidict-6.1.0 numpy-1.19.5 osqp-1.0.5 packaging-25.0 pandas-1.4.4 pillow-10.4.0 prometheus-client-0.21.1 propcache-0.2.0 pymoo-0.5.0 pyparsing-3.1.4 pyyaml-6.0.3 redis-4.1.4 requests-2.32.4 scs-3.2.7.post2 typing-extensions-4.13.2 urllib3-2.2.3 wrapt-1.17.3 yarl-1.15.2
-#13 127.9 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
-#13 128.5 
-#13 128.5 [notice] A new release of pip is available: 23.0.1 -> 25.0.1
-#13 128.5 [notice] To update, run: pip install --upgrade pip
-#13 DONE 129.4s
-
-#14 [10/12] WORKDIR /root
-#14 DONE 0.0s
-
-#15 [11/12] RUN rm -rf adaptdl/dist
-#15 DONE 0.1s
-
-#16 [12/12] RUN rm -rf sched/dist
-#16 DONE 0.1s
-
-#17 exporting to image
-#17 exporting layers
-#17 exporting layers 10.8s done
-#17 exporting manifest sha256:3876daf2d1cca164101cdbbe962122a15a242cfcd0a427eded19ed86791b0cb7
-#17 exporting manifest sha256:3876daf2d1cca164101cdbbe962122a15a242cfcd0a427eded19ed86791b0cb7 done
-#17 exporting config sha256:e424d72a4cea99d1fa9c1e32db2b13f7e732933f1b493967f794cdc606ede5c7 done
-#17 exporting attestation manifest sha256:06c2c26d1ea53ecc7426697c600dd6863d11626c689c5b09543e81c8e3c5f7b7 done
-#17 exporting manifest list sha256:51988d737ae892a90c049421f64370164bc18acfd37f3341db53d289b52d5757 done
-#17 naming to 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest done
-#17 pushing layers
-#17 ...
-
-#18 [auth] sharing credentials for 399790253372.dkr.ecr.us-east-1.amazonaws.com
-#18 DONE 0.0s
-
-#17 exporting to image
-#17 pushing layers 12.4s done
-#17 pushing manifest for 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest@sha256:51988d737ae892a90c049421f64370164bc18acfd37f3341db53d289b52d5757
-#17 pushing manifest for 399790253372.dkr.ecr.us-east-1.amazonaws.com/adaptdl-sched:latest@sha256:51988d737ae892a90c049421f64370164bc18acfd37f3341db53d289b52d5757 0.9s done
-#17 DONE 24.2s
-release "adaptdl" uninstalled
-I1026 15:19:27.221355   98000 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[1].limits\""
-I1026 15:19:27.221419   98000 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[1].requests\""
-I1026 15:19:27.221436   98000 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[3].limits\""
-I1026 15:19:27.221368   98000 warnings.go:110] "Warning: spec.template.spec.imagePullSecrets[0].name: invalid empty name \"\""
-I1026 15:19:27.221448   98000 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[3].requests\""
-I1026 15:19:27.221460   98000 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[4].limits\""
-I1026 15:19:27.221470   98000 warnings.go:110] "Warning: unknown field \"spec.template.spec.containers[4].requests\""
-I1026 15:19:27.221480   98000 warnings.go:110] "Warning: spec.template.spec.imagePullSecrets[0].name: invalid empty name \"\""
-NAME: adaptdl
-LAST DEPLOYED: Sun Oct 26 15:19:26 2025
-NAMESPACE: adaptdl
-STATUS: deployed
-REVISION: 1
-TEST SUITE: None
-Looking for scheduler pod...
-Found scheduler pod adaptdl-adaptdl-sched-74d64f4476-sj56g in namespace adaptdl
-Uploading checkpoint from ./checkpoint/global-profile-state to pod adaptdl-adaptdl-sched-74d64f4476-sj56g container global-profiler...
-Successfully uploaded checkpoint.
---- Command completed with return code: 0 ---
-[2025-10-26 15:20:58] 
-✓ Scaling up cluster to 48 nodes...
-[2025-10-26 15:20:58] Running: ['aws', 'autoscaling', 'update-auto-scaling-group', '--auto-scaling-group-name', 'eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084', '--desired-capacity', '12']
-[2025-10-26 15:21:48] 
-
-Interrupted by user. Exiting without scaling down...
-[2025-10-26 15:21:48] 
-=== All Experiments Completed at 2025-10-26 15:21:48 ===
+✅ All experiments completed successfully!
+[2025-11-05 17:18:51] 
+✓ Scaling down cluster to 0 nodes...
+[2025-11-05 17:18:51] Running: ['aws', 'autoscaling', 'update-auto-scaling-group', '--auto-scaling-group-name', 'eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084', '--desired-capacity', '0']
+[2025-11-05 17:18:52] 
+=== All Experiments Completed at 2025-11-05 17:18:52 ===

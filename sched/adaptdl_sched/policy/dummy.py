@@ -141,9 +141,12 @@ class DummyPolicy(object):
                     gpus -= gpus_per_replica
                     available_gpus[node_name] = gpus
             
-            new_allocations[job_key] = current_alloc
+            
             if len(current_alloc) < num_replicas:
-                LOG.warning(f"Job {job_key}: wanted {num_replicas} replicas, got {len(current_alloc)}")
+                new_allocations[job_key] = []
+                LOG.warning(f"Job {job_key}: wanted {num_replicas} replicas, got 0.")
+            else:
+                new_allocations[job_key] = current_alloc
         
         # Calculate desired number of nodes based on total GPUs needed
         total_gpus_needed = sum(self._job_gpu_assignments.values())
