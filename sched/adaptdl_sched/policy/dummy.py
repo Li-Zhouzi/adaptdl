@@ -98,6 +98,10 @@ class DummyPolicy(object):
             
             # Calculate total GPUs this job had in its previous allocation
             gpus_in_prev_alloc = len(prev_alloc) * gpus_per_replica
+
+            if job_info.max_replicas == 1:
+                # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
+                target_gpu_count = 1
                 
             if gpus_in_prev_alloc == target_gpu_count:
                 # Check if this previous allocation can be preserved
@@ -131,8 +135,10 @@ class DummyPolicy(object):
             
             # Get the fixed GPU assignment for this job
             target_gpu_count = self._job_gpu_assignments[job_key]
+            if job_info.max_replicas == 1:
+                # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
+                target_gpu_count = 1
             num_replicas = target_gpu_count // gpus_per_replica
-            
             # Try to allocate the job
             current_alloc = []
             for node_name, gpus in available_gpus.items():

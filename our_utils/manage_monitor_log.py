@@ -13,6 +13,8 @@ def process_log_file(log_file_path):
     jobs = {}
     total_gpu_hours = 0
     effective_gpu_hours = 0
+    # Track total GPU-hours per job (allocated GPUs * time interval, in hours)
+    job_gpu_hours = {}
     # New waste decomposition metrics
     fragmentation_waste_hours = 0
     ready_unused_waste_hours = 0
@@ -106,6 +108,9 @@ def process_log_file(log_file_path):
                 # Time step length
                 dt = time_diff
                 has_alloc = len(palloc) > 0
+                # Accumulate per-job GPU-hours using previous state allocation
+                if has_alloc and dt > 0:
+                    job_gpu_hours[pname] = job_gpu_hours.get(pname, 0.0) + (len(palloc) * dt / 3600.0)
 
                 # Determine growth across the interval using current job state
                 cjob = current_jobs_by_name.get(pname)
@@ -238,6 +243,7 @@ def process_log_file(log_file_path):
         decreased_progress_issues,
         job_drop_sums,
         job_max_progress,
+        job_gpu_hours,
     )
 
 def is_pod_status_failing(pod_status):
@@ -668,6 +674,26 @@ def print_all_jobs_summary(jobs):
         total_wasted = sum(epoch_info.get('wasted_time', 0) for epoch_info in job_info['epochs'].values())
         total_idle = total_queueing + total_wasted
         print(f"{job_name:<20} {response_time:<18.1f} {total_queueing:<12.1f} {total_wasted:<12.1f} {total_idle:<12.1f}")
+
+def print_job_gpu_hours(job_gpu_hours):
+    """Print total GPU-hours used by each job (allocated GPUs * time, hours)."""
+    if not job_gpu_hours:
+        print("\nNo per-job GPU-hour data available.")
+        return
+    print(f"\n" + "="*80)
+    print("PER-JOB GPU HOURS")
+    print("="*80)
+    print(f"{'Job Name':<30} {'GPU Hours':>12}")
+    print("-" * 80)
+    for job_name in sorted(job_gpu_hours.keys()):
+        hours = job_gpu_hours[job_name]
+        print(f"{job_name:<30} {hours:>12.2f}")
+    # Also print a Python-friendly dictionary for direct processing
+    print("\njob_gpu_hours = {")
+    for job_name in sorted(job_gpu_hours.keys()):
+        hours = job_gpu_hours[job_name]
+        print(f"    '{job_name}': {hours:.6f},")
+    print("}")
 
 def compute_mean_job_response_time(jobs):
     """Compute mean total response time per job (from first_seen to last epoch end)."""
@@ -1227,13 +1253,15 @@ def main():
     log_file_path = sys.argv[1]
     print(f"Processing log file: {log_file_path}")
 
-    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress = process_log_file(log_file_path)
+    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress, job_gpu_hours = process_log_file(log_file_path)
     
     # Find first job time for metrics calculation
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
     
     # Print response time and wasted time for all jobs
     print_all_jobs_summary(jobs)
+    # Print per-job GPU-hours
+    print_job_gpu_hours(job_gpu_hours)
 
     # Print jobs that completed with failing pod status
     print_failed_completed_jobs(completed_jobs_status)
@@ -1283,15 +1311,15 @@ def main():
     # At the very end, warn about any jobs with decreasing progress
     print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress)
 
-    print("response_dict={")
-    for job_name, job_info in jobs.items():
-        if job_info['epochs']:
-            last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
-            actual_response_time = last_epoch_end - job_info['first_seen']
+    # print("response_dict={")
+    # for job_name, job_info in jobs.items():
+    #     if job_info['epochs']:
+    #         last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+    #         actual_response_time = last_epoch_end - job_info['first_seen']
         
-        print(f"    '{job_name}': {actual_response_time:.1f},")
+    #     print(f"    '{job_name}': {actual_response_time:.1f},")
 
-    print("}")
+    # print("}")
 
 if __name__ == "__main__":
     main()

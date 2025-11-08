@@ -44,6 +44,10 @@ class FixedWidthPolicy(object):
         Give each job width[job_type][epoch] GPUs. Prioritize jobs that already have the correct number of GPUs in prev_allocations. 
         For those jobs that don't have the correct number of GPUs, allocate to the best effort.
         Ask for total number of desired nodes.
+        New logic 11/7/2025: the jobs start with 1 GPU (when grad_params and perf_params are None). It runs on 1 GPU for one rescaling time,
+        and after the training starts, its params are updated, and thus, max_replicas is not 1, and it gets the width[job_type][epoch] GPUs. 
+        However, the desired number of GPUs is always width[job_type][epoch], even when the job is running on 1 GPU. 
+        This whole process is because the bsz is only updated when an epoch is finished or the job is rescaled.
         '''
         new_allocations = {}
         # Track available GPUs on each node
@@ -63,6 +67,9 @@ class FixedWidthPolicy(object):
             gpus_in_prev_alloc = len(prev_alloc)
             print("Here: ", job_info.application, job_info.epoch)
             gpu_wanted = self.width[job_info.application][str(job_info.epoch)]
+            if job_info.max_replicas == 1:
+                # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
+                gpu_wanted = 1
             
             # only fulfill the job if it has the correct number of GPUs
             if gpus_in_prev_alloc == gpu_wanted:
@@ -70,7 +77,7 @@ class FixedWidthPolicy(object):
                 # Deduct the GPUs from available_gpus. This iterates once per replica in prev_alloc.
                 for node_name_from_prev in prev_alloc:
                     available_gpus[node_name_from_prev] -= gpus_per_replica
-                total_gpus_needed += gpu_wanted
+                total_gpus_needed += self.width[job_info.application][str(job_info.epoch)]
         
         # Second pass: assign remaining jobs
         for job_key, job_info in jobs.items():
@@ -81,6 +88,9 @@ class FixedWidthPolicy(object):
             assert gpus_per_replica == 1, f"Job {job_key} requests {gpus_per_replica} GPUs per replica, which is not 1."
                 
             gpu_wanted = self.width[job_info.application][str(job_info.epoch)]     
+            if job_info.max_replicas == 1:
+                # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
+                gpu_wanted = 1
             # Try to allocate the job
             current_alloc = []
             for node_name, gpus in available_gpus.items():
@@ -90,7 +100,7 @@ class FixedWidthPolicy(object):
                     available_gpus[node_name] = gpus
             
             new_allocations[job_key] = current_alloc
-            total_gpus_needed += gpu_wanted
+            total_gpus_needed += self.width[job_info.application][str(job_info.epoch)]
             if len(current_alloc) < gpu_wanted:
                 LOG.warning(f"Job {job_key}: wanted {gpu_wanted} GPUs, got {len(current_alloc)}")
         

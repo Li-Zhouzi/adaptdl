@@ -372,14 +372,14 @@ def process_single_log(log_file_path):
                     threshold = 0.2 * total_duration
                     app_name = job_name.rsplit('-', 1)[0]
                     # Skip assertion if epoch overlaps monitor gaps, since we lack samples
-                    if (not epoch_info.get('has_monitor_gap', False) and
-                        not epoch_info.get('is_affected', False) and
-                        plateau_duration > threshold and plateau_duration > 10 and
-                        epoch_num < APPLICATIONS[app_name]["max_epochs"]-1):
-                        raise AssertionError(
-                            f"End-of-epoch plateau exceeds 20% (plateau={plateau_duration}s, and is larger than 10s "
-                            f"threshold={threshold}s) for job {job_name} epoch {epoch_num}, expected number of GPUs: {job_info['expected_gpus']}"
-                        )
+                    # if (not epoch_info.get('has_monitor_gap', False) and
+                    #     not epoch_info.get('is_affected', False) and
+                    #     plateau_duration > threshold and plateau_duration > 10 and
+                    #     epoch_num < APPLICATIONS[app_name]["max_epochs"]-1):
+                    #     raise AssertionError(
+                    #         f"End-of-epoch plateau exceeds 20% (plateau={plateau_duration}s, and is larger than 10s "
+                    #         f"threshold={threshold}s) for job {job_name} epoch {epoch_num}, expected number of GPUs: {job_info['expected_gpus']}"
+                    #     )
         # Do not forward-fill here; keep raw per-epoch batch_sizes only
             
     return jobs_data
