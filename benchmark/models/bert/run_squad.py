@@ -34,6 +34,7 @@ import adaptdl
 import adaptdl.torch
 import adaptdl.env
 import adaptdl.collective
+import adaptdl.checkpoint
 from adaptdl._signal import get_exit_flag
 from adaptdl.torch._metrics import get_progress, report_train_metrics, report_valid_metrics
 
@@ -62,6 +63,14 @@ logger = logging.getLogger(__name__)
 
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_QUESTION_ANSWERING_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
+
+
+def maybe_checkpoint(stage):
+    """Save checkpoints when a termination request is pending."""
+    if adaptdl.collective.allreduce(get_exit_flag()):
+        logger.info("Exit requested during %s, saving checkpoint.", stage)
+        adaptdl.checkpoint.save_all_states()
+        exit(143)
 
 
 def set_seed(args):
@@ -190,6 +199,7 @@ def train(args, train_dataset, model, tokenizer):
             else:
                 print("Train: skipped (no batches processed)")
 
+        maybe_checkpoint("post-train")
         results = evaluate(args, model, tokenizer)
         for key, value in results.items():
             tb_writer.add_scalar("eval_{}".format(key), value, epoch)
@@ -218,7 +228,9 @@ def evaluate(args, model, tokenizer, prefix=""):
     all_results = []
     start_time = timeit.default_timer()
 
-    for batch in tqdm(eval_dataloader, desc="Evaluating"):
+    maybe_checkpoint("evaluate-start")
+    for step, batch in enumerate(tqdm(eval_dataloader, desc="Evaluating")):
+        maybe_checkpoint(f"evaluate-step-{step}")
         model.eval()
         batch = tuple(t.to(args.device) for t in batch)
 

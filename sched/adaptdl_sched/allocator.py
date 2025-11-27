@@ -50,7 +50,7 @@ class AdaptDLAllocator(object):
 
         # Select the policy to use
         # Options: "pollux", "dummy", "fixed-width"
-        SELECTED_POLICY = "dummy"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+        SELECTED_POLICY = "fixed-width"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
 
         # Width fetching configuration
         self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
@@ -350,6 +350,9 @@ class AdaptDLAllocator(object):
         job_info.num_restarts = job.get("status", {}).get("group") or 0
         current_ts = datetime.now(timezone.utc)
         job_info.age = (current_ts - creation_ts).total_seconds()
+
+        job_info.progress = hints.get("progress", 0)
+
         # LOG.info("Job name: %s", job_name)
         # LOG.info("max_replicas: %s", max_replicas)
         return job_info

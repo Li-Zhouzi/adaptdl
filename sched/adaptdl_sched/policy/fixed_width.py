@@ -14,7 +14,7 @@ class FixedWidthPolicy(object):
     '''
     def __init__(self, width):
         self.width = width
-        self.max_nodes = 20
+        self.max_nodes = 40
 
     def _sort_nodes(self, nodes):
         return OrderedDict(  # Sort preemptible nodes last.

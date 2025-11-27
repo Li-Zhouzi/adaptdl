@@ -260,17 +260,22 @@ def _get_glue_list(arrival_dict, size_dict):
     num_epochs_dict = dict()
     for app_name in arrival_dict.keys():
         num_epochs_dict[app_name] = len(size_dict[app_name])
-    # print("num_epochs_dict: ", num_epochs_dict)
-    # Generate 30 random dictionaries
+
     glue_list = []
-    for _ in range(50):
+    num_try = 0
+    while len(glue_list) < 50 and num_try < 100:
         glue_dict = {}
         for app_name, k in num_epochs_dict.items():
-            max_glue = math.ceil(k / 5)
-            glue_dict[app_name] = random.randint(1, max_glue)
+            possible_glue = []
+            j = 1
+            while j <= k / 2:
+                possible_glue.append(j)
+                j *= 2
+            glue_dict[app_name] = random.choice(possible_glue)
+
         if glue_dict not in glue_list:
             glue_list.append(glue_dict)
-
+        num_try += 1
     return glue_list
 
 def _get_width_with_rescale(speedup_dict, size_dict, application_rates, b):
@@ -375,28 +380,28 @@ def _compute_width_iter(application_rates, size_data, speedup_dict, b):
 
 
 def get_width(goodput_dict, b):
-    # speedup_dict, size_dict = _get_speedup_and_size(goodput_dict)
-    # LOG.info("="*100)
-    # # print(speedup_dict)
-    # arrival_dict = dict()
-    # for app in ARRIVAL_RATE.keys():
-    #     if ARRIVAL_RATE[app] > 0:
-    #         arrival_dict[app] = ARRIVAL_RATE[app]
-    # LOG.info(f"Arrival dict: {arrival_dict}")
-    # LOG.info(f"Budget: {b}")
-    # return _get_width_with_rescale(speedup_dict, size_dict, arrival_dict, b)
+    speedup_dict, size_dict = _get_speedup_and_size(goodput_dict)
+    LOG.info("="*100)
+    # print(speedup_dict)
+    arrival_dict = dict()
+    for app in ARRIVAL_RATE.keys():
+        if ARRIVAL_RATE[app] > 0:
+            arrival_dict[app] = ARRIVAL_RATE[app]
+    LOG.info(f"Arrival dict: {arrival_dict}")
+    LOG.info(f"Budget: {b}")
+    return _get_width_with_rescale(speedup_dict, size_dict, arrival_dict, b)
 
     # Below is only for testing
-    width = dict()
-    for app in ARRIVAL_RATE.keys():
-        width[app] = dict()
-        for epoch in range(APPLICATIONS[app].max_epochs):
-            width[app][epoch] = 4
-            if epoch > 15:
-                width[app][epoch] = 8
-            if epoch > 30:
-                width[app][epoch] = 16
-            if epoch > 50:
-                width[app][epoch] = 8
-    return width
+    # width = dict()
+    # for app in ARRIVAL_RATE.keys():
+    #     width[app] = dict()
+    #     for epoch in range(APPLICATIONS[app].max_epochs):
+    #         width[app][epoch] = 4
+    #         if epoch > 15:
+    #             width[app][epoch] = 8
+    #         if epoch > 30:
+    #             width[app][epoch] = 16
+    #         if epoch > 50:
+    #             width[app][epoch] = 8
+    # return width
 

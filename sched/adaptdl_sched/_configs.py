@@ -26,11 +26,11 @@ class Application(object):
         self.gradient_accumulation = gradient_accumulation
         self.dataset_size = dataset_size
         if self.name == "cifar10":
-            self.rescale_time = 120
+            self.rescale_time = 50
         elif self.name == "deepspeech2":
-            self.rescale_time = 150
+            self.rescale_time = 87
         elif self.name == "bert":
-            self.rescale_time = 300
+            self.rescale_time = 380
         elif self.name == "yolov3":
             self.rescale_time = 80
         elif self.name == "imagenet":
