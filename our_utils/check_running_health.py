@@ -181,6 +181,19 @@ def get_scheduler_logs():
             f.write(result.stdout)
 
         print(f"[INFO] Saved {container} logs to {log_file}")
+        
+        log_file = os.path.join(ERROR_LOG_DIR, f"{container}_previous.txt")
+        print(f"[INFO] Fetching previous logs for container: {container}")
+        result = subprocess.run(
+            f"kubectl logs -n {SCHEDULER_NAMESPACE} {scheduler_pod} -c {container} --previous",
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+        with open(log_file, 'a') as f:
+            f.write(f"=== Logs for scheduler container {container} (previous) ===\n")
+            f.write(f"Timestamp: {datetime.now()}\n")
+            f.write(result.stdout)
 
 
 def get_nodes_info():
