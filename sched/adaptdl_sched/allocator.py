@@ -139,8 +139,9 @@ class AdaptDLAllocator(object):
         node_infos, _ = await self._find_nodes()
 
         # get the node to allocate
-        new_allocation = self._get_policy().allocate_job(
-                            job_info, node_infos)
+        # new_allocation = self._get_policy().allocate_job(
+        #                     job_info, node_infos)
+        new_allocation = [] # always let a job queue when it arrives. 
         patch = {"status": {"allocation": new_allocation}}
         LOG.info("Patch AdaptdlJob %s/%s: %s ",
                  namespace, name, patch)
