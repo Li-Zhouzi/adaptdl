@@ -103,8 +103,15 @@ class FixedWidthPolicy(object):
             total_gpus_needed += self.width[job_info.application][str(job_info.epoch)]
             if len(current_alloc) < gpu_wanted:
                 LOG.warning(f"Job {job_key}: wanted {gpu_wanted} GPUs, got {len(current_alloc)}")
-        
-        desired_nodes = math.ceil(total_gpus_needed / node_template.resources.get("nvidia.com/gpu", 1))        
+
+        desired_nodes = math.ceil(total_gpus_needed / node_template.resources.get("nvidia.com/gpu", 1))
+
+        # Calculate actual nodes used in allocations
+        actual_nodes_used = len(set.union(*map(set, new_allocations.values()))) if new_allocations else 0
+
+        # Desired nodes should be at least the actual nodes used (due to imperfect bin-packing)
+        desired_nodes = max(desired_nodes, actual_nodes_used)
+
         LOG.info(f"FixedWidthPolicy optimize results: {new_allocations}, desired_nodes: {desired_nodes}")
         if desired_nodes > self.max_nodes:
             desired_nodes = self.max_nodes

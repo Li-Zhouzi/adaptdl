@@ -21,7 +21,7 @@ import threading
 CHECK_INTERVAL = 300  # 5 minutes in seconds
 ALLOCATOR_LOG_INTERVAL = 3600  # 1 hour in seconds
 ERROR_LOG_DIR = "./experiment_results/1127-FW-b40/errors"
-PERIODIC_LOG_DIR = "./experiment_results/periodic_logs"
+PERIODIC_LOG_DIR = "./experiment_results/1127-FW-b40/periodic_logs"
 AUTOSCALING_GROUP_NAME = "eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084"
 SCHEDULER_NAMESPACE = "adaptdl"
 SCHEDULER_POD_PREFIX = "adaptdl-sched"
@@ -181,7 +181,7 @@ def get_scheduler_logs():
             f.write(result.stdout)
 
         print(f"[INFO] Saved {container} logs to {log_file}")
-        
+
         log_file = os.path.join(ERROR_LOG_DIR, f"{container}_previous.txt")
         print(f"[INFO] Fetching previous logs for container: {container}")
         result = subprocess.run(
