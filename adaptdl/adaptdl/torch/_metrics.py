@@ -278,7 +278,7 @@ def _update_grad_params_from_global_profiler(epoch):
     
     global_state = _load_global_profiler_state._GLOBAL_PROFILE_STATE
     if global_state is None:
-        print("Global profile state not available")
+        raise Exception("Global profile state not available")
         return
     
     # Get application from job_id
@@ -286,7 +286,7 @@ def _update_grad_params_from_global_profiler(epoch):
     
     # Check if global_grad_params exists in the global state
     if not hasattr(global_state, 'global_grad_params'):
-        print("global_grad_params not found in global state")
+        raise Exception("global_grad_params not found in global state")
         return
     
     # Look for grad_params for this application and epoch
@@ -298,9 +298,9 @@ def _update_grad_params_from_global_profiler(epoch):
             _metrics_state().grad_params = (grad_params[0], grad_params[1])
             # print(f"Updated grad_params for application {application}, epoch {epoch}: {grad_params}")
         else:
-            print(f"No grad_params found for application {application}, epoch {epoch}")
+            raise Exception(f"No grad_params found for application {application}, epoch {epoch}")
     else:
-        print(f"No grad_params found for application {application}")
+        raise Exception(f"No grad_params found for application {application}")
 
 def _metrics_state():
     global _METRICS_STATE
@@ -378,6 +378,14 @@ def _load_global_profiler_state(metrics_state):
             metrics_state.profile[key] = profile_data
         print("Loaded global profile for application ", application)
         print("length of profile: ", len(metrics_state.profile))
+
+    # Load grad_params for epoch 0 during initialization
+    from adaptdl.torch.epoch import current_epoch
+    if current_epoch() is None:
+        epoch = 0
+    else:
+        epoch = current_epoch()
+    _update_grad_params_from_global_profiler(epoch)
 
 
 _METRICS_STATE = None

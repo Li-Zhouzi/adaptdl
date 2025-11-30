@@ -982,8 +982,16 @@ def print_job_breakdown(job_name, jobs):
         idle = queueing + wasted
 
         gpu_allocations = epoch_info.get('gpu_allocations', [])
-        # Format allocation string (GPU counts) and pairs if available
-        alloc_str = str(gpu_allocations) if len(gpu_allocations) > 1 else (str(gpu_allocations[0]) if gpu_allocations else "0")
+        allocation_pairs = epoch_info.get('allocation_pairs', set())
+
+        # Format allocation string with (num_nodes, num_replicas) pairs if available
+        if allocation_pairs:
+            # Convert set to sorted list for consistent display
+            pairs_list = sorted(list(allocation_pairs))
+            alloc_str = str(pairs_list) if len(pairs_list) > 1 else str(pairs_list[0])
+        else:
+            # Fallback to GPU counts only
+            alloc_str = str(gpu_allocations) if len(gpu_allocations) > 1 else (str(gpu_allocations[0]) if gpu_allocations else "0")
 
         # Theoretical duration: average across observed allocations if multiple
         theoretical = -1
@@ -1092,16 +1100,15 @@ def calculate_theoretical_response_time(job_name, job_info):
         current_gpu_count = gpu_allocations[-1] if gpu_allocations else 0  # Use final allocation
         if previous_gpu_count is not None and current_gpu_count != previous_gpu_count:
             if application == "cifar10":
-                total_theoretical_time += 120  # 120 seconds rescaling overhead
+                total_theoretical_time += 50  # 120 seconds rescaling overhead
             elif application == "deepspeech2":
-                total_theoretical_time += 150  # 150 seconds rescaling overhead
+                total_theoretical_time += 87  # 150 seconds rescaling overhead
             elif application == "bert":
-                total_theoretical_time += 300  # 300 seconds rescaling overhead
+                total_theoretical_time += 380  # 300 seconds rescaling overhead
             else:
                 raise ValueError(f"Application {application} not supported")
         
         previous_gpu_count = current_gpu_count
-    
     return total_theoretical_time
 
 def plot_response_time_comparison(jobs, output_filename=None):
@@ -1261,13 +1268,13 @@ def main():
     # Print response time and wasted time for all jobs
     print_all_jobs_summary(jobs)
     # Print per-job GPU-hours
-    print_job_gpu_hours(job_gpu_hours)
+    # print_job_gpu_hours(job_gpu_hours)
 
     # Print jobs that completed with failing pod status
     print_failed_completed_jobs(completed_jobs_status)
 
     # Hardcoded specific job breakdown
-    specific_job_breakdown = 'deepspeech2-155'
+    specific_job_breakdown = 'cifar10-98'
     print_job_breakdown(specific_job_breakdown, jobs)
 
     print_mean_rescaling_time(jobs)
@@ -1293,8 +1300,8 @@ def main():
     import os
     base_name = os.path.splitext(log_file_path)[0]  # Remove extension properly
     # Plot response time comparison
-    plot_filename = base_name + '_response_time_comparison.png'
-    plot_response_time_comparison(jobs, plot_filename)
+    # plot_filename = base_name + '_response_time_comparison.png'
+    # plot_response_time_comparison(jobs, plot_filename)
     # Also save stacked response time plot
     stacked_plot_filename = base_name + '_response_time_stacked.png'
     plot_job_response_time_stacked(jobs, stacked_plot_filename)

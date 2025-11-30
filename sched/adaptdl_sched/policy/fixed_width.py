@@ -48,6 +48,7 @@ class FixedWidthPolicy(object):
         and after the training starts, its params are updated, and thus, max_replicas is not 1, and it gets the width[job_type][epoch] GPUs. 
         However, the desired number of GPUs is always width[job_type][epoch], even when the job is running on 1 GPU. 
         This whole process is because the bsz is only updated when an epoch is finished or the job is rescaled.
+        This logic is disabled on Nov 30.
         '''
         new_allocations = {}
         # Track available GPUs on each node
@@ -67,9 +68,9 @@ class FixedWidthPolicy(object):
             gpus_in_prev_alloc = len(prev_alloc)
             print("Here: ", job_info.application, job_info.epoch)
             gpu_wanted = self.width[job_info.application][str(job_info.epoch)]
-            if job_info.max_replicas == 1:
-                # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
-                gpu_wanted = 1
+            # if job_info.max_replicas == 1:
+            #     # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
+            #     gpu_wanted = 1
             
             # only fulfill the job if it has the correct number of GPUs
             if gpus_in_prev_alloc == gpu_wanted:
@@ -88,9 +89,9 @@ class FixedWidthPolicy(object):
             assert gpus_per_replica == 1, f"Job {job_key} requests {gpus_per_replica} GPUs per replica, which is not 1."
                 
             gpu_wanted = self.width[job_info.application][str(job_info.epoch)]     
-            if job_info.max_replicas == 1:
-                # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
-                gpu_wanted = 1
+            # if job_info.max_replicas == 1:
+            #     # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
+            #     gpu_wanted = 1
             # Try to allocate the job
             current_alloc = []
             for node_name, gpus in available_gpus.items():

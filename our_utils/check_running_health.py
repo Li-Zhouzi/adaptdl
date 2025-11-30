@@ -20,8 +20,8 @@ import threading
 # Configuration
 CHECK_INTERVAL = 300  # 5 minutes in seconds
 ALLOCATOR_LOG_INTERVAL = 3600  # 1 hour in seconds
-ERROR_LOG_DIR = "./experiment_results/1127-FW-b40/errors"
-PERIODIC_LOG_DIR = "./experiment_results/1127-FW-b40/periodic_logs"
+ERROR_LOG_DIR = "./experiment_results/1129-FW-b40/errors"
+PERIODIC_LOG_DIR = "./experiment_results/1129-FW-b40/periodic_logs"
 AUTOSCALING_GROUP_NAME = "eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084"
 SCHEDULER_NAMESPACE = "adaptdl"
 SCHEDULER_POD_PREFIX = "adaptdl-sched"
