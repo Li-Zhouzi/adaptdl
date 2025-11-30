@@ -52,6 +52,15 @@ def _summarize_batch(inputs, input_sizes, targets, target_sizes):
     except Exception as e:
         return f"batch summary unavailable: {e}"
 
+def _len_stats(input_sizes):
+    try:
+        lens = input_sizes.detach().cpu().int().tolist() if torch.is_tensor(input_sizes) else list(input_sizes)
+        if not lens:
+            return None, None, None
+        return min(lens), sum(lens) / len(lens), max(lens)
+    except Exception:
+        return None, None, None
+
 parser = argparse.ArgumentParser(description='DeepSpeech training')
 parser.add_argument('--train-manifest', metavar='DIR',
                     help='path to train manifest csv', default='data/train_manifest.csv')
@@ -184,7 +193,7 @@ if __name__ == '__main__':
     test_dataset = SpectrogramDataset(audio_conf=audio_conf, manifest_filepath=args.val_manifest, labels=labels,
                                       normalize=True, speed_volume_perturb=False, spec_augment=False)
 
-    train_loader = AudioDataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True,
+    train_loader = AudioDataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True,
                                    num_workers=args.num_workers)
     train_loader.autoscale_batch_size(640, local_bsz_bounds=(10, 80), gradient_accumulation=True)
     test_loader = AudioDataLoader(test_dataset, batch_size=args.batch_size,
@@ -239,9 +248,11 @@ if __name__ == '__main__':
                         norm = torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_norm)
                     optimizer.step()
 
-                    # per-iteration log (loss only)
-                    print('Epoch: [{0}][{1}/{2}]\tLoss {loss:.4f}'
-                          .format((epoch + 1), (i + 1), len(train_loader), loss=loss.item()))
+                    # per-iteration log (loss + sequence length stats)
+                    lens_min, lens_mean, lens_max = _len_stats(input_sizes)
+                    len_str = f" lens[min/mean/max]={lens_min}/{lens_mean}/{lens_max}"
+                    print('Epoch: [{0}][{1}/{2}]\tLoss {loss:.4f}{lens}'
+                          .format((epoch + 1), (i + 1), len(train_loader), loss=loss.item(), lens=len_str))
 
                     stats_train["train_loss_sum"] += loss.item() * inputs.size(0)
                     stats_train["train_total"] += inputs.size(0)
