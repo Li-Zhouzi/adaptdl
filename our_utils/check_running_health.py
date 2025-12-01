@@ -13,6 +13,7 @@ import subprocess
 import time
 import os
 import sys
+import json
 from datetime import datetime
 import threading
 
@@ -20,8 +21,11 @@ import threading
 # Configuration
 CHECK_INTERVAL = 300  # 5 minutes in seconds
 ALLOCATOR_LOG_INTERVAL = 3600  # 1 hour in seconds
-ERROR_LOG_DIR = "./experiment_results/1129-FW-b40/errors"
-PERIODIC_LOG_DIR = "./experiment_results/1129-FW-b40/periodic_logs"
+COMPLETION_CHECK_INTERVAL = 600  # 10 minutes in seconds
+EXP_DIR = "./experiment_results/1130-FW-b40"
+MONITOR_LOG_PATH = os.path.join(EXP_DIR, "monitor_log.txt")
+ERROR_LOG_DIR = os.path.join(EXP_DIR, "errors")
+PERIODIC_LOG_DIR = os.path.join(EXP_DIR, "periodic_logs")
 AUTOSCALING_GROUP_NAME = "eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084"
 SCHEDULER_NAMESPACE = "adaptdl"
 SCHEDULER_POD_PREFIX = "adaptdl-sched"
@@ -316,6 +320,137 @@ def fetch_allocator_log_periodically():
         print(f"[PERIODIC] Saved allocator log to {log_file}")
 
 
+def check_monitor_log_empty():
+    """
+    Check if the last line of monitor_log.txt has empty submitted_jobs.
+    Returns True if no jobs in last line, False otherwise.
+    Reads only the last few KB to handle large log files efficiently.
+    """
+    try:
+        # Read last 8KB of file (should contain several complete JSON lines)
+        with open(MONITOR_LOG_PATH, 'rb') as f:
+            # Seek to end of file
+            f.seek(0, os.SEEK_END)
+            file_size = f.tell()
+
+            if file_size == 0:
+                print(f"[WARNING] Monitor log file is empty")
+                return False
+
+            # Read last 8KB or entire file if smaller
+            read_size = min(8192, file_size)
+            f.seek(max(0, file_size - read_size))
+            tail_bytes = f.read()
+
+        # Decode and get last complete line
+        tail_text = tail_bytes.decode('utf-8', errors='ignore')
+        lines = tail_text.strip().split('\n')
+
+        # Try to parse lines from the end until we find a valid JSON
+        for line in reversed(lines):
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                record = json.loads(line)
+                submitted_jobs = record.get("submitted_jobs", [])
+
+                # Check if submitted_jobs is empty
+                is_empty = len(submitted_jobs) == 0
+                print(f"[INFO] Monitor log check: {'no jobs' if is_empty else f'{len(submitted_jobs)} jobs'} in last record")
+                return is_empty
+
+            except json.JSONDecodeError:
+                # This line might be incomplete, try previous line
+                continue
+
+        print(f"[WARNING] Could not find valid JSON in monitor log tail")
+        return False
+
+    except FileNotFoundError:
+        print(f"[WARNING] Monitor log file not found: {MONITOR_LOG_PATH}")
+        return False
+    except Exception as e:
+        print(f"[WARNING] Error reading monitor log: {e}")
+        return False
+
+
+def check_workload_running():
+    """
+    Check if run_workload process is still running.
+    Returns True if running, False if not running.
+    """
+    result = subprocess.run(
+        "pgrep -f run_workload",
+        shell=True,
+        capture_output=True,
+        text=True
+    )
+
+    is_running = result.returncode == 0
+    print(f"[INFO] run_workload process: {'running' if is_running else 'not running'}")
+    return is_running
+
+
+def check_experiment_completion():
+    """
+    Periodically check for experiment completion every 10 minutes.
+    Experiment is considered complete when BOTH conditions are met for 2 consecutive checks:
+    1. Monitor log's last line shows no jobs (submitted_jobs is empty)
+    2. run_workload process has finished
+
+    When experiment completes, terminate monitor process and scale down cluster.
+    """
+    print(f"[INFO] Started experiment completion checker (interval: {COMPLETION_CHECK_INTERVAL/60} minutes)")
+
+    consecutive_completion_checks = 0
+    required_consecutive_checks = 2
+
+    while True:
+        time.sleep(COMPLETION_CHECK_INTERVAL)
+
+        print(f"\n[COMPLETION CHECK] Running experiment completion check...")
+
+        # Check both conditions
+        log_empty = check_monitor_log_empty()
+        workload_finished = not check_workload_running()
+
+        if log_empty and workload_finished:
+            consecutive_completion_checks += 1
+            print(f"[COMPLETION CHECK] Both conditions met ({consecutive_completion_checks}/{required_consecutive_checks} checks)")
+
+            if consecutive_completion_checks >= required_consecutive_checks:
+                print(f"\n{'='*80}")
+                print(f"[SUCCESS] EXPERIMENT COMPLETED")
+                print(f"[SUCCESS] Conditions met for {required_consecutive_checks} consecutive checks:")
+                print(f"[SUCCESS] - Monitor log shows no jobs")
+                print(f"[SUCCESS] - run_workload process has finished")
+                print(f"[SUCCESS] Starting cleanup procedure...")
+                print(f"{'='*80}\n")
+
+                # Terminate monitor process
+                print(f"[INFO] Terminating run_monitor process...")
+                subprocess.run("pkill -f run_monitor", shell=True)
+
+                # Scale down cluster
+                print(f"[INFO] Scaling down cluster...")
+                scale_down_autoscaling_group()
+
+                print(f"\n{'='*80}")
+                print(f"[SUCCESS] Experiment completion cleanup finished")
+                print(f"[INFO] Exiting health monitor")
+                print(f"{'='*80}\n")
+
+                sys.exit(0)
+        else:
+            # Reset counter if conditions not met
+            if consecutive_completion_checks > 0:
+                print(f"[COMPLETION CHECK] Conditions not met, resetting counter (was {consecutive_completion_checks})")
+            consecutive_completion_checks = 0
+            print(f"[COMPLETION CHECK] Experiment still running (log_empty={log_empty}, workload_finished={workload_finished})")
+
+
 def cleanup_on_failure(job_name=None):
     """Execute cleanup procedure when a job failure is detected."""
     print(f"\n{'='*80}")
@@ -353,12 +488,18 @@ def main():
     print(f"AdaptDL Experiment Health Monitor")
     print(f"Health check interval: {CHECK_INTERVAL} seconds ({CHECK_INTERVAL/60} minutes)")
     print(f"Allocator log interval: {ALLOCATOR_LOG_INTERVAL} seconds ({ALLOCATOR_LOG_INTERVAL/3600} hour)")
+    print(f"Completion check interval: {COMPLETION_CHECK_INTERVAL} seconds ({COMPLETION_CHECK_INTERVAL/60} minutes)")
     print(f"{'='*80}\n")
 
     # Start periodic allocator log fetching in a background thread
     log_thread = threading.Thread(target=fetch_allocator_log_periodically, daemon=True)
     log_thread.start()
     print(f"[INFO] Started periodic allocator log fetching thread\n")
+
+    # Start experiment completion checker in a background thread
+    completion_thread = threading.Thread(target=check_experiment_completion, daemon=True)
+    completion_thread.start()
+    print(f"[INFO] Started experiment completion checker thread\n")
 
     while True:
         has_failure, job_name = check_job_health()
