@@ -316,9 +316,15 @@ class PolluxPolicy(object):
         self._prev_jobs = None
         self._prev_nodes = None
         # Utilization thresholds for cluster autoscaling.
-        self._min_util = 0.35
-        self._max_util = 0.65
-        self.target_util = (self._min_util + self._max_util) / 2
+
+        self.target_util = 0.6
+        boundary_width = min(self.target_util, 1 - self.target_util) * 0.3
+        self._min_util = self.target_util - boundary_width
+        self._max_util = self.target_util + boundary_width
+
+        # self._min_util = 0.35
+        # self._max_util = 0.65
+        # self.target_util = (self._min_util + self._max_util) / 2
 
         self._min_nodes = 2
         self._max_nodes = 40
@@ -583,11 +589,14 @@ class PolluxPolicy(object):
         delay = np.empty(len(job_values), dtype=np.float64)
         for i, job in enumerate(job_values):
             if getattr(job, "application", "") == "cifar10":
-                delay[i] = 120.0
+                # delay[i] = 120.0
+                delay[i] = 30.0
             elif getattr(job, "application", "") == "deepspeech2":
-                delay[i] = 150.0
+                # delay[i] = 150.0
+                delay[i] = 30.0
             elif getattr(job, "application", "") == "bert":
-                delay[i] = 300.0
+                # delay[i] = 300.0
+                delay[i] = 30.0
             else:
                 raise ValueError(f"Application {getattr(job, 'application', '')} not supported")
                 # delay[i] = 30.0

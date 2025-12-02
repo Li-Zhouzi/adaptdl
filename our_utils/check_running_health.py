@@ -22,7 +22,7 @@ import threading
 CHECK_INTERVAL = 300  # 5 minutes in seconds
 ALLOCATOR_LOG_INTERVAL = 3600  # 1 hour in seconds
 COMPLETION_CHECK_INTERVAL = 600  # 10 minutes in seconds
-EXP_DIR = "./experiment_results/1130-FW-b40"
+EXP_DIR = "./experiment_results/1201-Pollux-u0.6"
 MONITOR_LOG_PATH = os.path.join(EXP_DIR, "monitor_log.txt")
 ERROR_LOG_DIR = os.path.join(EXP_DIR, "errors")
 PERIODIC_LOG_DIR = os.path.join(EXP_DIR, "periodic_logs")
