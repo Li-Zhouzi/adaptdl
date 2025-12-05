@@ -7,7 +7,7 @@ data:
   ADAPTDL_GLOBAL_PROFILER_URL: http://{{ .Release.Name }}-global-profiler.{{ .Release.Namespace}}.svc.cluster.local:{{ .Values.globalProfiler.service.port }}
   ADAPTDL_GLOBAL_PROFILER_PORT: {{ .Values.globalProfiler.service.port | quote }}
   ADAPTDL_WIDTH_CALCULATOR_PORT: "8083"
-  WIDTH_CALCULATOR_BUDGET: "40"
+  WIDTH_CALCULATOR_BUDGET: "48"
   ADAPTDL_STORAGE_SUBPATH: {{ .Release.Namespace }}
   ADAPTDL_CHECKPOINT_PATH: /pollux/checkpoint
   ADAPTDL_IMAGE: {{ .Values.image.repository }}{{ empty .Values.image.digest | ternary ":" "@" }}{{ coalesce .Values.image.digest .Values.image.tag .Chart.AppVersion }}

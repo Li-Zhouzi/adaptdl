@@ -317,7 +317,7 @@ class PolluxPolicy(object):
         self._prev_nodes = None
         # Utilization thresholds for cluster autoscaling.
 
-        self.target_util = 0.6
+        self.target_util = 0.5
         boundary_width = min(self.target_util, 1 - self.target_util) * 0.3
         self._min_util = self.target_util - boundary_width
         self._max_util = self.target_util + boundary_width
@@ -883,11 +883,14 @@ class Problem(pymoo.core.problem.Problem):
         delay = np.empty(len(self._jobs), dtype=np.float64)
         for i, job in enumerate(self._jobs):
             if getattr(job, "application", "") == "cifar10":
-                delay[i] = 120.0
+                # delay[i] = 120.0
+                delay[i] = 30.0
             elif getattr(job, "application", "") == "deepspeech2":
-                delay[i] = 150.0
+                # delay[i] = 150.0
+                delay[i] = 30.0
             elif getattr(job, "application", "") == "bert":
-                delay[i] = 300.0
+                # delay[i] = 300.0
+                delay[i] = 30.0
             else:
                 raise ValueError(f"Application {getattr(job, 'application', '')} not supported")
                 # delay[i] = 30.0

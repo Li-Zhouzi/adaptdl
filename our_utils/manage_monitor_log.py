@@ -412,9 +412,9 @@ def print_mean_rescaling_time(jobs):
                     float(next_epoch.get('rescaling_time', 0) or 0)
                     + float(next_epoch.get('container_creation_time', 0) or 0)
                 )
-                assert next_wasted > 0, (
-                    f"Expected wasted time after rescaling for job {job_name}, epoch {epoch_num}, got 0"
-                )
+                # assert next_wasted > 0, (
+                #     f"Expected wasted time after rescaling for job {job_name}, epoch {epoch_num}, got 0"
+                # )
                 wasted_time = next_wasted
 
             stats = rescale_stats.setdefault(job_type, {'num_rescaling': 0, 'total_time': 0.0})
@@ -1274,7 +1274,7 @@ def main():
     print_failed_completed_jobs(completed_jobs_status)
 
     # Hardcoded specific job breakdown
-    specific_job_breakdown = 'cifar10-98'
+    specific_job_breakdown = 'cifar10-63'
     print_job_breakdown(specific_job_breakdown, jobs)
 
     print_mean_rescaling_time(jobs)

@@ -17,12 +17,14 @@ import json
 from datetime import datetime
 import threading
 
+# Global shutdown event used to coordinate graceful termination across threads
+shutdown_event = threading.Event()
 
 # Configuration
 CHECK_INTERVAL = 300  # 5 minutes in seconds
 ALLOCATOR_LOG_INTERVAL = 3600  # 1 hour in seconds
 COMPLETION_CHECK_INTERVAL = 600  # 10 minutes in seconds
-EXP_DIR = "./experiment_results/1201-Pollux-u0.6"
+EXP_DIR = "./experiment_results/1204-Pollux-u0.7"
 MONITOR_LOG_PATH = os.path.join(EXP_DIR, "monitor_log.txt")
 ERROR_LOG_DIR = os.path.join(EXP_DIR, "errors")
 PERIODIC_LOG_DIR = os.path.join(EXP_DIR, "periodic_logs")
@@ -273,8 +275,10 @@ def fetch_allocator_log_periodically():
     os.makedirs(PERIODIC_LOG_DIR, exist_ok=True)
 
     iteration = 0
-    while True:
-        time.sleep(ALLOCATOR_LOG_INTERVAL)
+    while not shutdown_event.is_set():
+        # Wait for interval or shutdown signal, whichever comes first
+        if shutdown_event.wait(ALLOCATOR_LOG_INTERVAL):
+            break
         iteration += 1
 
         print(f"\n[PERIODIC] Fetching allocator log (iteration {iteration})...")
@@ -407,8 +411,10 @@ def check_experiment_completion():
     consecutive_completion_checks = 0
     required_consecutive_checks = 2
 
-    while True:
-        time.sleep(COMPLETION_CHECK_INTERVAL)
+    while not shutdown_event.is_set():
+        # Wait for interval or shutdown signal, whichever comes first
+        if shutdown_event.wait(COMPLETION_CHECK_INTERVAL):
+            break
 
         print(f"\n[COMPLETION CHECK] Running experiment completion check...")
 
@@ -442,7 +448,9 @@ def check_experiment_completion():
                 print(f"[INFO] Exiting health monitor")
                 print(f"{'='*80}\n")
 
-                sys.exit(0)
+                # Signal shutdown to main loop and other threads, then return
+                shutdown_event.set()
+                return
         else:
             # Reset counter if conditions not met
             if consecutive_completion_checks > 0:
@@ -480,6 +488,8 @@ def cleanup_on_failure(job_name=None):
     print(f"[SUCCESS] Cleanup procedure completed")
     print(f"[INFO] Logs saved to: {ERROR_LOG_DIR}")
     print(f"{'='*80}\n")
+    # Ensure other threads exit promptly
+    shutdown_event.set()
 
 
 def main():
@@ -501,7 +511,7 @@ def main():
     completion_thread.start()
     print(f"[INFO] Started experiment completion checker thread\n")
 
-    while True:
+    while not shutdown_event.is_set():
         has_failure, job_name = check_job_health()
 
         if has_failure and job_name:
@@ -518,7 +528,12 @@ def main():
 
         print(f"[{datetime.now()}] All jobs healthy. Next check in {CHECK_INTERVAL} seconds.\n")
 
-        time.sleep(CHECK_INTERVAL)
+        # Wait for interval or shutdown signal
+        if shutdown_event.wait(CHECK_INTERVAL):
+            break
+
+    print("[INFO] Shutdown signal received, exiting health monitor")
+    sys.exit(0)
 
 
 if __name__ == "__main__":
