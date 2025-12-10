@@ -317,7 +317,7 @@ class PolluxPolicy(object):
         self._prev_nodes = None
         # Utilization thresholds for cluster autoscaling.
 
-        self.target_util = 0.5
+        self.target_util = 0.9
         boundary_width = min(self.target_util, 1 - self.target_util) * 0.3
         self._min_util = self.target_util - boundary_width
         self._max_util = self.target_util + boundary_width

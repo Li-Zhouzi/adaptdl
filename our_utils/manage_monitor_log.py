@@ -24,6 +24,8 @@ def process_log_file(log_file_path):
     decreased_progress_issues = {}  # Track any progress decreases per job
     job_drop_sums = {}  # Sum of progress drops per job
     job_max_progress = {}  # Max progress observed per job
+    # Track nodes in use at each timestamp
+    nodes_in_use_dict = {}
     
     with open(log_file_path, 'r') as f:
         lines = f.readlines()
@@ -60,6 +62,9 @@ def process_log_file(log_file_path):
 
             used_gpus = len(all_alloc_items)
             used_nodes = len(set(all_alloc_items))
+
+            # Track nodes in use at this timestamp
+            nodes_in_use_dict[prev_log['timestamp']] = used_nodes
 
             fragmentation_waste_gpus = max(0, NUM_GPU_PER_NODE * used_nodes - used_gpus)
             ready_unused_waste_gpus = max(0, NUM_GPU_PER_NODE * (ready_nodes - used_nodes))
@@ -244,6 +249,7 @@ def process_log_file(log_file_path):
         job_drop_sums,
         job_max_progress,
         job_gpu_hours,
+        nodes_in_use_dict,
     )
 
 def is_pod_status_failing(pod_status):
@@ -1260,7 +1266,7 @@ def main():
     log_file_path = sys.argv[1]
     print(f"Processing log file: {log_file_path}")
 
-    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress, job_gpu_hours = process_log_file(log_file_path)
+    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress, job_gpu_hours, nodes_in_use_dict = process_log_file(log_file_path)
     
     # Find first job time for metrics calculation
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
@@ -1303,11 +1309,83 @@ def main():
     # plot_filename = base_name + '_response_time_comparison.png'
     # plot_response_time_comparison(jobs, plot_filename)
     # Also save stacked response time plot
-    stacked_plot_filename = base_name + '_response_time_stacked.png'
-    plot_job_response_time_stacked(jobs, stacked_plot_filename)
+    # stacked_plot_filename = base_name + '_response_time_stacked.png'
+    # plot_job_response_time_stacked(jobs, stacked_plot_filename)
     
     metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, first_job_time)
     print_summary(metrics)
+
+    # Calculate and print time-average used number of nodes (with 30-second grace period)
+    if nodes_in_use_dict and last_job_arrival_time:
+        # First, process the dict to apply 30-second grace period for nodes
+        # Track when each node last became inactive
+        timestamps = sorted(nodes_in_use_dict.keys())
+
+        # For each timestamp, track which nodes are actually in use
+        # We need to identify individual nodes from the allocations
+        # Since nodes_in_use_dict only stores counts, we need to go back to the log
+        with open(log_file_path, 'r') as f:
+            lines = f.readlines()
+
+        # Build a dict of timestamp -> set of active nodes (with grace period)
+        active_nodes_with_grace = {}
+        node_last_active = {}  # node_id -> last timestamp it was actively used
+
+        for i, line in enumerate(lines):
+            if i == 0:
+                continue
+
+            log_entry = json.loads(line.strip())
+            timestamp = log_entry['timestamp']
+
+            # Get nodes currently in use
+            all_alloc_items = []
+            for job in log_entry['submitted_jobs']:
+                allocation = job.get('allocation', [])
+                if allocation:
+                    all_alloc_items.extend(allocation)
+
+            currently_used_nodes = set(all_alloc_items)
+
+            # Update last active time for currently used nodes
+            for node in currently_used_nodes:
+                node_last_active[node] = timestamp
+
+            # Determine which nodes are active with grace period
+            # A node is active if: currently used OR last used within 30 seconds
+            active_with_grace = set(currently_used_nodes)
+            for node, last_time in node_last_active.items():
+                if timestamp - last_time <= 30:  # 30-second grace period
+                    active_with_grace.add(node)
+
+            active_nodes_with_grace[timestamp] = len(active_with_grace)
+
+        # Now calculate time-weighted average
+        total_node_time = 0
+        grace_timestamps = sorted(active_nodes_with_grace.keys())
+
+        for i in range(len(grace_timestamps) - 1):
+            current_timestamp = grace_timestamps[i]
+            next_timestamp = grace_timestamps[i + 1]
+            time_diff = next_timestamp - current_timestamp
+            nodes_used = active_nodes_with_grace[current_timestamp]
+            total_node_time += nodes_used * time_diff
+
+        # Add the last interval up to last_job_arrival_time if needed
+        if grace_timestamps:
+            last_tracked_timestamp = grace_timestamps[-1]
+            if last_tracked_timestamp < last_job_arrival_time:
+                time_diff = last_job_arrival_time - last_tracked_timestamp
+                nodes_used = active_nodes_with_grace[last_tracked_timestamp]
+                total_node_time += nodes_used * time_diff
+
+        # Calculate average: total_node_time / (last_job_arrival_time - first_job_time)
+        experiment_duration = last_job_arrival_time - first_job_time
+        time_average_nodes = total_node_time / experiment_duration if experiment_duration > 0 else 0
+
+        print("\n" + "="*60)
+        print(f"Time-Average Used Number of Nodes (with 30s grace): {time_average_nodes:.2f}")
+        print("="*60)
 
     # Finally, print mean job total response time (placed at the very end)
     mean_rt = compute_mean_job_response_time(jobs)

@@ -73,11 +73,12 @@ if __name__ == "__main__":
         nodes = core_api.list_node().items
         total_everything = len(nodes)
         total_nodes = len(nodes)
-        ready_nodes = sum(
-            1 for n in nodes
+        ready_node_names = [
+            n.metadata.name for n in nodes
             if any(c.type == "Ready" and c.status == "True" for c in n.status.conditions)
             and not n.spec.unschedulable  # Exclude nodes with scheduling disabled
-        )
+        ]
+        ready_nodes = len(ready_node_names)
         
         # Get pod information for all pods in the namespace
         pods = core_api.list_namespaced_pod(namespace)
@@ -102,7 +103,8 @@ if __name__ == "__main__":
             "cluster_nodes": {
                 "total": total_nodes,
                 "ready": ready_nodes,
-                "total_including_terminating": total_everything
+                "total_including_terminating": total_everything,
+                "ready_node_names": ready_node_names
             }
         }
         for obj in obj_list["items"]:
