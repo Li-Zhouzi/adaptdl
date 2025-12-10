@@ -1,0 +1,396 @@
+
+================================================================================
+SCALE-DOWN ANALYSIS
+================================================================================
+
+--- Scale-down Cycle 1 ---
+Start time: 1765123625.6971018 (2025-12-07 11:07:05.697102)
+End time: 1765123639.989114 (2025-12-07 11:07:19.989114)
+Scaling: 9 -> 8 nodes
+Active nodes (8): ['ip-192-168-95-170.ec2.internal', 'ip-192-168-91-102.ec2.internal', 'ip-192-168-76-13.ec2.internal', 'ip-192-168-73-3.ec2.internal', 'ip-192-168-71-154.ec2.internal', 'ip-192-168-67-15.ec2.internal', 'ip-192-168-73-101.ec2.internal', 'ip-192-168-68-7.ec2.internal']
+
+First reallocation: 1765123640.920852 (2025-12-07 11:07:20.920852)
+  Time after cycle end: 0.93s
+All reallocations complete: 1765123640.920852 (2025-12-07 11:07:20.920852)
+  Time after cycle end: 0.93s
+
+Idle nodes (1 nodes):
+  ip-192-168-95-18.ec2.internal:
+    Stopped being used: 1765123640.920852 (2025-12-07 11:07:20.920852)
+      Time after cycle end: 0.93s
+    Removed from ready nodes: 1765123902.98428 (2025-12-07 11:11:42.984280)
+      Time after cycle end: 263.00s
+
+
+--- Scale-down Cycle 2 ---
+Start time: 1765124690.5473528 (2025-12-07 11:24:50.547353)
+End time: 1765124704.6880364 (2025-12-07 11:25:04.688036)
+Scaling: 11 -> 8 nodes
+Active nodes (8): ['ip-192-168-64-177.ec2.internal', 'ip-192-168-81-215.ec2.internal', 'ip-192-168-80-176.ec2.internal', 'ip-192-168-71-154.ec2.internal', 'ip-192-168-67-15.ec2.internal', 'ip-192-168-67-185.ec2.internal', 'ip-192-168-73-101.ec2.internal', 'ip-192-168-68-7.ec2.internal']
+
+First reallocation: 1765124705.4749272 (2025-12-07 11:25:05.474927)
+  Time after cycle end: 0.79s
+All reallocations complete: 1765124705.4749272 (2025-12-07 11:25:05.474927)
+  Time after cycle end: 0.79s
+
+Idle nodes (3 nodes):
+  ip-192-168-88-130.ec2.internal:
+    Stopped being used: 1765124705.4749272 (2025-12-07 11:25:05.474927)
+      Time after cycle end: 0.79s
+    Removed from ready nodes: 1765124985.765325 (2025-12-07 11:29:45.765325)
+      Time after cycle end: 281.08s
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765124705.4749272 (2025-12-07 11:25:05.474927)
+      Time after cycle end: 0.79s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-93-196.ec2.internal:
+    Stopped being used: 1765124705.4749272 (2025-12-07 11:25:05.474927)
+      Time after cycle end: 0.79s
+    Removed from ready nodes: 1765124985.765325 (2025-12-07 11:29:45.765325)
+      Time after cycle end: 281.08s
+
+
+--- Scale-down Cycle 3 ---
+Start time: 1765125561.6609364 (2025-12-07 11:39:21.660936)
+End time: 1765125576.8885002 (2025-12-07 11:39:36.888500)
+Scaling: 9 -> 8 nodes
+Active nodes (8): ['ip-192-168-66-112.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-80-176.ec2.internal', 'ip-192-168-71-154.ec2.internal', 'ip-192-168-67-15.ec2.internal', 'ip-192-168-73-101.ec2.internal', 'ip-192-168-67-185.ec2.internal', 'ip-192-168-68-7.ec2.internal']
+
+First reallocation: 1765125577.752811 (2025-12-07 11:39:37.752811)
+  Time after cycle end: 0.86s
+All reallocations complete: 1765125577.752811 (2025-12-07 11:39:37.752811)
+  Time after cycle end: 0.86s
+
+Idle nodes (1 nodes):
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765125577.752811 (2025-12-07 11:39:37.752811)
+      Time after cycle end: 0.86s
+    Removed from ready nodes: NOT DETECTED
+
+
+--- Scale-down Cycle 4 ---
+Start time: 1765128059.7512083 (2025-12-07 12:20:59.751208)
+End time: 1765128074.4279718 (2025-12-07 12:21:14.427972)
+Scaling: 10 -> 4 nodes
+Active nodes (4): ['ip-192-168-66-112.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-78-154.ec2.internal', 'ip-192-168-64-177.ec2.internal']
+
+First reallocation: 1765128074.672662 (2025-12-07 12:21:14.672662)
+  Time after cycle end: 0.24s
+All reallocations complete: 1765128075.957559 (2025-12-07 12:21:15.957559)
+  Time after cycle end: 1.53s
+
+Idle nodes (6 nodes):
+  ip-192-168-80-50.ec2.internal:
+    Stopped being used: 1765128074.672662 (2025-12-07 12:21:14.672662)
+      Time after cycle end: 0.24s
+    Removed from ready nodes: 1765128342.532394 (2025-12-07 12:25:42.532394)
+      Time after cycle end: 268.10s
+  ip-192-168-87-205.ec2.internal:
+    Stopped being used: 1765128074.672662 (2025-12-07 12:21:14.672662)
+      Time after cycle end: 0.24s
+    Removed from ready nodes: 1765128342.532394 (2025-12-07 12:25:42.532394)
+      Time after cycle end: 268.10s
+  ip-192-168-90-34.ec2.internal:
+    Stopped being used: 1765128074.672662 (2025-12-07 12:21:14.672662)
+      Time after cycle end: 0.24s
+    Removed from ready nodes: 1765128342.532394 (2025-12-07 12:25:42.532394)
+      Time after cycle end: 268.10s
+  ip-192-168-84-16.ec2.internal:
+    Stopped being used: 1765128074.672662 (2025-12-07 12:21:14.672662)
+      Time after cycle end: 0.24s
+    Removed from ready nodes: 1765128342.532394 (2025-12-07 12:25:42.532394)
+      Time after cycle end: 268.10s
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765128075.957559 (2025-12-07 12:21:15.957559)
+      Time after cycle end: 1.53s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-81-5.ec2.internal:
+    Stopped being used: 1765128074.672662 (2025-12-07 12:21:14.672662)
+      Time after cycle end: 0.24s
+    Removed from ready nodes: 1765128342.532394 (2025-12-07 12:25:42.532394)
+      Time after cycle end: 268.10s
+
+
+--- Scale-down Cycle 5 ---
+Start time: 1765128873.0619526 (2025-12-07 12:34:33.061953)
+End time: 1765128886.090639 (2025-12-07 12:34:46.090639)
+Scaling: 6 -> 3 nodes
+Active nodes (3): ['ip-192-168-66-112.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-68-57.ec2.internal']
+
+First reallocation: 1765128886.980984 (2025-12-07 12:34:46.980984)
+  Time after cycle end: 0.89s
+All reallocations complete: 1765128886.980984 (2025-12-07 12:34:46.980984)
+  Time after cycle end: 0.89s
+
+Idle nodes (3 nodes):
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765128886.980984 (2025-12-07 12:34:46.980984)
+      Time after cycle end: 0.89s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-68-7.ec2.internal:
+    Stopped being used: 1765128886.980984 (2025-12-07 12:34:46.980984)
+      Time after cycle end: 0.89s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-78-154.ec2.internal:
+    Stopped being used: 1765128886.980984 (2025-12-07 12:34:46.980984)
+      Time after cycle end: 0.89s
+    Removed from ready nodes: 1765129066.5673 (2025-12-07 12:37:46.567300)
+      Time after cycle end: 180.48s
+
+
+--- Scale-down Cycle 6 ---
+Start time: 1765130075.9253342 (2025-12-07 12:54:35.925334)
+End time: 1765130090.9586127 (2025-12-07 12:54:50.958613)
+Scaling: 9 -> 8 nodes
+Active nodes (8): ['ip-192-168-68-57.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-92-219.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-68-13.ec2.internal', 'ip-192-168-90-196.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-66-250.ec2.internal']
+
+First reallocation: 1765130091.407397 (2025-12-07 12:54:51.407397)
+  Time after cycle end: 0.45s
+All reallocations complete: 1765130091.407397 (2025-12-07 12:54:51.407397)
+  Time after cycle end: 0.45s
+
+Idle nodes (1 nodes):
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765130091.407397 (2025-12-07 12:54:51.407397)
+      Time after cycle end: 0.45s
+    Removed from ready nodes: NOT DETECTED
+
+
+--- Scale-down Cycle 7 ---
+Start time: 1765130482.924226 (2025-12-07 13:01:22.924226)
+End time: 1765130497.8794346 (2025-12-07 13:01:37.879435)
+Scaling: 10 -> 7 nodes
+Active nodes (7): ['ip-192-168-67-66.ec2.internal', 'ip-192-168-68-13.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-66-250.ec2.internal', 'ip-192-168-68-57.ec2.internal']
+
+First reallocation: 1765130498.1669009 (2025-12-07 13:01:38.166901)
+  Time after cycle end: 0.29s
+All reallocations complete: 1765130499.466353 (2025-12-07 13:01:39.466353)
+  Time after cycle end: 1.59s
+
+Idle nodes (3 nodes):
+  ip-192-168-90-196.ec2.internal:
+    Stopped being used: 1765130498.1669009 (2025-12-07 13:01:38.166901)
+      Time after cycle end: 0.29s
+    Removed from ready nodes: 1765130853.749662 (2025-12-07 13:07:33.749662)
+      Time after cycle end: 355.87s
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765130499.466353 (2025-12-07 13:01:39.466353)
+      Time after cycle end: 1.59s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-92-219.ec2.internal:
+    Stopped being used: 1765130499.466353 (2025-12-07 13:01:39.466353)
+      Time after cycle end: 1.59s
+    Removed from ready nodes: 1765130791.3748322 (2025-12-07 13:06:31.374832)
+      Time after cycle end: 293.50s
+
+
+--- Scale-down Cycle 8 ---
+Start time: 1765131088.299662 (2025-12-07 13:11:28.299662)
+End time: 1765131103.0249488 (2025-12-07 13:11:43.024949)
+Scaling: 12 -> 7 nodes
+Active nodes (7): ['ip-192-168-67-66.ec2.internal', 'ip-192-168-68-13.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-66-250.ec2.internal', 'ip-192-168-68-57.ec2.internal']
+
+First reallocation: 1765131103.0964952 (2025-12-07 13:11:43.096495)
+  Time after cycle end: 0.07s
+All reallocations complete: 1765131104.636389 (2025-12-07 13:11:44.636389)
+  Time after cycle end: 1.61s
+
+Idle nodes (5 nodes):
+  ip-192-168-74-133.ec2.internal:
+    Stopped being used: 1765131103.0964952 (2025-12-07 13:11:43.096495)
+      Time after cycle end: 0.07s
+    Removed from ready nodes: 1765131343.5779572 (2025-12-07 13:15:43.577957)
+      Time after cycle end: 240.55s
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765131104.636389 (2025-12-07 13:11:44.636389)
+      Time after cycle end: 1.61s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-75-220.ec2.internal:
+    Stopped being used: 1765131103.0964952 (2025-12-07 13:11:43.096495)
+      Time after cycle end: 0.07s
+    Removed from ready nodes: 1765131344.9175942 (2025-12-07 13:15:44.917594)
+      Time after cycle end: 241.89s
+  ip-192-168-80-12.ec2.internal:
+    Stopped being used: 1765131103.0964952 (2025-12-07 13:11:43.096495)
+      Time after cycle end: 0.07s
+    Removed from ready nodes: 1765131343.5779572 (2025-12-07 13:15:43.577957)
+      Time after cycle end: 240.55s
+  ip-192-168-87-97.ec2.internal:
+    Stopped being used: 1765131103.0964952 (2025-12-07 13:11:43.096495)
+      Time after cycle end: 0.07s
+    Removed from ready nodes: 1765131343.5779572 (2025-12-07 13:15:43.577957)
+      Time after cycle end: 240.55s
+
+
+--- Scale-down Cycle 9 ---
+Start time: 1765131937.23829 (2025-12-07 13:25:37.238290)
+End time: 1765131951.220918 (2025-12-07 13:25:51.220918)
+Scaling: 7 -> 6 nodes
+Active nodes (6): ['ip-192-168-67-66.ec2.internal', 'ip-192-168-68-13.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-66-250.ec2.internal']
+
+First reallocation: 1765131951.709439 (2025-12-07 13:25:51.709439)
+  Time after cycle end: 0.49s
+All reallocations complete: 1765131951.709439 (2025-12-07 13:25:51.709439)
+  Time after cycle end: 0.49s
+
+Idle nodes (1 nodes):
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765131951.709439 (2025-12-07 13:25:51.709439)
+      Time after cycle end: 0.49s
+    Removed from ready nodes: NOT DETECTED
+
+
+--- Scale-down Cycle 10 ---
+Start time: 1765132402.0141356 (2025-12-07 13:33:22.014136)
+End time: 1765132419.1656983 (2025-12-07 13:33:39.165698)
+Scaling: 7 -> 6 nodes
+Active nodes (6): ['ip-192-168-67-66.ec2.internal', 'ip-192-168-68-13.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-66-250.ec2.internal']
+
+First reallocation: 1765132420.389054 (2025-12-07 13:33:40.389054)
+  Time after cycle end: 1.22s
+All reallocations complete: 1765132420.389054 (2025-12-07 13:33:40.389054)
+  Time after cycle end: 1.22s
+
+Idle nodes (1 nodes):
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765132420.389054 (2025-12-07 13:33:40.389054)
+      Time after cycle end: 1.22s
+    Removed from ready nodes: NOT DETECTED
+
+
+--- Scale-down Cycle 11 ---
+Start time: 1765132871.4042041 (2025-12-07 13:41:11.404204)
+End time: 1765132886.8644414 (2025-12-07 13:41:26.864441)
+Scaling: 12 -> 9 nodes
+Active nodes (9): ['ip-192-168-67-66.ec2.internal', 'ip-192-168-68-159.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-72-76.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-68-13.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-76-62.ec2.internal', 'ip-192-168-66-250.ec2.internal']
+WARNING: Not all jobs reallocated within 120s for cycle at 1765132871.4042041
+
+First reallocation: 1765132887.613039 (2025-12-07 13:41:27.613039)
+  Time after cycle end: 0.75s
+All reallocations complete: NOT DETECTED (timeout)
+
+Idle nodes (3 nodes):
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765132887.613039 (2025-12-07 13:41:27.613039)
+      Time after cycle end: 0.75s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-86-81.ec2.internal:
+    Stopped being used: 1765132887.613039 (2025-12-07 13:41:27.613039)
+      Time after cycle end: 0.75s
+    Removed from ready nodes: 1765133141.280096 (2025-12-07 13:45:41.280096)
+      Time after cycle end: 254.42s
+  ip-192-168-83-150.ec2.internal:
+    Stopped being used: 1765132887.613039 (2025-12-07 13:41:27.613039)
+      Time after cycle end: 0.75s
+    Removed from ready nodes: 1765133141.280096 (2025-12-07 13:45:41.280096)
+      Time after cycle end: 254.42s
+
+
+--- Scale-down Cycle 12 ---
+Start time: 1765134729.6744967 (2025-12-07 14:12:09.674497)
+End time: 1765134744.284794 (2025-12-07 14:12:24.284794)
+Scaling: 14 -> 6 nodes
+Active nodes (6): ['ip-192-168-67-66.ec2.internal', 'ip-192-168-68-159.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-66-250.ec2.internal']
+
+First reallocation: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+  Time after cycle end: 0.68s
+All reallocations complete: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+  Time after cycle end: 0.68s
+
+Idle nodes (8 nodes):
+  ip-192-168-73-13.ec2.internal:
+    Stopped being used: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+      Time after cycle end: 0.68s
+    Removed from ready nodes: 1765135009.9939451 (2025-12-07 14:16:49.993945)
+      Time after cycle end: 265.71s
+  ip-192-168-91-85.ec2.internal:
+    Stopped being used: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+      Time after cycle end: 0.68s
+    Removed from ready nodes: 1765135009.9939451 (2025-12-07 14:16:49.993945)
+      Time after cycle end: 265.71s
+  ip-192-168-81-56.ec2.internal:
+    Stopped being used: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+      Time after cycle end: 0.68s
+    Removed from ready nodes: 1765135021.106465 (2025-12-07 14:17:01.106465)
+      Time after cycle end: 276.82s
+  ip-192-168-79-232.ec2.internal:
+    Stopped being used: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+      Time after cycle end: 0.68s
+    Removed from ready nodes: 1765135316.52647 (2025-12-07 14:21:56.526470)
+      Time after cycle end: 572.24s
+  ip-192-168-94-42.ec2.internal:
+    Stopped being used: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+      Time after cycle end: 0.68s
+    Removed from ready nodes: 1765135009.9939451 (2025-12-07 14:16:49.993945)
+      Time after cycle end: 265.71s
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+      Time after cycle end: 0.68s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-88-50.ec2.internal:
+    Stopped being used: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+      Time after cycle end: 0.68s
+    Removed from ready nodes: 1765134816.322251 (2025-12-07 14:13:36.322251)
+      Time after cycle end: 72.04s
+  ip-192-168-88-171.ec2.internal:
+    Stopped being used: 1765134744.9679601 (2025-12-07 14:12:24.967960)
+      Time after cycle end: 0.68s
+    Removed from ready nodes: 1765135009.9939451 (2025-12-07 14:16:49.993945)
+      Time after cycle end: 265.71s
+
+
+--- Scale-down Cycle 13 ---
+Start time: 1765136715.4338312 (2025-12-07 14:45:15.433831)
+End time: 1765136733.8581362 (2025-12-07 14:45:33.858136)
+Scaling: 11 -> 7 nodes
+Active nodes (7): ['ip-192-168-67-66.ec2.internal', 'ip-192-168-68-159.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-68-239.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-66-250.ec2.internal']
+
+First reallocation: 1765136734.8918169 (2025-12-07 14:45:34.891817)
+  Time after cycle end: 1.03s
+All reallocations complete: 1765136734.8918169 (2025-12-07 14:45:34.891817)
+  Time after cycle end: 1.03s
+
+Idle nodes (4 nodes):
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765136734.8918169 (2025-12-07 14:45:34.891817)
+      Time after cycle end: 1.03s
+    Removed from ready nodes: NOT DETECTED
+  ip-192-168-84-157.ec2.internal:
+    Stopped being used: 1765136734.8918169 (2025-12-07 14:45:34.891817)
+      Time after cycle end: 1.03s
+    Removed from ready nodes: 1765136980.0811641 (2025-12-07 14:49:40.081164)
+      Time after cycle end: 246.22s
+  ip-192-168-69-241.ec2.internal:
+    Stopped being used: 1765136734.8918169 (2025-12-07 14:45:34.891817)
+      Time after cycle end: 1.03s
+    Removed from ready nodes: 1765136980.0811641 (2025-12-07 14:49:40.081164)
+      Time after cycle end: 246.22s
+  ip-192-168-72-250.ec2.internal:
+    Stopped being used: 1765136734.8918169 (2025-12-07 14:45:34.891817)
+      Time after cycle end: 1.03s
+    Removed from ready nodes: 1765136980.0811641 (2025-12-07 14:49:40.081164)
+      Time after cycle end: 246.22s
+
+
+--- Scale-down Cycle 14 ---
+Start time: 1765137406.7713926 (2025-12-07 14:56:46.771393)
+End time: 1765137430.16986 (2025-12-07 14:57:10.169860)
+Scaling: 13 -> 11 nodes
+Active nodes (11): ['ip-192-168-67-66.ec2.internal', 'ip-192-168-68-159.ec2.internal', 'ip-192-168-66-112.ec2.internal', 'ip-192-168-65-113.ec2.internal', 'ip-192-168-68-239.ec2.internal', 'ip-192-168-64-177.ec2.internal', 'ip-192-168-94-179.ec2.internal', 'ip-192-168-94-251.ec2.internal', 'ip-192-168-80-199.ec2.internal', 'ip-192-168-68-7.ec2.internal', 'ip-192-168-66-250.ec2.internal']
+
+First reallocation: 1765137431.2415009 (2025-12-07 14:57:11.241501)
+  Time after cycle end: 1.07s
+All reallocations complete: 1765137431.2415009 (2025-12-07 14:57:11.241501)
+  Time after cycle end: 1.07s
+
+Idle nodes (2 nodes):
+  ip-192-168-94-97.ec2.internal:
+    Stopped being used: 1765137431.2415009 (2025-12-07 14:57:11.241501)
+      Time after cycle end: 1.07s
+    Removed from ready nodes: 1765137674.45437 (2025-12-07 15:01:14.454370)
+      Time after cycle end: 244.28s
+  ip-192-168-95-170.ec2.internal:
+    Stopped being used: 1765137431.2415009 (2025-12-07 14:57:11.241501)
+      Time after cycle end: 1.07s
+    Removed from ready nodes: NOT DETECTED
+

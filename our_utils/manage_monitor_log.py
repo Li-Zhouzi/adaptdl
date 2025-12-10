@@ -1355,7 +1355,7 @@ def main():
             # A node is active if: currently used OR last used within 30 seconds
             active_with_grace = set(currently_used_nodes)
             for node, last_time in node_last_active.items():
-                if timestamp - last_time <= 30:  # 30-second grace period
+                if timestamp - last_time <= 265:  # 265-second grace period
                     active_with_grace.add(node)
 
             active_nodes_with_grace[timestamp] = len(active_with_grace)
