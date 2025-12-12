@@ -35,6 +35,8 @@ from adaptdl_sched.utils import patch_job_status
 from adaptdl_sched.cluster_expander import ClusterExpander
 from adaptdl_sched.config import allowed_taints
 from adaptdl_sched.policy.fixed_width import APPLICATION_NAMES
+from adaptdl_sched.aws_scaledown import trigger_aws_scaledown
+import adaptdl_sched.config as config
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -50,7 +52,7 @@ class AdaptDLAllocator(object):
 
         # Select the policy to use
         # Options: "pollux", "dummy", "fixed-width"
-        SELECTED_POLICY = "dummy"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+        SELECTED_POLICY = "pollux"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
 
         # Width fetching configuration
         self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
@@ -77,6 +79,16 @@ class AdaptDLAllocator(object):
         self._desired_num_nodes = None
         # Track which nodes are actually allocated to jobs
         self._allocated_nodes = None
+
+        # AWS direct scale-down configuration (optional feature)
+        self._aws_scaledown_enabled = config.get_enable_direct_asg_scaledown()
+        self._aws_asg_name = None
+        self._aws_scaledown_wait = 60
+
+        if self._aws_scaledown_enabled:
+            self._aws_asg_name = config.get_aws_asg_name()
+            self._aws_scaledown_wait = config.get_scaledown_wait_seconds()
+            LOG.info(f"AWS direct scale-down enabled: ASG={self._aws_asg_name}, wait={self._aws_scaledown_wait}s")
 
     async def run(self):
         # three functionality: (1) watch for new job and start if possible.
@@ -441,6 +453,28 @@ class AdaptDLAllocator(object):
                     active_nodes.append(f"~{self._desired_num_nodes-len(active_nodes)}")
 
             self._cluster_expander.fit(active_nodes)
+
+            # Trigger direct AWS scale-down if enabled and scaling down
+            if (self._aws_scaledown_enabled and
+                self._desired_num_nodes is not None and
+                self._desired_num_nodes < len(nodes)):
+
+                # Identify nodes to terminate (nodes NOT in active_nodes)
+                active_node_names = set(n for n in active_nodes if not n.startswith("~"))
+                all_node_names = set(nodes.keys())
+                nodes_to_terminate = list(all_node_names - active_node_names)
+
+                if nodes_to_terminate:
+                    # Fire background task (fire-and-forget)
+                    asyncio.create_task(
+                        trigger_aws_scaledown(
+                            self._aws_asg_name,
+                            nodes_to_terminate,
+                            self._aws_scaledown_wait
+                        )
+                    )
+                    LOG.info(f"[AWS ScaleDown] Triggered termination of {len(nodes_to_terminate)} nodes: {nodes_to_terminate}")
+
             LOG.info("Active nodes: %s (target: %s, actual: %s, allocated: %s)",
                      active_nodes, self._desired_num_nodes, len(nodes), len(self._allocated_nodes))
         elif jobs or unschedulable_jobs:

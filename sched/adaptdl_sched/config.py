@@ -87,3 +87,18 @@ def get_job_patch_pods():
 def get_job_patch_containers():
     val = os.getenv("ADAPTDL_JOB_PATCH_CONTAINERS")
     return json.loads(val) if val is not None else None
+
+
+def get_aws_asg_name():
+    """Get AWS Auto Scaling Group name."""
+    return os.getenv("ADAPTDL_AWS_ASG_NAME", "eks-12xlarge-cbd-1007-c8ccdfb1-0ed8-acd8-ee69-7bdc2245b084")
+
+
+def get_enable_direct_asg_scaledown():
+    """Check if direct AWS ASG scale-down is enabled."""
+    return os.getenv("ADAPTDL_ENABLE_DIRECT_ASG_SCALEDOWN", "false").lower() == "true"
+
+
+def get_scaledown_wait_seconds():
+    """Get wait time before executing scale-down."""
+    return int(os.getenv("ADAPTDL_SCALEDOWN_WAIT_SECONDS", "60"))

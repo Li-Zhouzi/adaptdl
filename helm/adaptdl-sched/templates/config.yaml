@@ -24,3 +24,5 @@ data:
   ADAPTDL_JOB_PATCH_CONTAINERS: {{ .Values.job.patch.containers | toJson | quote }}
   {{- end }}
   {{- end }}
+  ADAPTDL_ENABLE_DIRECT_ASG_SCALEDOWN: "true"
+  ADAPTDL_SCALEDOWN_WAIT_SECONDS: "60"

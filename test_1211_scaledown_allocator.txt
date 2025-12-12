@@ -1,0 +1,173 @@
+INFO:adaptdl_sched.policy.dummy:DummyPolicy initialized with GPU options: [12]
+INFO:__main__:[TIMESTAMP: 1765432043.2636552] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:adaptdl_sched.cluster_expander:Received 0 expected nodes. There are 0 Running, 0 Pending placeholder pods.
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47460, 'ephemeral-storage': 76224326324, 'memory': 197002903552, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47360, 'ephemeral-storage': 76224326324, 'memory': 196373757952, 'nvidia.com/gpu': 4, 'pods': 225}}
+INFO:__main__:Job resources: {}
+INFO:__main__:Allocations (in 0.000 sec): {}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 0 expected nodes. There are 0 Running, 0 Pending placeholder pods.
+INFO:__main__:detected an added job adaptdl/cifar10-35.
+INFO:__main__:Patch AdaptdlJob adaptdl/cifar10-35: {'status': {'allocation': []}} 
+INFO:__main__:detected an added job adaptdl/cifar10-35.
+INFO:__main__:Patch AdaptdlJob adaptdl/cifar10-35: {'status': {'allocation': []}} 
+INFO:adaptdl_sched.cluster_expander:Received 0 expected nodes. There are 0 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432103.363555] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47460, 'ephemeral-storage': 76224326324, 'memory': 197002903552, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47360, 'ephemeral-storage': 76224326324, 'memory': 196373757952, 'nvidia.com/gpu': 4, 'pods': 224}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=0
+INFO:__main__:Allocator side: Initializing desired nodes: 3
+INFO:__main__:Active nodes: ['ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', '~1'] (target: 3, actual: 2, allocated: 2)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}
+INFO:__main__:Job allocation change detected; restarting adaptdl/cifar10-35 | old=[] -> new=['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']
+INFO:__main__:Patch AdaptDLJob adaptdl/cifar10-35: {'status': {'allocation': ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 0 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Spawned adaptdl-placeholder-sp8hk
+INFO:adaptdl_sched.cluster_expander:Spawned adaptdl-placeholder-d6b72
+INFO:adaptdl_sched.cluster_expander:Spawned adaptdl-placeholder-rrgjp
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 2 Running, 1 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432163.5387352] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Scale-up in progress: showing policy 2/2 nodes (target: 3)
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=515.6617737042576
+WARNING:__main__:Allocator side: Autoscaling needed during scale-up: policy wants 3 nodes but was shown 2 nodes, target is 3 nodes, actual is 2 nodes. Keeping target at 3 until scale-up completes.
+INFO:__main__:Active nodes: ['ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', '~1'] (target: 3, actual: 2, allocated: 2)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 2 Running, 1 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 2 Running, 1 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432223.7187517] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Scale-up in progress: showing policy 2/2 nodes (target: 3)
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=1294.0585939652096
+WARNING:__main__:Allocator side: Autoscaling needed during scale-up: policy wants 3 nodes but was shown 2 nodes, target is 3 nodes, actual is 2 nodes. Keeping target at 3 until scale-up completes.
+INFO:__main__:Active nodes: ['ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', '~1'] (target: 3, actual: 2, allocated: 2)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 2 Running, 1 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 2 Running, 1 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432283.8552613] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47659, 'ephemeral-storage': 76224326324, 'memory': 197280776192, 'pods': 228}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Steady state: desired=3, actual=3
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=2306.0564528087075
+INFO:__main__:Allocator side: Starting autoscaling: current=3, desired=2
+INFO:__main__:Active nodes: ['ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 2, actual: 3, allocated: 2)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 2 expected nodes. There are 2 Running, 1 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Deleted adaptdl-placeholder-rrgjp
+INFO:adaptdl_sched.cluster_expander:Received 2 expected nodes. There are 2 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432343.9799626] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47660, 'ephemeral-storage': 76224326324, 'memory': 197286019072, 'nvidia.com/gpu': 4, 'pods': 229}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Scale-down in progress: showing policy 2/3 nodes (previously allocated: 2)
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=3386.67129291858
+INFO:__main__:Active nodes: ['ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal'] (target: 3, actual: 3, allocated: 2)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 2 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Spawned adaptdl-placeholder-p79fr
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432404.1026862] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47659, 'ephemeral-storage': 76224326324, 'memory': 197280776192, 'nvidia.com/gpu': 4, 'pods': 228}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Steady state: desired=3, actual=3
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=4486.465562151575
+INFO:__main__:Active nodes: ['ip-192-168-82-218.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 3, actual: 3, allocated: 3)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal']}
+INFO:__main__:Job allocation change detected; restarting adaptdl/cifar10-35 | old=['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal'] -> new=['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal']
+INFO:__main__:Patch AdaptDLJob adaptdl/cifar10-35: {'status': {'allocation': ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal']}}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432464.264611] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47659, 'ephemeral-storage': 76224326324, 'memory': 197280776192, 'nvidia.com/gpu': 4, 'pods': 228}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Steady state: desired=3, actual=3
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=4506.977795784766
+INFO:__main__:Active nodes: ['ip-192-168-82-218.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 3, actual: 3, allocated: 3)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432524.3639095] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47659, 'ephemeral-storage': 76224326324, 'memory': 197280776192, 'nvidia.com/gpu': 4, 'pods': 228}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Steady state: desired=3, actual=3
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=4506.977795784766
+INFO:__main__:Active nodes: ['ip-192-168-82-218.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 3, actual: 3, allocated: 3)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432584.4629776] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47659, 'ephemeral-storage': 76224326324, 'memory': 197280776192, 'nvidia.com/gpu': 4, 'pods': 228}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Steady state: desired=3, actual=3
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=5322.100234898821
+INFO:__main__:Active nodes: ['ip-192-168-82-218.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 3, actual: 3, allocated: 3)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432644.593938] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47659, 'ephemeral-storage': 76224326324, 'memory': 197280776192, 'nvidia.com/gpu': 4, 'pods': 228}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Steady state: desired=3, actual=3
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=6920.503432013337
+INFO:__main__:Active nodes: ['ip-192-168-82-218.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 3, actual: 3, allocated: 3)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Received 3 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432704.7080894] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47659, 'ephemeral-storage': 76224326324, 'memory': 197280776192, 'nvidia.com/gpu': 4, 'pods': 228}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Steady state: desired=3, actual=3
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=8548.27600246753
+INFO:__main__:Allocator side: Starting autoscaling: current=3, desired=2
+INFO:__main__:Active nodes: ['ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 2, actual: 3, allocated: 2)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}
+INFO:__main__:Job allocation change detected; restarting adaptdl/cifar10-35 | old=['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal', 'ip-192-168-82-218.ec2.internal'] -> new=['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']
+INFO:__main__:Patch AdaptDLJob adaptdl/cifar10-35: {'status': {'allocation': ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 2 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Deleted adaptdl-placeholder-p79fr
+INFO:adaptdl_sched.cluster_expander:Received 2 expected nodes. There are 3 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Deleted adaptdl-placeholder-p79fr
+INFO:__main__:[TIMESTAMP: 1765432764.8296847] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47660, 'ephemeral-storage': 76224326324, 'memory': 197286019072, 'nvidia.com/gpu': 4, 'pods': 229}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Scale-down in progress: showing policy 2/3 nodes (previously allocated: 2)
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=9023.031029724967
+INFO:__main__:Active nodes: ['ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 2, actual: 3, allocated: 2)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 2 expected nodes. There are 2 Running, 0 Pending placeholder pods.
+INFO:adaptdl_sched.cluster_expander:Received 2 expected nodes. There are 2 Running, 0 Pending placeholder pods.
+INFO:__main__:[TIMESTAMP: 1765432824.9283996] Starting allocator optimization cycle
+INFO:__main__:Running allocator loop
+INFO:__main__:Node resources: {'ip-192-168-77-227.ec2.internal': {'cpu': 47459, 'ephemeral-storage': 76224326324, 'memory': 196997660672, 'nvidia.com/gpu': 4, 'pods': 223}, 'ip-192-168-78-181.ec2.internal': {'cpu': 47359, 'ephemeral-storage': 76224326324, 'memory': 196368515072, 'nvidia.com/gpu': 4, 'pods': 224}, 'ip-192-168-82-218.ec2.internal': {'cpu': 47660, 'ephemeral-storage': 76224326324, 'memory': 197286019072, 'nvidia.com/gpu': 4, 'pods': 229}}
+INFO:__main__:Job resources: {('adaptdl', 'cifar10-35'): {'pods': 1, 'cpu': 10000, 'memory': 40000000000, 'nvidia.com/gpu': 1}}
+INFO:__main__:Scale-down in progress: showing policy 2/3 nodes (previously allocated: 2)
+INFO:adaptdl_sched.policy.dummy:DummyPolicy optimize: progress=9985.181867079831
+INFO:__main__:Active nodes: ['ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal'] (target: 2, actual: 3, allocated: 2)
+INFO:__main__:Allocations (in 0.000 sec): {('adaptdl', 'cifar10-35'): ['ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-77-227.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal', 'ip-192-168-78-181.ec2.internal']}
+INFO:__main__:Sleep for 60 seconds
+INFO:adaptdl_sched.cluster_expander:Received 2 expected nodes. There are 2 Running, 0 Pending placeholder pods.

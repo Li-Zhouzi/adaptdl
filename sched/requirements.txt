@@ -9,3 +9,4 @@ numpy==1.19.5
 aiohttp==3.7.4.post0  # 3.8.1 causes issues with kubernetes_asyncio==9.1.0
 jsonpatch>=1.26
 cvxpy
+boto3>=1.26.0
