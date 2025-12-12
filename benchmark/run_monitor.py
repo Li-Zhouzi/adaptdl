@@ -77,6 +77,14 @@ if __name__ == "__main__":
             n.metadata.name for n in nodes
             if any(c.type == "Ready" and c.status == "True" for c in n.status.conditions)
             and not n.spec.unschedulable  # Exclude nodes with scheduling disabled
+            # {
+            #     "name": n.metadata.name,
+            #     "ready": any(c.type == "Ready" and c.status == "True" for c in n.status.conditions),
+            #     "schedulable": not n.spec.unschedulable,
+            #     "terminating": n.metadata.deletion_timestamp is not None,
+            #     "conditions": [{"type": c.type, "status": c.status} for c in n.status.conditions]
+            # }
+            # for n in nodes
         ]
         ready_nodes = len(ready_node_names)
         

@@ -52,39 +52,41 @@ class DummyPolicy(object):
         """
 
         # Only for debugging purposes
-        # assert len(jobs) == 1, "DEBUGGING BRANCH"
-        # job = list(jobs.values())[0]
-        # assert job.application == "bert", "DEBUGGING BRANCH"
-        # LOG.info(f"DummyPolicy optimize: progress={job.progress}")
-        # if job.progress < 20:
-        #     assigned_gpu = 1
-        # elif job.progress < 7500:
-        #     # Before 200, use 4 GPUs
-        #     assigned_gpu = 8
-        #     # Reset post-400 sequence flags before crossing 400
-        #     self._post400_flip_done = False
-        #     self._post400_back_done = False
-        #     self._current_flip_cycle = None
-        # elif job.progress < 8085:
-        #     # [200, 400): use 8 GPUs
-        #     assigned_gpu = 2
-        #     # Reset post-400 sequence flags before crossing 400
-        #     self._post400_flip_done = False
-        #     self._post400_back_done = False
-        # else:
-        #     assigned_gpu = 4
-        # available_gpus = {node_name: node.resources.get("nvidia.com/gpu", 0) 
-        #                 for node_name, node in nodes.items()}
-        # current_alloc = []
-        # for node_name, gpus in available_gpus.items():
-        #     while len(current_alloc) < assigned_gpu and gpus >= 1:
-        #         current_alloc.append(node_name)
-        #         gpus -= 1
-        #         available_gpus[node_name] = gpus
-        # # Return shape must be (allocations_dict, desired_nodes)
-        # job_key = list(jobs.keys())[0]
-        # gpus_per_node = node_template.resources.get("nvidia.com/gpu", 1)
-        # return {job_key: current_alloc}, 2 # DEBUGGING BRANCH
+        assert len(jobs) == 1, "DEBUGGING BRANCH"
+        job = list(jobs.values())[0]
+        assert job.application == "cifar10", "DEBUGGING BRANCH"
+        LOG.info(f"DummyPolicy optimize: progress={job.progress}")
+        if job.progress < 2000:
+            assigned_gpu = 12
+        elif job.progress < 3000:
+            # Before 200, use 4 GPUs
+            assigned_gpu = 8
+            # Reset post-400 sequence flags before crossing 400
+            self._post400_flip_done = False
+            self._post400_back_done = False
+            self._current_flip_cycle = None
+        elif job.progress < 8000:
+            # [200, 400): use 8 GPUs
+            assigned_gpu = 12
+            # Reset post-400 sequence flags before crossing 400
+            self._post400_flip_done = False
+            self._post400_back_done = False
+        elif job.progress < 10000:
+            assigned_gpu = 8
+        else:
+            assigned_gpu = 4
+        available_gpus = {node_name: node.resources.get("nvidia.com/gpu", 0) 
+                        for node_name, node in nodes.items()}
+        current_alloc = []
+        for node_name, gpus in available_gpus.items():
+            while len(current_alloc) < assigned_gpu and gpus >= 1:
+                current_alloc.append(node_name)
+                gpus -= 1
+                available_gpus[node_name] = gpus
+        # Return shape must be (allocations_dict, desired_nodes)
+        job_key = list(jobs.keys())[0]
+        gpus_per_node = node_template.resources.get("nvidia.com/gpu", 1)
+        return {job_key: current_alloc}, math.ceil(assigned_gpu / 4) # DEBUGGING BRANCH
 
         new_allocations = {}
         # Track available GPUs on each node

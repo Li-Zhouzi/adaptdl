@@ -19,7 +19,7 @@ spec:
           "--predict_file=/mnt/squad/dev-v1.1.json",
           "--per_gpu_train_batch_size=12", # previously 12
           "--learning_rate=3e-5",
-          "--num_train_epochs=2.0",
+          "--num_train_epochs=1.0",
           "--max_seq_length=256", # previously 384
           "--doc_stride=128",
           "--cache_dir=/mnt/squad",
