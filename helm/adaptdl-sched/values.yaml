@@ -93,6 +93,9 @@ globalProfiler:
       memory: 2Gi
       cpu: 2
 
+serviceAccount:
+  annotations: {eks.amazonaws.com/role-arn: arn:aws:iam::399790253372:role/eksctl-adaptdl-eks-cluster-addon-iamserviceac-Role1-cgXbTYIUyBxu}
+
 # Some services depend on the specific name of the registry service which is
 # enforced through fullnameOverride.
 docker-registry:

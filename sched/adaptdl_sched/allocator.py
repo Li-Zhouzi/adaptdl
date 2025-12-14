@@ -84,11 +84,13 @@ class AdaptDLAllocator(object):
         self._aws_scaledown_enabled = config.get_enable_direct_asg_scaledown()
         self._aws_asg_name = None
         self._aws_scaledown_wait = 60
+        self._aws_region = None
 
         if self._aws_scaledown_enabled:
             self._aws_asg_name = config.get_aws_asg_name()
             self._aws_scaledown_wait = config.get_scaledown_wait_seconds()
-            LOG.info(f"AWS direct scale-down enabled: ASG={self._aws_asg_name}, wait={self._aws_scaledown_wait}s")
+            self._aws_region = config.get_aws_region()
+            LOG.info(f"AWS direct scale-down enabled: ASG={self._aws_asg_name}, region={self._aws_region}, wait={self._aws_scaledown_wait}s")
 
     async def run(self):
         # three functionality: (1) watch for new job and start if possible.
@@ -246,6 +248,7 @@ class AdaptDLAllocator(object):
         nodes, node_template = await self._find_nodes(
                                    pod_label_selector="!adaptdl/job"
                                )
+        protected_nodes = await self._get_protected_nodes()
         LOG.info("Node resources: %s",
                  {k: v.resources for k, v in nodes.items()})
         jobs, prev_allocations = \
@@ -254,7 +257,7 @@ class AdaptDLAllocator(object):
                  {k: v.resources for k, v in jobs.items()})
         start = time.time()
         allocations = self._allocate(jobs, nodes, prev_allocations,
-                                     node_template)
+                                     node_template, protected_nodes)
         duration = time.time() - start
         LOG.info("Allocations (in %.3f sec): %s", duration,
                  allocations)
@@ -393,7 +396,8 @@ class AdaptDLAllocator(object):
 
         return job_infos, allocations
 
-    def _allocate(self, jobs, nodes, prev_allocations, node_template):
+    def _allocate(self, jobs, nodes, prev_allocations, node_template,
+                  protected_nodes):
         unschedulable_jobs = []
         for job_key in list(jobs):
             job_resources = jobs[job_key].resources
@@ -464,13 +468,24 @@ class AdaptDLAllocator(object):
                 all_node_names = set(nodes.keys())
                 nodes_to_terminate = list(all_node_names - active_node_names)
 
+                if protected_nodes:
+                    before_filter = set(nodes_to_terminate)
+                    nodes_to_terminate = [
+                        node for node in nodes_to_terminate
+                        if node not in protected_nodes
+                    ]
+                    filtered = before_filter - set(nodes_to_terminate)
+                    if filtered:
+                        LOG.info("[AWS ScaleDown] Skipping protected nodes: %s", list(filtered))
+
                 if nodes_to_terminate:
                     # Fire background task (fire-and-forget)
                     asyncio.create_task(
                         trigger_aws_scaledown(
                             self._aws_asg_name,
                             nodes_to_terminate,
-                            self._aws_scaledown_wait
+                            self._aws_scaledown_wait,
+                            self._aws_region
                         )
                     )
                     LOG.info(f"[AWS ScaleDown] Triggered termination of {len(nodes_to_terminate)} nodes: {nodes_to_terminate}")
@@ -482,6 +497,40 @@ class AdaptDLAllocator(object):
             # Assumption is AdaptDL is running on a different ASG
             self._cluster_expander.fit(['~1'])
         return allocations
+
+    async def _get_protected_nodes(self):
+        """Return nodes that should never be picked for direct scale-down.
+
+        Currently protects:
+        - Nodes hosting the AdaptDL scheduler pod (app=adaptdl-sched)
+        - Nodes hosting kube-system efs-csi-controller pods
+        """
+        protected = set()
+        try:
+            pod_list = await self._core_api.list_pod_for_all_namespaces()
+        except Exception as exc:
+            LOG.warning("Failed to list pods for protected node detection: %s", exc)
+            return protected
+
+        for pod in pod_list.items:
+            node_name = pod.spec.node_name
+            if not node_name:
+                continue
+
+            # Protect scheduler node (namespace-based and name substring)
+            pod_name = pod.metadata.name or ""
+            if pod.metadata.namespace == "adaptdl" and "adaptdl-sched" in pod_name:
+                protected.add(node_name)
+
+            # Protect nodes running kube-system efs-csi-controller pods
+            if (pod.metadata.namespace == "kube-system" and
+                    (pod.metadata.name or "").startswith("efs-csi-controller")):
+                protected.add(node_name)
+
+        if protected:
+            LOG.info("Protected nodes (excluded from termination): %s",
+                     list(protected))
+        return protected
 
     def _get_filtered_nodes_for_policy(self, nodes):
         """Filter nodes based on autoscaling state to prevent oscillation.

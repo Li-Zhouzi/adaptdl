@@ -26,7 +26,7 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 
 
-async def trigger_aws_scaledown(asg_name: str, nodes_to_terminate: list, wait_seconds: int = 60):
+async def trigger_aws_scaledown(asg_name: str, nodes_to_terminate: list, wait_seconds: int = 60, aws_region: str = "us-east-1"):
     """
     Background task: Wait then directly terminate specific EC2 instances.
     Fire-and-forget - no return value, just logs on completion/error.
@@ -35,6 +35,7 @@ async def trigger_aws_scaledown(asg_name: str, nodes_to_terminate: list, wait_se
         asg_name: AWS Auto Scaling Group name
         nodes_to_terminate: List of Kubernetes node names to terminate
         wait_seconds: Grace period for checkpoint saving
+        aws_region: AWS region for boto3 clients
     """
     try:
         LOG.info(f"[AWS ScaleDown] Scheduled termination of {len(nodes_to_terminate)} nodes in {wait_seconds}s: {nodes_to_terminate}")
@@ -44,20 +45,20 @@ async def trigger_aws_scaledown(asg_name: str, nodes_to_terminate: list, wait_se
 
         # Call AWS API in thread pool (boto3 is synchronous)
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _terminate_instances_sync, asg_name, nodes_to_terminate)
+        await loop.run_in_executor(None, _terminate_instances_sync, asg_name, nodes_to_terminate, aws_region)
 
         LOG.info(f"[AWS ScaleDown] SUCCESS: Terminated {len(nodes_to_terminate)} instances")
     except Exception as e:
         LOG.error(f"[AWS ScaleDown] FAILED: {e}", exc_info=True)
 
 
-def _terminate_instances_sync(asg_name: str, node_names: list):
+def _terminate_instances_sync(asg_name: str, node_names: list, aws_region: str = "us-east-1"):
     """Synchronous AWS API call to terminate specific instances (runs in thread pool)."""
     if not BOTO3_AVAILABLE:
         raise RuntimeError("boto3 not installed. Install with: pip install boto3")
 
-    ec2 = boto3.client('ec2')
-    autoscaling = boto3.client('autoscaling')
+    ec2 = boto3.client('ec2', region_name=aws_region)
+    autoscaling = boto3.client('autoscaling', region_name=aws_region)
 
     # Map Kubernetes node names to EC2 instance IDs
     instance_ids = []

@@ -19,6 +19,7 @@ def process_log_file(log_file_path):
     fragmentation_waste_hours = 0
     ready_unused_waste_hours = 0
     wasted_capacity_hours = 0
+    scheduler_waste_hours = 0
     last_job_arrival_time = None
     completed_jobs_status = {}  # Track completion_time and pod_status for completed jobs
     decreased_progress_issues = {}  # Track any progress decreases per job
@@ -26,6 +27,7 @@ def process_log_file(log_file_path):
     job_max_progress = {}  # Max progress observed per job
     # Track nodes in use at each timestamp
     nodes_in_use_dict = {}
+    scheduler_nodes = set()
     
     with open(log_file_path, 'r') as f:
         lines = f.readlines()
@@ -33,6 +35,12 @@ def process_log_file(log_file_path):
     for i, line in enumerate(lines):
         log_entry = json.loads(line.strip())
         timestamp = log_entry['timestamp']
+
+        # Capture the initial scheduler nodes (first log entry expected to have 2 nodes)
+        if i == 0 and not scheduler_nodes:
+            ready_node_names = log_entry.get('cluster_nodes', {}).get('ready_node_names', [])
+            assert len(ready_node_names) == 2, f"Expected 2 scheduler nodes, got {len(ready_node_names)}"
+            scheduler_nodes = set(ready_node_names)
         
         # Calculate GPU hours for this time step
         if i > 0:
@@ -61,16 +69,21 @@ def process_log_file(log_file_path):
                     all_alloc_items.extend(allocation)
 
             used_gpus = len(all_alloc_items)
-            used_nodes = len(set(all_alloc_items))
+            used_node_set = set(all_alloc_items)
+            used_nodes = len(used_node_set)
 
             # Track nodes in use at this timestamp
             nodes_in_use_dict[prev_log['timestamp']] = used_nodes
 
             fragmentation_waste_gpus = max(0, NUM_GPU_PER_NODE * used_nodes - used_gpus)
             ready_unused_waste_gpus = max(0, NUM_GPU_PER_NODE * (ready_nodes - used_nodes))
+            # Scheduler nodes waste: scheduler nodes that are not in use
+            scheduler_unused_nodes = [n for n in scheduler_nodes if n not in used_node_set]
+            scheduler_waste_gpus = len(scheduler_unused_nodes) * NUM_GPU_PER_NODE
 
             fragmentation_waste_hours += fragmentation_waste_gpus * time_diff / 3600
             ready_unused_waste_hours += ready_unused_waste_gpus * time_diff / 3600
+            scheduler_waste_hours += scheduler_waste_gpus * time_diff / 3600
 
             # Total wasted capacity is the sum of the two components
             wasted_capacity_gpus = fragmentation_waste_gpus + ready_unused_waste_gpus
@@ -243,6 +256,7 @@ def process_log_file(log_file_path):
         fragmentation_waste_hours,
         ready_unused_waste_hours,
         wasted_capacity_hours,
+        scheduler_waste_hours,
         last_job_arrival_time,
         completed_jobs_status,
         decreased_progress_issues,
@@ -250,6 +264,7 @@ def process_log_file(log_file_path):
         job_max_progress,
         job_gpu_hours,
         nodes_in_use_dict,
+        scheduler_nodes,
     )
 
 def is_pod_status_failing(pod_status):
@@ -281,7 +296,7 @@ def is_pod_status_failing(pod_status):
 
     return False
 
-def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, first_job_time):
+def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, scheduler_waste_hours, last_job_arrival_time, first_job_time):
     """Calculate simplified metrics based on GPU hours and job arrival time."""
     experiment_duration_hours = (last_job_arrival_time - first_job_time) / 3600
     # average_gpu_usage now reflects READY GPUs average
@@ -289,6 +304,7 @@ def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_
     effective_average_gpu_usage = effective_gpu_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     fragmentation_waste_average = fragmentation_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     ready_unused_average = ready_unused_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
+    scheduler_waste_average = scheduler_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
     wasted_capacity_average = wasted_capacity_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
 
     
@@ -297,12 +313,14 @@ def calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_
         'effective_gpu_hours': effective_gpu_hours,
         'fragmentation_waste_hours': fragmentation_waste_hours,
         'ready_unused_waste_hours': ready_unused_waste_hours,
+        'scheduler_waste_hours': scheduler_waste_hours,
         'wasted_capacity_hours': wasted_capacity_hours,
         'experiment_duration_hours': experiment_duration_hours,
         'average_gpu_usage': average_gpu_usage,
         'effective_average_gpu_usage': effective_average_gpu_usage,
         'fragmentation_waste_average': fragmentation_waste_average,
         'ready_unused_average': ready_unused_average,
+        'scheduler_waste_average': scheduler_waste_average,
         'wasted_capacity_average': wasted_capacity_average,
         'last_job_arrival_time': last_job_arrival_time
     }
@@ -322,6 +340,7 @@ def print_summary(metrics):
     print(f"\nDecomposition:")
     print(f"Fragmentation Waste Average: {metrics['fragmentation_waste_average']:.2f} GPUs")
     print(f"Ready-Unused Nodes Average: {metrics['ready_unused_average']:.2f} GPUs")
+    print(f"Scheduler Waste Average: {metrics['scheduler_waste_average']:.2f} GPUs")
     print(f"Wasted Capacity Average: {metrics['wasted_capacity_average']:.2f} GPUs")
     
     print(f"\nLast Job Arrival Time: {datetime.fromtimestamp(metrics['last_job_arrival_time'])}")
@@ -1266,7 +1285,9 @@ def main():
     log_file_path = sys.argv[1]
     print(f"Processing log file: {log_file_path}")
 
-    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, completed_jobs_status, decreased_progress_issues, job_drop_sums, job_max_progress, job_gpu_hours, nodes_in_use_dict = process_log_file(log_file_path)
+    jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours,\
+    wasted_capacity_hours, scheduler_waste_hours, last_job_arrival_time, completed_jobs_status, \
+    decreased_progress_issues, job_drop_sums, job_max_progress, job_gpu_hours, nodes_in_use_dict, scheduler_nodes = process_log_file(log_file_path)
     
     # Find first job time for metrics calculation
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
@@ -1312,12 +1333,13 @@ def main():
     # stacked_plot_filename = base_name + '_response_time_stacked.png'
     # plot_job_response_time_stacked(jobs, stacked_plot_filename)
     
-    metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, last_job_arrival_time, first_job_time)
+    metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, scheduler_waste_hours, last_job_arrival_time, first_job_time)
     print_summary(metrics)
 
-    # Calculate and print time-average used number of nodes (with 30-second grace period)
+    # Calculate and print time-average used number of nodes (with grace period)
+    Grace_period_length = 60
     if nodes_in_use_dict and last_job_arrival_time:
-        # First, process the dict to apply 30-second grace period for nodes
+        # First, process the dict to apply grace period for nodes
         # Track when each node last became inactive
         timestamps = sorted(nodes_in_use_dict.keys())
 
@@ -1332,8 +1354,6 @@ def main():
         node_last_active = {}  # node_id -> last timestamp it was actively used
 
         for i, line in enumerate(lines):
-            if i == 0:
-                continue
 
             log_entry = json.loads(line.strip())
             timestamp = log_entry['timestamp']
@@ -1355,10 +1375,14 @@ def main():
             # A node is active if: currently used OR last used within 30 seconds
             active_with_grace = set(currently_used_nodes)
             for node, last_time in node_last_active.items():
-                if timestamp - last_time <= 265:  # 265-second grace period
+                if timestamp - last_time <= Grace_period_length:  # 265-second grace period
                     active_with_grace.add(node)
+            
+            for node in scheduler_nodes:
+                active_with_grace.add(node)
 
             active_nodes_with_grace[timestamp] = len(active_with_grace)
+            assert len(active_with_grace) >= len(currently_used_nodes), f"Active nodes with grace {active_with_grace} is greater than currently used nodes {currently_used_nodes}"
 
         # Now calculate time-weighted average
         total_node_time = 0
@@ -1371,20 +1395,12 @@ def main():
             nodes_used = active_nodes_with_grace[current_timestamp]
             total_node_time += nodes_used * time_diff
 
-        # Add the last interval up to last_job_arrival_time if needed
-        if grace_timestamps:
-            last_tracked_timestamp = grace_timestamps[-1]
-            if last_tracked_timestamp < last_job_arrival_time:
-                time_diff = last_job_arrival_time - last_tracked_timestamp
-                nodes_used = active_nodes_with_grace[last_tracked_timestamp]
-                total_node_time += nodes_used * time_diff
-
         # Calculate average: total_node_time / (last_job_arrival_time - first_job_time)
         experiment_duration = last_job_arrival_time - first_job_time
         time_average_nodes = total_node_time / experiment_duration if experiment_duration > 0 else 0
 
-        print("\n" + "="*60)
-        print(f"Time-Average Used Number of Nodes (with 30s grace): {time_average_nodes:.2f}")
+        print("="*60)
+        print(f"Time-Average Used Number of GPUs (with grace): {NUM_GPU_PER_NODE * time_average_nodes:.2f}")
         print("="*60)
 
     # Finally, print mean job total response time (placed at the very end)

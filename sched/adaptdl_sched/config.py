@@ -102,3 +102,8 @@ def get_enable_direct_asg_scaledown():
 def get_scaledown_wait_seconds():
     """Get wait time before executing scale-down."""
     return int(os.getenv("ADAPTDL_SCALEDOWN_WAIT_SECONDS", "60"))
+
+
+def get_aws_region():
+    """Get AWS region for boto3 clients."""
+    return os.getenv("ADAPTDL_AWS_REGION", "us-east-1")
