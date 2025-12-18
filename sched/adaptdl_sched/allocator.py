@@ -81,10 +81,17 @@ class AdaptDLAllocator(object):
         self._allocated_nodes = None
 
         # AWS direct scale-down configuration (optional feature)
+        # NOTE: AWS direct scale-down is NOT compatible with Pollux policy
+        # because Pollux dynamically adjusts allocations and autoscaling decisions
         self._aws_scaledown_enabled = config.get_enable_direct_asg_scaledown()
         self._aws_asg_name = None
         self._aws_scaledown_wait = 60
         self._aws_region = None
+
+        # Disable AWS scale-down for Pollux policy (not compatible)
+        if self._aws_scaledown_enabled and self._policy_type == "pollux":
+            LOG.warning("AWS direct scale-down is disabled for Pollux policy (not compatible)")
+            self._aws_scaledown_enabled = False
 
         if self._aws_scaledown_enabled:
             self._aws_asg_name = config.get_aws_asg_name()
@@ -422,8 +429,16 @@ class AdaptDLAllocator(object):
             # Filter nodes based on autoscaling state
             nodes_for_policy = self._get_filtered_nodes_for_policy(nodes)
 
-            allocations, desired_nodes = self._get_policy().optimize(
-                jobs, nodes_for_policy, prev_allocations, node_template)
+            # For FixedWidthPolicy, pass scheduler nodes (protected nodes) with their resources
+            # so the policy can prioritize using them even if they're not in the filtered nodes
+            if self._policy_type == "fixed-width" and protected_nodes:
+                # Create a dict of protected nodes with their resources from the full nodes dict
+                protected_nodes_dict = {name: nodes[name] for name in protected_nodes if name in nodes}
+                allocations, desired_nodes = self._get_policy().optimize(
+                    jobs, nodes_for_policy, prev_allocations, node_template, scheduler_nodes=protected_nodes_dict)
+            else:
+                allocations, desired_nodes = self._get_policy().optimize(
+                    jobs, nodes_for_policy, prev_allocations, node_template)
 
             # Track which nodes are actually being used for next round
             if allocations:

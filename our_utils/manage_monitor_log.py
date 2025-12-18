@@ -39,7 +39,8 @@ def process_log_file(log_file_path):
         # Capture the initial scheduler nodes (first log entry expected to have 2 nodes)
         if i == 0 and not scheduler_nodes:
             ready_node_names = log_entry.get('cluster_nodes', {}).get('ready_node_names', [])
-            assert len(ready_node_names) == 2, f"Expected 2 scheduler nodes, got {len(ready_node_names)}"
+            if len(ready_node_names) > 0:
+                assert len(ready_node_names) == 2, f"Expected 2 scheduler nodes, got {len(ready_node_names)}"
             scheduler_nodes = set(ready_node_names)
         
         # Calculate GPU hours for this time step
@@ -1277,6 +1278,277 @@ def plot_job_response_time_stacked(jobs, output_filename=None):
     else:
         plt.show()
 
+def analyze_idle_waste_decomposition(log_file_path, first_job_time, last_job_arrival_time):
+    """
+    Analyze and decompose idle waste into categories:
+    - scheduler_waste: scheduler nodes that are not being used
+    - starting_waste: time from node appearance until first use
+    - middle_waste: time between usage periods (for nodes used multiple times)
+    - ending_waste: time from when node becomes unused until disappearance
+
+    Also tracks nodes with multiple usage periods and their entry timestamps.
+    Calculates average waste metrics using experiment_duration = (last_job_arrival_time - first_job_time).
+
+    Raises error if:
+    - cluster_nodes doesn't have ready_node_names field
+    """
+    with open(log_file_path, 'r') as f:
+        lines = f.readlines()
+
+    # Track node lifecycle: {node_name: [(timestamp, is_used), ...]}
+    node_timeline = {}
+    scheduler_nodes = set()
+
+    # First pass: build node timeline
+    for i, line in enumerate(lines):
+        log_entry = json.loads(line.strip())
+        timestamp = log_entry['timestamp']
+
+        # Check for ready_node_names
+        cluster_nodes = log_entry.get('cluster_nodes', {})
+        if 'ready_node_names' not in cluster_nodes:
+            raise ValueError(f"Line {i+1}: cluster_nodes missing 'ready_node_names' field. "
+                           "This function requires logs with ready_node_names.")
+
+        ready_node_names = cluster_nodes['ready_node_names']
+
+        # Capture scheduler nodes from first entry
+        if i == 0:
+            scheduler_nodes = set(ready_node_names)
+
+        # Get all allocated nodes
+        allocated_nodes = set()
+        for job in log_entry.get('submitted_jobs', []):
+            allocation = job.get('allocation', [])
+            if allocation:
+                allocated_nodes.update(allocation)
+
+        # Track each ready node's status
+        for node in ready_node_names:
+            if node not in node_timeline:
+                node_timeline[node] = []
+            is_used = node in allocated_nodes
+            node_timeline[node].append((timestamp, is_used))
+
+    # Second pass: analyze each node and decompose waste
+    scheduler_waste_hours = 0
+    starting_waste_hours = 0
+    middle_waste_hours = 0
+    ending_waste_hours = 0
+    nodes_with_multiple_periods = {}  # {node_name: [entry_timestamps]}
+    starting_waste_durations = []  # List of starting waste durations in seconds
+    ending_waste_durations = []  # List of ending waste durations in seconds
+
+    for node, timeline in node_timeline.items():
+        is_scheduler = node in scheduler_nodes
+
+        # Check usage pattern and detect multiple usage periods
+        usage_periods = []
+        in_use = False
+        use_start = None
+
+        for timestamp, used in timeline:
+            if used and not in_use:
+                # Start of usage period
+                use_start = timestamp
+                in_use = True
+            elif not used and in_use:
+                # End of usage period
+                usage_periods.append((use_start, timestamp))
+                in_use = False
+                use_start = None
+
+        # If still in use at the end
+        if in_use:
+            usage_periods.append((use_start, timeline[-1][0]))
+
+        # Track nodes with multiple usage periods
+        if len(usage_periods) > 1:
+            entry_timestamps = [period[0] for period in usage_periods]
+            nodes_with_multiple_periods[node] = entry_timestamps
+
+        # Calculate waste hours
+        if is_scheduler:
+            # Scheduler node - all idle time is scheduler waste
+            for j in range(len(timeline) - 1):
+                timestamp, is_used = timeline[j]
+                next_timestamp = timeline[j+1][0]
+                if not is_used:
+                    time_diff = next_timestamp - timestamp
+                    scheduler_waste_hours += NUM_GPU_PER_NODE * time_diff / 3600
+        else:
+            # Worker node - calculate starting, middle, and ending waste
+            if len(usage_periods) == 0:
+                # Node never used - all time is starting waste
+                node_start_time = timeline[0][0]
+                node_end_time = timeline[-1][0]
+                starting_duration = node_end_time - node_start_time
+                starting_waste_durations.append(starting_duration)
+
+                for j in range(len(timeline) - 1):
+                    time_diff = timeline[j+1][0] - timeline[j][0]
+                    starting_waste_hours += NUM_GPU_PER_NODE * time_diff / 3600
+            else:
+                # Node used one or more times
+                first_use_start = usage_periods[0][0]
+                last_use_end = usage_periods[-1][1]
+                node_start_time = timeline[0][0]
+                node_end_time = timeline[-1][0]
+
+                # Track starting waste duration (appearance to first use)
+                starting_duration = first_use_start - node_start_time
+                if starting_duration > 0:
+                    starting_waste_durations.append(starting_duration)
+
+                # Track ending waste duration (last use to disappearance)
+                ending_duration = node_end_time - last_use_end
+                if ending_duration > 0:
+                    ending_waste_durations.append(ending_duration)
+
+                # Starting waste: from appearance to first use
+                for j in range(len(timeline) - 1):
+                    timestamp = timeline[j][0]
+                    next_timestamp = timeline[j+1][0]
+
+                    if timestamp < first_use_start:
+                        # This period is before first use
+                        if next_timestamp <= first_use_start:
+                            # Entire period is starting waste
+                            time_diff = next_timestamp - timestamp
+                        else:
+                            # Partial period (up to first use)
+                            time_diff = first_use_start - timestamp
+                        starting_waste_hours += NUM_GPU_PER_NODE * time_diff / 3600
+
+                # Middle waste: gaps between usage periods (if multiple periods)
+                if len(usage_periods) > 1:
+                    for k in range(len(usage_periods) - 1):
+                        gap_start = usage_periods[k][1]  # End of period k
+                        gap_end = usage_periods[k+1][0]  # Start of period k+1
+
+                        for j in range(len(timeline) - 1):
+                            timestamp = timeline[j][0]
+                            next_timestamp = timeline[j+1][0]
+
+                            # Check if this time interval overlaps with the gap
+                            if timestamp >= gap_start and timestamp < gap_end:
+                                if next_timestamp <= gap_end:
+                                    time_diff = next_timestamp - timestamp
+                                else:
+                                    time_diff = gap_end - timestamp
+                                middle_waste_hours += NUM_GPU_PER_NODE * time_diff / 3600
+
+                # Ending waste: from last use to disappearance
+                for j in range(len(timeline) - 1):
+                    timestamp = timeline[j][0]
+                    next_timestamp = timeline[j+1][0]
+
+                    if timestamp >= last_use_end:
+                        # This period is after last use
+                        time_diff = next_timestamp - timestamp
+                        ending_waste_hours += NUM_GPU_PER_NODE * time_diff / 3600
+
+    # Calculate experiment duration and averages
+    experiment_duration_hours = (last_job_arrival_time - first_job_time) / 3600 if (last_job_arrival_time and first_job_time) else 0
+
+    scheduler_waste_avg = scheduler_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
+    starting_waste_avg = starting_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
+    middle_waste_avg = middle_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
+    ending_waste_avg = ending_waste_hours / experiment_duration_hours if experiment_duration_hours > 0 else 0
+    total_waste = scheduler_waste_hours + starting_waste_hours + middle_waste_hours + ending_waste_hours
+    total_waste_avg = total_waste / experiment_duration_hours if experiment_duration_hours > 0 else 0
+
+    # Print results
+    print("\n" + "="*60)
+    print("IDLE WASTE DECOMPOSITION ANALYSIS")
+    print("="*60)
+    print(f"Experiment Duration: {experiment_duration_hours:.2f} hours")
+    # print(f"\nGPU-Hours:")
+    # print(f"  Scheduler Waste: {scheduler_waste_hours:.2f}")
+    # print(f"  Starting Waste: {starting_waste_hours:.2f}")
+    # print(f"  Middle Waste: {middle_waste_hours:.2f}")
+    # print(f"  Ending Waste: {ending_waste_hours:.2f}")
+    # print(f"  Total Idle Waste: {total_waste:.2f}")
+    print(f"\nAverage GPUs:")
+    print(f"  Scheduler Waste Average: {scheduler_waste_avg:.2f} GPUs")
+    print(f"  Starting Waste Average: {starting_waste_avg:.2f} GPUs")
+    print(f"  Middle Waste Average: {middle_waste_avg:.2f} GPUs")
+    print(f"  Ending Waste Average: {ending_waste_avg:.2f} GPUs")
+    print(f"  Total Idle Waste Average: {total_waste_avg:.2f} GPUs")
+    print("="*60)
+
+    # Print nodes with multiple usage periods
+    if nodes_with_multiple_periods:
+        print("\nNodes with Multiple Usage Periods:")
+        print("-" * 60)
+        for node_name, entry_times in nodes_with_multiple_periods.items():
+            print(f"  {node_name}:")
+            print(f"    Number of usage periods: {len(entry_times)}")
+            print(f"    Entry timestamps: {entry_times}")
+        print("="*60)
+
+    # Plot histograms for starting and ending waste durations
+    if starting_waste_durations or ending_waste_durations:
+        fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+        # Starting waste histogram
+        if starting_waste_durations:
+            starting_waste_seconds = starting_waste_durations
+            axes[0].hist(starting_waste_seconds, bins=20, color='skyblue', edgecolor='black', alpha=0.7)
+            axes[0].set_xlabel('Duration (seconds)', fontsize=12)
+            axes[0].set_ylabel('Number of Nodes', fontsize=12)
+            axes[0].set_title('Starting Waste Period Length\n(Node Appearance to First Use)', fontsize=13, fontweight='bold')
+            axes[0].grid(True, alpha=0.3, axis='y')
+
+            # Add statistics
+            mean_start = np.mean(starting_waste_seconds)
+            median_start = np.median(starting_waste_seconds)
+            axes[0].axvline(mean_start, color='red', linestyle='--', linewidth=2, label=f'Mean: {mean_start:.1f}s')
+            axes[0].axvline(median_start, color='green', linestyle='--', linewidth=2, label=f'Median: {median_start:.1f}s')
+            axes[0].legend()
+        else:
+            axes[0].text(0.5, 0.5, 'No starting waste data', ha='center', va='center', transform=axes[0].transAxes)
+            axes[0].set_title('Starting Waste Period Length', fontsize=13, fontweight='bold')
+
+        # Ending waste histogram
+        if ending_waste_durations:
+            ending_waste_seconds = ending_waste_durations
+            axes[1].hist(ending_waste_seconds, bins=20, color='lightcoral', edgecolor='black', alpha=0.7)
+            axes[1].set_xlabel('Duration (seconds)', fontsize=12)
+            axes[1].set_ylabel('Number of Nodes', fontsize=12)
+            axes[1].set_title('Ending Waste Period Length\n(Last Use to Disappearance)', fontsize=13, fontweight='bold')
+            axes[1].grid(True, alpha=0.3, axis='y')
+
+            # Add statistics
+            mean_end = np.mean(ending_waste_seconds)
+            median_end = np.median(ending_waste_seconds)
+            axes[1].axvline(mean_end, color='red', linestyle='--', linewidth=2, label=f'Mean: {mean_end:.1f}s')
+            axes[1].axvline(median_end, color='green', linestyle='--', linewidth=2, label=f'Median: {median_end:.1f}s')
+            axes[1].legend()
+        else:
+            axes[1].text(0.5, 0.5, 'No ending waste data', ha='center', va='center', transform=axes[1].transAxes)
+            axes[1].set_title('Ending Waste Period Length', fontsize=13, fontweight='bold')
+
+        plt.tight_layout()
+        plt.show()
+
+    return {
+        'scheduler_waste_hours': scheduler_waste_hours,
+        'starting_waste_hours': starting_waste_hours,
+        'middle_waste_hours': middle_waste_hours,
+        'ending_waste_hours': ending_waste_hours,
+        'total_idle_waste_hours': total_waste,
+        'scheduler_waste_avg': scheduler_waste_avg,
+        'starting_waste_avg': starting_waste_avg,
+        'middle_waste_avg': middle_waste_avg,
+        'ending_waste_avg': ending_waste_avg,
+        'total_idle_waste_avg': total_waste_avg,
+        'experiment_duration_hours': experiment_duration_hours,
+        'nodes_with_multiple_periods': nodes_with_multiple_periods,
+        'starting_waste_durations': starting_waste_durations,
+        'ending_waste_durations': ending_waste_durations
+    }
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: python manage_monitor_log.py <log_file_path>")
@@ -1411,6 +1683,8 @@ def main():
 
     # At the very end, warn about any jobs with decreasing progress
     print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress)
+
+    # analyze_idle_waste_decomposition(log_file_path, first_job_time, last_job_arrival_time)
 
     # print("response_dict={")
     # for job_name, job_info in jobs.items():

@@ -39,21 +39,33 @@ class FixedWidthPolicy(object):
         else:
             return []
 
-    def optimize(self, jobs, nodes, prev_allocations, node_template):
+    def optimize(self, jobs, nodes, prev_allocations, node_template, scheduler_nodes=None):
         '''
-        Give each job width[job_type][epoch] GPUs. Prioritize jobs that already have the correct number of GPUs in prev_allocations. 
+        Give each job width[job_type][epoch] GPUs. Prioritize jobs that already have the correct number of GPUs in prev_allocations.
         For those jobs that don't have the correct number of GPUs, allocate to the best effort.
         Ask for total number of desired nodes.
         New logic 11/7/2025: the jobs start with 1 GPU (when grad_params and perf_params are None). It runs on 1 GPU for one rescaling time,
-        and after the training starts, its params are updated, and thus, max_replicas is not 1, and it gets the width[job_type][epoch] GPUs. 
-        However, the desired number of GPUs is always width[job_type][epoch], even when the job is running on 1 GPU. 
+        and after the training starts, its params are updated, and thus, max_replicas is not 1, and it gets the width[job_type][epoch] GPUs.
+        However, the desired number of GPUs is always width[job_type][epoch], even when the job is running on 1 GPU.
         This whole process is because the bsz is only updated when an epoch is finished or the job is rescaled.
         This logic is disabled on Nov 30.
+
+        scheduler_nodes: Dictionary of scheduler nodes {node_name: NodeInfo}. These nodes cannot be turned off,
+                        so they should be prioritized in the second pass allocation.
         '''
         new_allocations = {}
+        if scheduler_nodes is None:
+            scheduler_nodes = {}
+
         # Track available GPUs on each node
-        available_gpus = {node_name: node.resources.get("nvidia.com/gpu", 0) 
+        # available_gpus should contain both nodes from 'nodes' and from 'scheduler_nodes' (they may overlap)
+        available_gpus = {node_name: node.resources.get("nvidia.com/gpu", 0)
                          for node_name, node in nodes.items()}
+
+        # Add scheduler nodes (may overlap with nodes)
+        for node_name, node in scheduler_nodes.items():
+            if node_name not in available_gpus:
+                available_gpus[node_name] = node.resources.get("nvidia.com/gpu", 0)
         total_gpus_needed = 0
         # First pass: preserve existing allocations that already have the correct number of GPUs
         for job_key, prev_alloc in prev_allocations.items():
@@ -81,25 +93,39 @@ class FixedWidthPolicy(object):
                 total_gpus_needed += self.width[job_info.application][str(job_info.epoch)]
         
         # Second pass: assign remaining jobs
+        # Prioritize scheduler nodes to ensure they are used whenever possible
+        # Create prioritized node list: scheduler nodes first, then other nodes
+        prioritized_nodes = []
+        # Add scheduler nodes first (sorted for determinism)
+        scheduler_node_names = set(scheduler_nodes.keys())
+        for node_name in sorted(scheduler_node_names):
+            if node_name in available_gpus:
+                prioritized_nodes.append(node_name)
+        # Add non-scheduler nodes (sorted for determinism)
+        for node_name in sorted(available_gpus.keys()):
+            if node_name not in scheduler_node_names:
+                prioritized_nodes.append(node_name)
+
         for job_key, job_info in jobs.items():
             if job_key in new_allocations:
                 continue  # Already allocated or handled (e.g. 0-GPU job)
-                
+
             gpus_per_replica = job_info.resources.get("nvidia.com/gpu", 1)
             assert gpus_per_replica == 1, f"Job {job_key} requests {gpus_per_replica} GPUs per replica, which is not 1."
-                
-            gpu_wanted = self.width[job_info.application][str(job_info.epoch)]     
+
+            gpu_wanted = self.width[job_info.application][str(job_info.epoch)]
             # if job_info.max_replicas == 1:
             #     # This job has never run before, so the grad and perf params are none, which may lead to a bad bsz.
             #     gpu_wanted = 1
-            # Try to allocate the job
+            # Try to allocate the job, prioritizing scheduler nodes
             current_alloc = []
-            for node_name, gpus in available_gpus.items():
+            for node_name in prioritized_nodes:
+                gpus = available_gpus[node_name]
                 while len(current_alloc) < gpu_wanted and gpus >= gpus_per_replica:
                     current_alloc.append(node_name)
                     gpus -= gpus_per_replica
                     available_gpus[node_name] = gpus
-            
+
             new_allocations[job_key] = current_alloc
             total_gpus_needed += self.width[job_info.application][str(job_info.epoch)]
             if len(current_alloc) < gpu_wanted:
