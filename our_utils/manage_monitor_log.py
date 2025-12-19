@@ -1684,7 +1684,7 @@ def main():
     # At the very end, warn about any jobs with decreasing progress
     print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress)
 
-    # analyze_idle_waste_decomposition(log_file_path, first_job_time, last_job_arrival_time)
+    analyze_idle_waste_decomposition(log_file_path, first_job_time, last_job_arrival_time)
 
     # print("response_dict={")
     # for job_name, job_info in jobs.items():

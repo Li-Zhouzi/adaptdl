@@ -52,7 +52,7 @@ class AdaptDLAllocator(object):
 
         # Select the policy to use
         # Options: "pollux", "dummy", "fixed-width"
-        SELECTED_POLICY = "pollux"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
+        SELECTED_POLICY = "fixed-width"  # <--- CHANGE THIS VALUE TO SWITCH POLICY
 
         # Width fetching configuration
         self._width_service_url = os.environ.get("WIDTH_SERVICE_URL", "http://localhost:8083")
@@ -97,6 +97,8 @@ class AdaptDLAllocator(object):
             self._aws_asg_name = config.get_aws_asg_name()
             self._aws_scaledown_wait = config.get_scaledown_wait_seconds()
             self._aws_region = config.get_aws_region()
+            # Track when nodes were marked for termination: {node_name: timestamp}
+            self._pending_terminations = {}  # Dict[str, float]
             LOG.info(f"AWS direct scale-down enabled: ASG={self._aws_asg_name}, region={self._aws_region}, wait={self._aws_scaledown_wait}s")
 
     async def run(self):
@@ -175,8 +177,12 @@ class AdaptDLAllocator(object):
                 LOG.info(f"[TIMESTAMP: {time.time()}] Starting allocator optimization cycle")
                 await self._optimize_all()
 
-            LOG.info("Sleep for 60 seconds")
-            await asyncio.sleep(60)
+            if self._policy_type == "fixed-width":
+                LOG.info("Fixed-width policy: Sleep for 5 seconds")
+                await asyncio.sleep(5)
+            else:
+                LOG.info("Sleep for 60 seconds")
+                await asyncio.sleep(60)
 
     async def _fetch_width_loop(self):
         """Periodically fetch width from the width service."""
@@ -263,8 +269,8 @@ class AdaptDLAllocator(object):
         LOG.info("Job resources: %s",
                  {k: v.resources for k, v in jobs.items()})
         start = time.time()
-        allocations = self._allocate(jobs, nodes, prev_allocations,
-                                     node_template, protected_nodes)
+        allocations = await self._allocate(jobs, nodes, prev_allocations,
+                                           node_template, protected_nodes)
         duration = time.time() - start
         LOG.info("Allocations (in %.3f sec): %s", duration,
                  allocations)
@@ -403,8 +409,8 @@ class AdaptDLAllocator(object):
 
         return job_infos, allocations
 
-    def _allocate(self, jobs, nodes, prev_allocations, node_template,
-                  protected_nodes):
+    async def _allocate(self, jobs, nodes, prev_allocations, node_template,
+                        protected_nodes):
         unschedulable_jobs = []
         for job_key in list(jobs):
             job_resources = jobs[job_key].resources
@@ -428,6 +434,10 @@ class AdaptDLAllocator(object):
         elif jobs and nodes:
             # Filter nodes based on autoscaling state
             nodes_for_policy = self._get_filtered_nodes_for_policy(nodes)
+
+            # Execute terminations for nodes aged >= 60s
+            if self._aws_scaledown_enabled:
+                await self._execute_aged_terminations()
 
             # For FixedWidthPolicy, pass scheduler nodes (protected nodes) with their resources
             # so the policy can prioritize using them even if they're not in the filtered nodes
@@ -481,29 +491,32 @@ class AdaptDLAllocator(object):
                 # Identify nodes to terminate (nodes NOT in active_nodes)
                 active_node_names = set(n for n in active_nodes if not n.startswith("~"))
                 all_node_names = set(nodes.keys())
-                nodes_to_terminate = list(all_node_names - active_node_names)
+                nodes_to_mark = list(all_node_names - active_node_names)
 
                 if protected_nodes:
-                    before_filter = set(nodes_to_terminate)
-                    nodes_to_terminate = [
-                        node for node in nodes_to_terminate
+                    before_filter = set(nodes_to_mark)
+                    nodes_to_mark = [
+                        node for node in nodes_to_mark
                         if node not in protected_nodes
                     ]
-                    filtered = before_filter - set(nodes_to_terminate)
+                    filtered = before_filter - set(nodes_to_mark)
                     if filtered:
                         LOG.info("[AWS ScaleDown] Skipping protected nodes: %s", list(filtered))
 
-                if nodes_to_terminate:
-                    # Fire background task (fire-and-forget)
-                    asyncio.create_task(
-                        trigger_aws_scaledown(
-                            self._aws_asg_name,
-                            nodes_to_terminate,
-                            self._aws_scaledown_wait,
-                            self._aws_region
-                        )
-                    )
-                    LOG.info(f"[AWS ScaleDown] Triggered termination of {len(nodes_to_terminate)} nodes: {nodes_to_terminate}")
+                # Mark nodes for termination if not already pending
+                if nodes_to_mark:
+                    new_terminations = []
+                    current_time = time.time()
+
+                    for node_name in nodes_to_mark:
+                        if node_name not in self._pending_terminations:
+                            self._pending_terminations[node_name] = current_time
+                            new_terminations.append(node_name)
+
+                    if new_terminations:
+                        LOG.info(f"[AWS ScaleDown] Marked {len(new_terminations)} nodes for termination (will execute after {self._aws_scaledown_wait}s): {new_terminations}")
+
+                    LOG.info(f"[AWS ScaleDown] Total pending terminations: {len(self._pending_terminations)} nodes")
 
             LOG.info("Active nodes: %s (target: %s, actual: %s, allocated: %s)",
                      active_nodes, self._desired_num_nodes, len(nodes), len(self._allocated_nodes))
@@ -555,46 +568,59 @@ class AdaptDLAllocator(object):
         """
         if self._desired_num_nodes is None:
             # First allocation, no filtering needed
-            return nodes
-
-        actual_num_nodes = len(nodes)
-
-        if self._desired_num_nodes == actual_num_nodes:
-            # Steady state: desired matches actual
-            LOG.info("Steady state: desired=%s, actual=%s",
-                     self._desired_num_nodes, actual_num_nodes)
-            return nodes
-        elif self._desired_num_nodes < actual_num_nodes:
-            # Scale-down in progress: filter to desired count
-            # Prioritize nodes that were allocated in the previous round
-            from collections import OrderedDict
-
-            filtered_nodes = OrderedDict()
-
-            # First, add nodes that were allocated in the previous round
-            assert len(self._allocated_nodes) <= self._desired_num_nodes, "Allocated nodes should be less than or equal to desired nodes"
-            if self._allocated_nodes:
-                for node_name in self._allocated_nodes:
-                    assert not node_name.startswith("~"), "Allocated nodes should not be virtual nodes"
-                    if node_name in nodes:
-                        filtered_nodes[node_name] = nodes[node_name]
-
-            # Then fill remaining slots with other nodes
-            for node_name, node_info in nodes.items():
-                if len(filtered_nodes) >= self._desired_num_nodes:
-                    break
-                if node_name not in filtered_nodes:
-                    filtered_nodes[node_name] = node_info
-
-            LOG.info("Scale-down in progress: showing policy %s/%s nodes (previously allocated: %s)",
-                     len(filtered_nodes), actual_num_nodes,
-                     len(self._allocated_nodes) if self._allocated_nodes else 0)
-            return filtered_nodes
+            result_nodes = nodes
         else:
-            # Scale-up in progress: show only current nodes
-            LOG.info("Scale-up in progress: showing policy %s/%s nodes (target: %s)",
-                     actual_num_nodes, actual_num_nodes, self._desired_num_nodes)
-            return nodes
+            actual_num_nodes = len(nodes)
+
+            if self._desired_num_nodes == actual_num_nodes:
+                # Steady state: desired matches actual
+                LOG.info("Steady state: desired=%s, actual=%s",
+                         self._desired_num_nodes, actual_num_nodes)
+                result_nodes = nodes
+            elif self._desired_num_nodes < actual_num_nodes:
+                # Scale-down in progress: filter to desired count
+                # Prioritize nodes that were allocated in the previous round
+                from collections import OrderedDict
+
+                filtered_nodes = OrderedDict()
+
+                # First, add nodes that were allocated in the previous round
+                assert len(self._allocated_nodes) <= self._desired_num_nodes, "Allocated nodes should be less than or equal to desired nodes"
+                if self._allocated_nodes:
+                    for node_name in self._allocated_nodes:
+                        assert not node_name.startswith("~"), "Allocated nodes should not be virtual nodes"
+                        if node_name in nodes:
+                            filtered_nodes[node_name] = nodes[node_name]
+
+                # Then fill remaining slots with other nodes
+                for node_name, node_info in nodes.items():
+                    if len(filtered_nodes) >= self._desired_num_nodes:
+                        break
+                    if node_name not in filtered_nodes:
+                        filtered_nodes[node_name] = node_info
+
+                LOG.info("Scale-down in progress: showing policy %s/%s nodes (previously allocated: %s)",
+                         len(filtered_nodes), actual_num_nodes,
+                         len(self._allocated_nodes) if self._allocated_nodes else 0)
+                result_nodes = filtered_nodes
+            else:
+                # Scale-up in progress: show only current nodes
+                LOG.info("Scale-up in progress: showing policy %s/%s nodes (target: %s)",
+                         actual_num_nodes, actual_num_nodes, self._desired_num_nodes)
+                result_nodes = nodes
+
+        # Cancel pending terminations for nodes being considered for allocation
+        if self._aws_scaledown_enabled and self._pending_terminations:
+            cancelled_nodes = []
+            for node_name in list(result_nodes.keys()):
+                if node_name in self._pending_terminations:
+                    del self._pending_terminations[node_name]
+                    cancelled_nodes.append(node_name)
+
+            if cancelled_nodes:
+                LOG.info(f"[AWS ScaleDown] Cancelled pending termination for nodes being considered: {cancelled_nodes}")
+
+        return result_nodes
 
     def _update_scaling_state(self, desired_nodes, actual_num_nodes, policy_num_nodes):
         """Update autoscaling state and log warnings if needed.
@@ -628,6 +654,35 @@ class AdaptDLAllocator(object):
         else:
             # Scale-down in progress: allow updating to new target
             self._desired_num_nodes = desired_nodes
+
+    async def _execute_aged_terminations(self):
+        """Execute AWS termination for nodes pending longer than wait period."""
+        if not self._pending_terminations:
+            return
+
+        current_time = time.time()
+        wait_seconds = self._aws_scaledown_wait
+        nodes_to_terminate_now = []
+
+        for node_name, marked_time in list(self._pending_terminations.items()):
+            age = current_time - marked_time
+            if age >= wait_seconds:
+                nodes_to_terminate_now.append(node_name)
+                del self._pending_terminations[node_name]
+
+        if nodes_to_terminate_now:
+            LOG.info(f"[AWS ScaleDown] Executing termination for {len(nodes_to_terminate_now)} nodes aged >= {wait_seconds}s: {nodes_to_terminate_now}")
+
+            # Call AWS termination immediately (no additional wait)
+            try:
+                from adaptdl_sched.aws_scaledown import execute_aws_scaledown_immediate
+                await execute_aws_scaledown_immediate(
+                    self._aws_asg_name,
+                    nodes_to_terminate_now,
+                    self._aws_region
+                )
+            except Exception as e:
+                LOG.error(f"[AWS ScaleDown] Failed to terminate nodes {nodes_to_terminate_now}: {e}", exc_info=True)
 
 
 if __name__ == "__main__":

@@ -88,3 +88,26 @@ def _terminate_instances_sync(asg_name: str, node_names: list, aws_region: str =
             ShouldDecrementDesiredCapacity=True  # Reduce desired capacity
         )
         LOG.info(f"[AWS ScaleDown] Terminated instance: {instance_id}")
+
+
+async def execute_aws_scaledown_immediate(asg_name: str, nodes_to_terminate: list, aws_region: str = "us-east-1"):
+    """
+    Execute AWS termination immediately (no wait period).
+    Used when the allocator has already handled the delay via timestamp tracking.
+
+    Args:
+        asg_name: AWS Auto Scaling Group name
+        nodes_to_terminate: List of Kubernetes node names to terminate
+        aws_region: AWS region for boto3 clients
+    """
+    try:
+        LOG.info(f"[AWS ScaleDown] Executing immediate termination of {len(nodes_to_terminate)} nodes: {nodes_to_terminate}")
+
+        # Call AWS API in thread pool (boto3 is synchronous)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, _terminate_instances_sync, asg_name, nodes_to_terminate, aws_region)
+
+        LOG.info(f"[AWS ScaleDown] SUCCESS: Terminated {len(nodes_to_terminate)} instances")
+    except Exception as e:
+        LOG.error(f"[AWS ScaleDown] FAILED: {e}", exc_info=True)
+        raise  # Re-raise so caller can handle
