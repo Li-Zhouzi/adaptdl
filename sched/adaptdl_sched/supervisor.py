@@ -16,6 +16,7 @@
 import kubernetes_asyncio as kubernetes
 from aiohttp import web
 import logging
+import time
 from adaptdl.sched_hints import SCHED_HINTS
 from adaptdl_sched.config import get_supervisor_port
 from datetime import datetime
@@ -49,6 +50,24 @@ class Supervisor:
         name = request.match_info["name"]
         group = request.match_info["group"]
         timeout = int(request.query.get("timeout", "30"))
+        start_time = time.time()
+
+        LOG.info("[DISCOVER_START] job=%s group=%s namespace=%s ts=%.3f",
+                 name, group, namespace, start_time)
+
+        # Fetch job allocation for node verification
+        job_allocation = None
+        try:
+            job = await self._objs_api.get_namespaced_custom_object(
+                "adaptdl.petuum.com", "v1", namespace, "adaptdljobs", name)
+            job_allocation = job.get("status", {}).get("allocation", [])
+            LOG.info("[DISCOVER_ALLOC] job=%s group=%s allocation=%s ts=%.3f",
+                     name, group, job_allocation, time.time())
+        except Exception as e:
+            LOG.warning("[DISCOVER_ALLOC_FAILED] job=%s group=%s error=%s ts=%.3f",
+                       name, group, str(e), time.time())
+            # Continue without allocation check if fetch fails
+
         pod_ip_list = None
         async with kubernetes.watch.Watch() as w:
             stream = w.stream(self._core_api.list_namespaced_pod, namespace,
@@ -57,14 +76,70 @@ class Supervisor:
                               timeout_seconds=timeout)
             async for event in stream:
                 pod = event["object"]
+                event_type = event.get("type", "UNKNOWN")
+                pod_name = pod.metadata.name
+                pod_group = pod.metadata.annotations.get("adaptdl/group", "unknown")
                 replicas = int(pod.metadata.annotations["adaptdl/replicas"])
                 rank = int(pod.metadata.annotations["adaptdl/rank"])
-                if pod.metadata.annotations["adaptdl/group"] == group:
-                    if pod_ip_list is None:
-                        pod_ip_list = [None] * replicas
-                    pod_ip_list[rank] = pod.status.pod_ip
-                    if all(pod_ip is not None for pod_ip in pod_ip_list):
-                        return web.json_response(pod_ip_list)
+                node_name = pod.spec.node_name if pod.spec else "unknown"
+                pod_ip = pod.status.pod_ip
+                del_ts = pod.metadata.deletion_timestamp
+
+                LOG.info("[DISCOVER_EVENT] type=%s pod=%s group=%s rank=%s/%s node=%s ip=%s del_ts=%s ts=%.3f",
+                         event_type, pod_name, pod_group, rank, replicas,
+                         node_name, pod_ip, del_ts, time.time())
+
+                # Defensive check 1: Skip terminating pods
+                if del_ts is not None:
+                    LOG.warning("[DISCOVER_SKIP] pod=%s reason=deletion_timestamp_set group=%s rank=%s node=%s ip=%s ts=%.3f",
+                               pod_name, pod_group, rank, node_name, pod_ip, time.time())
+                    continue
+
+                # Defensive check 2: Skip DELETED events
+                if event_type == "DELETED":
+                    LOG.warning("[DISCOVER_SKIP] pod=%s reason=event_type_deleted group=%s rank=%s node=%s ip=%s ts=%.3f",
+                               pod_name, pod_group, rank, node_name, pod_ip, time.time())
+                    continue
+
+                # Only process pods from the requested group
+                if pod_group != group:
+                    continue
+
+                # Defensive check 3: Verify node matches allocation (if available)
+                if job_allocation and len(job_allocation) > rank:
+                    expected_node = job_allocation[rank]
+                    # Extract hostname from node name (e.g., "ip-192-168-66-70.ec2.internal")
+                    # and compare with allocation entry
+                    if expected_node not in node_name:
+                        LOG.warning("[DISCOVER_SKIP] pod=%s reason=node_mismatch group=%s rank=%s expected_node=%s actual_node=%s ip=%s ts=%.3f",
+                                   pod_name, pod_group, rank, expected_node, node_name, pod_ip, time.time())
+                        continue
+
+                # Initialize pod_ip_list if this is the first valid pod
+                if pod_ip_list is None:
+                    pod_ip_list = [None] * replicas
+
+                # Defensive check 4: Prevent overwriting already-filled slots
+                if pod_ip_list[rank] is not None:
+                    LOG.warning("[DISCOVER_SKIP] pod=%s reason=rank_already_filled group=%s rank=%s node=%s ip=%s current_ip=%s ts=%.3f",
+                               pod_name, pod_group, rank, node_name, pod_ip, pod_ip_list[rank], time.time())
+                    continue
+
+                # Accept this pod
+                pod_ip_list[rank] = pod_ip
+                LOG.info("[DISCOVER_ACCEPT] pod=%s group=%s rank=%s node=%s ip=%s current_list=%s ts=%.3f",
+                         pod_name, pod_group, rank, node_name, pod_ip, pod_ip_list, time.time())
+
+                # Check if we have all IPs
+                if all(pod_ip is not None for pod_ip in pod_ip_list):
+                    duration = time.time() - start_time
+                    LOG.info("[DISCOVER_SUCCESS] job=%s group=%s ips=%s duration=%.3f ts=%.3f",
+                             name, group, pod_ip_list, duration, time.time())
+                    return web.json_response(pod_ip_list)
+
+        # Timeout
+        LOG.warning("[DISCOVER_TIMEOUT] job=%s group=%s partial_ips=%s ts=%.3f",
+                   name, group, pod_ip_list, time.time())
         return web.json_response(status=408)  # Timeout.
 
     async def _handle_report(self, request):

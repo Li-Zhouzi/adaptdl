@@ -24,7 +24,7 @@ shutdown_event = threading.Event()
 CHECK_INTERVAL = 300  # 5 minutes in seconds
 ALLOCATOR_LOG_INTERVAL = 3600  # 1 hour in seconds
 COMPLETION_CHECK_INTERVAL = 600  # 10 minutes in seconds
-EXP_DIR = "./experiment_results/1216-Pollux-u0.9"
+EXP_DIR = "./experiment_results/1218-Pollux-u0.9"
 MONITOR_LOG_PATH = os.path.join(EXP_DIR, "monitor_log.txt")
 ERROR_LOG_DIR = os.path.join(EXP_DIR, "errors")
 PERIODIC_LOG_DIR = os.path.join(EXP_DIR, "periodic_logs")
@@ -168,7 +168,7 @@ def get_scheduler_logs():
     print(f"[INFO] Found scheduler pod: {scheduler_pod}")
 
     # Get logs for each container
-    containers = ["allocator", "width-calculator"]
+    containers = ["allocator", "width-calculator", "supervisor"]
     for container in containers:
         log_file = os.path.join(ERROR_LOG_DIR, f"{container}.txt")
         print(f"[INFO] Fetching logs for container: {container}")
@@ -244,6 +244,41 @@ def get_pods_info():
         f.write(result.stdout)
 
     print(f"[INFO] Saved pods info to {log_file}")
+
+
+def filter_supervisor_logs_for_job(job_name):
+    """Filter supervisor logs to show only entries related to the failing job."""
+    print(f"[INFO] Filtering supervisor logs for job {job_name}...")
+
+    supervisor_log_file = os.path.join(ERROR_LOG_DIR, "supervisor.txt")
+
+    # Check if supervisor log exists
+    if not os.path.exists(supervisor_log_file):
+        print(f"[WARNING] Supervisor log file not found: {supervisor_log_file}")
+        return
+
+    try:
+        with open(supervisor_log_file, 'r') as f:
+            all_lines = f.readlines()
+
+        # Filter for job-specific and DISCOVER logs
+        job_lines = [line for line in all_lines
+                     if job_name in line or "[DISCOVER" in line]
+
+        if job_lines:
+            filtered_log_file = os.path.join(ERROR_LOG_DIR, f"supervisor_{job_name}.txt")
+            with open(filtered_log_file, 'w') as f:
+                f.write(f"=== Filtered Supervisor Logs for {job_name} ===\n")
+                f.write(f"Timestamp: {datetime.now()}\n\n")
+                f.writelines(job_lines)
+
+            print(f"[INFO] Saved filtered supervisor logs to {filtered_log_file}")
+            print(f"[INFO] Filtered {len(job_lines)} lines related to {job_name}")
+        else:
+            print(f"[INFO] No supervisor logs found for job {job_name}")
+
+    except Exception as e:
+        print(f"[WARNING] Error filtering supervisor logs: {e}")
 
 
 def scale_down_autoscaling_group():
@@ -473,6 +508,8 @@ def cleanup_on_failure(job_name=None):
     if job_name:
         get_failing_job_logs(job_name)
     get_scheduler_logs()
+    if job_name:
+        filter_supervisor_logs_for_job(job_name)
     get_nodes_info()
     get_pods_info()
 
