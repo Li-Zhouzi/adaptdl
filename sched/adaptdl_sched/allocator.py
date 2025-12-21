@@ -79,6 +79,7 @@ class AdaptDLAllocator(object):
         self._desired_num_nodes = None
         # Track which nodes are actually allocated to jobs
         self._allocated_nodes = None
+        self._policy_last_allocation = {}
 
         # AWS direct scale-down configuration (optional feature)
         # NOTE: AWS direct scale-down is NOT compatible with Pollux policy
@@ -178,8 +179,8 @@ class AdaptDLAllocator(object):
                 await self._optimize_all()
 
             if self._policy_type == "fixed-width":
-                LOG.info("Fixed-width policy: Sleep for 5 seconds")
-                await asyncio.sleep(5)
+                LOG.info("Fixed-width policy: Sleep for 10 seconds")
+                await asyncio.sleep(10)
             else:
                 LOG.info("Sleep for 60 seconds")
                 await asyncio.sleep(60)
@@ -268,8 +269,12 @@ class AdaptDLAllocator(object):
             await self._find_jobs_and_allocations()
         LOG.info("Job resources: %s",
                  {k: v.resources for k, v in jobs.items()})
+        if self._policy_last_allocation != prev_allocations:
+            LOG.info("WARNING: Policy last allocation not equal to computed: %s != %s", self._policy_last_allocation, prev_allocations)
         start = time.time()
-        allocations = await self._allocate(jobs, nodes, prev_allocations,
+        # allocations = await self._allocate(jobs, nodes, prev_allocations,
+        #                                    node_template, protected_nodes)
+        allocations = await self._allocate(jobs, nodes, self._policy_last_allocation,
                                            node_template, protected_nodes)
         duration = time.time() - start
         LOG.info("Allocations (in %.3f sec): %s", duration,
@@ -403,6 +408,9 @@ class AdaptDLAllocator(object):
             if "allocation" in job.get("status", {}):
                 allocations[namespace, name] = \
                     list(job["status"]["allocation"])
+            else:
+                # Ensure all jobs have an allocation entry, even if empty
+                allocations[namespace, name] = []
 
             job_info = self._get_job_info(job)
             job_infos[(namespace, name)] = job_info
@@ -435,10 +443,6 @@ class AdaptDLAllocator(object):
             # Filter nodes based on autoscaling state
             nodes_for_policy = self._get_filtered_nodes_for_policy(nodes)
 
-            # Execute terminations for nodes aged >= 60s
-            if self._aws_scaledown_enabled:
-                await self._execute_aged_terminations()
-
             # For FixedWidthPolicy, pass scheduler nodes (protected nodes) with their resources
             # so the policy can prioritize using them even if they're not in the filtered nodes
             if self._policy_type == "fixed-width" and protected_nodes:
@@ -453,8 +457,10 @@ class AdaptDLAllocator(object):
             # Track which nodes are actually being used for next round
             if allocations:
                 self._allocated_nodes = set.union(*map(set, allocations.values()))
+                self._policy_last_allocation = allocations
             else:
                 self._allocated_nodes = set()
+                self._policy_last_allocation = {}
 
             # Update desired nodes and handle scaling state
             self._update_scaling_state(desired_nodes, len(nodes), len(nodes_for_policy))
@@ -474,6 +480,10 @@ class AdaptDLAllocator(object):
                 for node_name in nodes:
                     if node_name not in active_nodes:
                         active_nodes.append(node_name)
+                        if self._aws_scaledown_enabled and self._pending_terminations:
+                            if node_name in self._pending_terminations:
+                                LOG.info(f"[AWS ScaleDown] Cancelled pending termination for node {node_name}")
+                                del self._pending_terminations[node_name]
                         if len(active_nodes) >= self._desired_num_nodes:
                             break
 
@@ -517,7 +527,9 @@ class AdaptDLAllocator(object):
                         LOG.info(f"[AWS ScaleDown] Marked {len(new_terminations)} nodes for termination (will execute after {self._aws_scaledown_wait}s): {new_terminations}")
 
                     LOG.info(f"[AWS ScaleDown] Total pending terminations: {len(self._pending_terminations)} nodes")
-
+            # Execute terminations for nodes aged >= 60s
+            if self._aws_scaledown_enabled:
+                await self._execute_aged_terminations()
             LOG.info("Active nodes: %s (target: %s, actual: %s, allocated: %s)",
                      active_nodes, self._desired_num_nodes, len(nodes), len(self._allocated_nodes))
         elif jobs or unschedulable_jobs:
@@ -561,8 +573,7 @@ class AdaptDLAllocator(object):
         return protected
 
     def _get_filtered_nodes_for_policy(self, nodes):
-        """Filter nodes based on autoscaling state to prevent oscillation.
-
+        """
         For scale-down: Show policy only the desired subset to prevent re-expanding.
         For scale-up: Show policy only current nodes until scaling completes.
         """
@@ -623,10 +634,19 @@ class AdaptDLAllocator(object):
         return result_nodes
 
     def _update_scaling_state(self, desired_nodes, actual_num_nodes, policy_num_nodes):
-        """Update autoscaling state and log warnings if needed.
-
-        self._desired_num_nodes is always set after this method, never None.
         """
+        This function is used to set the desired number of nodes of the allocator. 
+        For fixed width policy, the desired number of nodes should just be the desired number of nodes from the policy.
+        However, for pollux policy, the desired number of nodes should not change during scaling up: Scale down can be mimiced by filtering the active nodes,
+        however, during a scale up, we do not want it to scale up a little and stop. We wantt it to scale up  to the desired numebr of nodes decided by the first time pollux decides to scale up.
+        """
+        if self._policy_type == "fixed-width" or self._policy_type == "dummy":
+            self._desired_num_nodes = desired_nodes
+            return
+        else:
+            if self._policy_type != "pollux":
+                raise ValueError("policy {} not supported".format(self._policy_type))
+
         if self._desired_num_nodes is None:
             # First allocation: initialize desired_num_nodes
             LOG.info("Allocator side: Initializing desired nodes: %s", desired_nodes)

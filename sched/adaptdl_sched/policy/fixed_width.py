@@ -75,7 +75,17 @@ class FixedWidthPolicy(object):
             job_info = jobs[job_key]
             gpus_per_replica = job_info.resources.get("nvidia.com/gpu", 1)
             assert gpus_per_replica == 1, f"Job {job_key} requests {gpus_per_replica} GPUs per replica, which is not 1."
-                
+
+            # Check if all nodes in prev_allocation are available
+            # Nodes can be missing due to: taints, termination, AWS scale-down, etc.
+            all_nodes_available = all(node_name in available_gpus for node_name in prev_alloc)
+            if not all_nodes_available:
+                # Some nodes are missing - skip this job in first round
+                # It will be reallocated in second round with available nodes
+                missing_nodes = [n for n in prev_alloc if n not in available_gpus]
+                LOG.warning(f"Job {job_key}: skipping first round preservation because nodes are missing: {missing_nodes}")
+                continue
+
             # Calculate total GPUs this job had in its previous allocation
             gpus_in_prev_alloc = len(prev_alloc)
             print("Here: ", job_info.application, job_info.epoch)

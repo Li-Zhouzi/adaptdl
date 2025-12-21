@@ -51,6 +51,7 @@ def process_log_file(log_file_path):
             # Extract cluster node information
             cluster_nodes = prev_log.get('cluster_nodes', {})
             ready_nodes = cluster_nodes.get('ready', 0)
+            assert ready_nodes == len(cluster_nodes.get('ready_node_names', [])), f"Expected {len(cluster_nodes.get('ready_node_names', []))} ready nodes, got {ready_nodes}"
 
             # Calculate GPU metrics (use READY GPUs for total/average usage)
             ready_gpus = ready_nodes * NUM_GPU_PER_NODE
@@ -1476,16 +1477,6 @@ def analyze_idle_waste_decomposition(log_file_path, first_job_time, last_job_arr
     print(f"  Ending Waste Average: {ending_waste_avg:.2f} GPUs")
     print(f"  Total Idle Waste Average: {total_waste_avg:.2f} GPUs")
     print("="*60)
-
-    # Print nodes with multiple usage periods
-    if nodes_with_multiple_periods:
-        print("\nNodes with Multiple Usage Periods:")
-        print("-" * 60)
-        for node_name, entry_times in nodes_with_multiple_periods.items():
-            print(f"  {node_name}:")
-            print(f"    Number of usage periods: {len(entry_times)}")
-            print(f"    Entry timestamps: {entry_times}")
-        print("="*60)
 
     # Plot histograms for starting and ending waste durations
     if starting_waste_durations or ending_waste_durations:
