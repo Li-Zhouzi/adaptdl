@@ -130,6 +130,10 @@ class FixedWidthPolicy(object):
             # Try to allocate the job, prioritizing scheduler nodes
             current_alloc = []
             for node_name in prioritized_nodes:
+                # If job wants multiple of 4 GPUs, only use nodes with all 4 GPUs available
+                if gpu_wanted % 4 == 0 and available_gpus[node_name] != 4:
+                    continue
+
                 gpus = available_gpus[node_name]
                 while len(current_alloc) < gpu_wanted and gpus >= gpus_per_replica:
                     current_alloc.append(node_name)

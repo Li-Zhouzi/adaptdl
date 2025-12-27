@@ -200,17 +200,20 @@ def process_log_file(log_file_path):
                     'last_progress': None,
                     'stuck_start_time': None,
                     'queueing_start_time': None,
-                    'allocation_pairs': set()
+                    'allocation_pairs': set(),
+                    'allocation_nodes': set()
                 }
             
             epoch_info = jobs[job_name]['epochs'][epoch]
             epoch_info['last_seen'] = timestamp
-            
+
             # Track allocation pairs (num_nodes, num_replicas) observed in this epoch
             if allocation:
                 num_replicas = len(allocation)
                 num_nodes = len(set(allocation))
                 epoch_info['allocation_pairs'].add((num_nodes, num_replicas))
+                # Store actual node names
+                epoch_info['allocation_nodes'].update(allocation)
 
             # Track GPU allocations
             gpu_count = len(allocation)
@@ -731,6 +734,17 @@ def compute_mean_job_response_time(jobs):
             response_times.append(last_epoch_end - job_info['first_seen'])
     return (sum(response_times) / len(response_times)) if response_times else 0.0
 
+def compute_mean_job_response_minus_queueing_time(jobs):
+    """Compute mean of (response time - queueing time) per job."""
+    effective_times = []
+    for job_name, job_info in jobs.items():
+        if job_info['epochs']:
+            last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+            response_time = last_epoch_end - job_info['first_seen']
+            total_queueing = sum(epoch_info.get('queueing_time', 0) for epoch_info in job_info['epochs'].values())
+            effective_times.append(response_time - total_queueing)
+    return (sum(effective_times) / len(effective_times)) if effective_times else 0.0
+
 def get_theoretical_duration(application, epoch, num_gpus):
     """Calculate theoretical duration using goodput function."""
     goodput_functions = {
@@ -977,7 +991,7 @@ def print_epoch_details(job_name, jobs, goodput_function=None):
         
         print(f"{epoch:<8} {gpu_str:<15} {duration:<12.1f} {queueing:<10.1f} {wasted:<10.1f} {idle:<10.1f} {theoretical:<15.1f}")
 
-def print_job_breakdown(job_name, jobs):
+def print_job_breakdown(job_name, jobs, scheduler_nodes=None):
     """Print per-epoch breakdown for a specific job: actual, wasted, theoretical, rescaling, and allocation."""
     if job_name not in jobs:
         print(f"\nJob '{job_name}' not found for breakdown.")
@@ -990,11 +1004,11 @@ def print_job_breakdown(job_name, jobs):
         return
 
     # Header
-    print(f"\n" + "="*90)
+    print(f"\n" + "="*110)
     print(f"PER-EPOCH BREAKDOWN FOR {job_name}")
-    print("="*90)
-    print(f"{'Epoch':<6} {'Actual(s)':<12} {'Queue(s)':<10} {'Wasted(s)':<12} {'Idle(s)':<12} {'Theoretical(s)':<15} {'Rescale(s)':<12} {'Allocations':<20}")
-    print("-" * 90)
+    print("="*110)
+    print(f"{'Epoch':<6} {'Actual(s)':<12} {'Queue(s)':<10} {'Wasted(s)':<12} {'Idle(s)':<12} {'Theoretical(s)':<15} {'Rescale(s)':<12} {'Allocations':<20} {'SchedNodes':<11}")
+    print("-" * 110)
 
     previous_final_gpu_count = None
     sum_actual_durations = 0.0
@@ -1048,9 +1062,9 @@ def print_job_breakdown(job_name, jobs):
         rescale = 0
         if previous_final_gpu_count is not None and final_gpu_count != previous_final_gpu_count:
             if application == "cifar10":
-                rescale = 120
+                rescale = 50
             elif application == "deepspeech2":
-                rescale = 150
+                rescale = 100
             elif application == "bert":
                 rescale = 300
             else:
@@ -1063,14 +1077,20 @@ def print_job_breakdown(job_name, jobs):
             sum_theoretical_durations += float(theoretical)
         sum_rescale += float(rescale)
 
-        print(f"{epoch:<6} {duration:<12.1f} {queueing:<10.1f} {wasted:<12.1f} {idle:<12.1f} {theoretical:<15.1f} {rescale:<12.1f} {alloc_str:<20}")
+        # Count scheduler nodes in allocation
+        sched_node_count = 0
+        if scheduler_nodes is not None:
+            allocation_nodes = epoch_info.get('allocation_nodes', set())
+            sched_node_count = len(allocation_nodes & scheduler_nodes)
+
+        print(f"{epoch:<6} {duration:<12.1f} {queueing:<10.1f} {wasted:<12.1f} {idle:<12.1f} {theoretical:<15.1f} {rescale:<12.1f} {alloc_str:<20} {sched_node_count:<11}")
 
     # Total actual response time for this job (from first_seen to last epoch end)
     last_epoch_end = max(ei['last_seen'] for ei in job_epochs.values())
     total_response_time = last_epoch_end - jobs[job_name]['first_seen']
     total_theoretical_time = calculate_theoretical_response_time(job_name, jobs[job_name])
 
-    print("-" * 90)
+    print("-" * 110)
     print(f"Total Actual Response Time (first->last) (s): {total_response_time:.1f}")
     print(f"Total Actual (sum of epoch durations) (s): {sum_actual_durations:.1f}")
     print(f"Total Theoretical Response Time (s): {total_theoretical_time:.1f}")
@@ -1564,8 +1584,8 @@ def main():
     print_failed_completed_jobs(completed_jobs_status)
 
     # Hardcoded specific job breakdown
-    specific_job_breakdown = 'cifar10-63'
-    print_job_breakdown(specific_job_breakdown, jobs)
+    specific_job_breakdown = 'deepspeech2-155'
+    print_job_breakdown(specific_job_breakdown, jobs, scheduler_nodes)
 
     print_mean_rescaling_time(jobs)
 
@@ -1668,8 +1688,10 @@ def main():
 
     # Finally, print mean job total response time (placed at the very end)
     mean_rt = compute_mean_job_response_time(jobs)
+    mean_rt_minus_queue = compute_mean_job_response_minus_queueing_time(jobs)
     print("\n" + "="*60)
     print(f"Mean Job Response Time (s): {mean_rt:.1f}")
+    print(f"Mean Job Response Time - Queueing (s): {mean_rt_minus_queue:.1f}")
     print("="*60)
 
     # At the very end, warn about any jobs with decreasing progress
