@@ -42,7 +42,13 @@ SCHED_HINTS = MappingProxyType({'initBatchSize': 0,
                                 'perfParams': None,
                                 'progress': None,
                                 'new_profile': None,
-                                'new_goodput_profile': None})
+                                'new_goodput_profile': None,
+                                # NEW DIAGNOSTIC FIELDS:
+                                'localGradParams': None,   # Current job's actual grad_params (sqr_avg, var_avg)
+                                'currentGain': None,       # Most recent gain value used for progress update
+                                'progressRate': None,      # Progress increment per second
+                                'throughput': None,        # Optimizer steps per second
+                                'stepTime': None})
 
 
 def post_sched_hints(sched_hints, job_key):

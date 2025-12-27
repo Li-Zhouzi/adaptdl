@@ -74,10 +74,15 @@ def profile_sync_time(sync_time):
 
 
 _PREV_REPORT = None
+_PREV_PROGRESS = None      # Track previous progress value for rate calculation
+_PREV_REPORT_TIME = None   # Track previous report timestamp
+_STEP_COUNT = 0            # Count optimizer steps between reports
+_LAST_GAIN = None          # Track most recent gain value
+_LAST_GRAD_PARAMS = None   # Track most recent local grad_params
 
 
 def profile_step_commit(epoch, batch_size, accumulation_step=False):
-    global _PREV_REPORT
+    global _PREV_REPORT, _STEP_COUNT
     state = _metrics_state()
     step_time = time.time() - state.step_start
     num_nodes = adaptdl.env.num_nodes()
@@ -122,8 +127,10 @@ def profile_step_commit(epoch, batch_size, accumulation_step=False):
     # del state.sync_time
     # End here for job wise profile
 
-    
+
     if not accumulation_step:
+        _STEP_COUNT += 1  # Count optimizer steps (not accumulation steps)
+
         if _PREV_REPORT is None:
             _PREV_REPORT = time.time()
         if adaptdl.env.replica_rank() == 0 and time.time() - _PREV_REPORT > 1:
@@ -144,6 +151,13 @@ def update_grad_params(edp_key, grad_norm_sqr, grad_variance):
 
 def update_progress(progress):
     _metrics_state().progress = progress
+
+
+def update_diagnostic_metrics(gain, grad_params):
+    """Update diagnostic metrics for progress growth analysis."""
+    global _LAST_GAIN, _LAST_GRAD_PARAMS
+    _LAST_GAIN = gain
+    _LAST_GRAD_PARAMS = grad_params
 
 
 def get_progress():
@@ -194,6 +208,8 @@ def _fit_perf_params():
 
 
 def _report_sched_hints(epoch, batch_size):
+    global _PREV_PROGRESS, _PREV_REPORT_TIME, _STEP_COUNT, _LAST_GAIN, _LAST_GRAD_PARAMS
+
     assert adaptdl.env.replica_rank() == 0
     state = _metrics_state()
     
@@ -218,7 +234,53 @@ def _report_sched_hints(epoch, batch_size):
     sched_hints["epoch"] = epoch
     sched_hints["batchSize"] = batch_size
     sched_hints["progress"] = state.progress
-    
+
+    # Compute diagnostic metrics
+    current_time = time.time()
+
+    # Compute progress rate (progress/second)
+    if _PREV_PROGRESS is not None and _PREV_REPORT_TIME is not None:
+        time_delta = current_time - _PREV_REPORT_TIME
+        progress_delta = state.progress - _PREV_PROGRESS
+        if time_delta > 0:
+            sched_hints["progressRate"] = progress_delta / time_delta
+            sched_hints["throughput"] = _STEP_COUNT / time_delta
+            sched_hints["stepTime"] = time_delta / _STEP_COUNT if _STEP_COUNT > 0 else None
+        else:
+            sched_hints["progressRate"] = 0.0
+            sched_hints["throughput"] = 0.0
+            sched_hints["stepTime"] = None
+    else:
+        sched_hints["progressRate"] = None
+        sched_hints["throughput"] = None
+        sched_hints["stepTime"] = None
+
+    # Add current gain and local grad_params
+    sched_hints["currentGain"] = _LAST_GAIN
+    if _LAST_GRAD_PARAMS is not None:
+        sched_hints["localGradParams"] = {
+            "sqr": _LAST_GRAD_PARAMS[0],  # sqr_avg
+            "var": _LAST_GRAD_PARAMS[1]   # var_avg
+        }
+
+    # Print diagnostics to console for immediate visibility
+    progress_rate_str = f"{sched_hints['progressRate']:.4f}" if sched_hints.get('progressRate') is not None else 'N/A'
+    throughput_str = f"{sched_hints['throughput']:.2f}" if sched_hints.get('throughput') is not None else 'N/A'
+    gain_str = f"{_LAST_GAIN:.4f}" if _LAST_GAIN is not None else 'N/A'
+    sqr_str = f"{_LAST_GRAD_PARAMS[0]:.2e}" if _LAST_GRAD_PARAMS is not None else 'N/A'
+    var_str = f"{_LAST_GRAD_PARAMS[1]:.2e}" if _LAST_GRAD_PARAMS is not None else 'N/A'
+
+    print(f"[DIAGNOSTIC] Job: {adaptdl.env.job_id()}, Epoch: {epoch}, Progress: {state.progress:.2f}, "
+          f"ProgressRate: {progress_rate_str}/s, "
+          f"Throughput: {throughput_str} steps/s, "
+          f"Gain: {gain_str}, "
+          f"LocalGradParams: sqr={sqr_str}, var={var_str}")
+
+    # Update tracking variables for next iteration
+    _PREV_PROGRESS = state.progress
+    _PREV_REPORT_TIME = current_time
+    _STEP_COUNT = 0  # Reset counter after reporting
+
     post_sched_hints(sched_hints, adaptdl.env.job_id())
 
 

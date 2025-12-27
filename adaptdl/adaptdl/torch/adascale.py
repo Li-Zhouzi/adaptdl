@@ -345,7 +345,14 @@ class AdaScale(object):
             self._optimizer_step(*args, **kwargs)
         for lr, pg in zip(initial_lr, self._optimizer.param_groups):
             pg["lr"] = lr
-        self._state["progress"] += self.gain(scale)
+        gain_value = self.gain(scale)
+        self._state["progress"] += gain_value
+
+        # Capture gain and grad_params for diagnostics (after progress update)
+        import adaptdl.torch._metrics
+        grad_params = (self.sqr_avg(), self.var_avg())
+        adaptdl.torch._metrics.update_diagnostic_metrics(gain_value, grad_params)
+
         self._reset_accumulation()
 
     def zero_grad(self, *args, **kwargs):

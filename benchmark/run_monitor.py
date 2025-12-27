@@ -137,10 +137,18 @@ if __name__ == "__main__":
             
             # Get grad_params from job status
             grad_params = obj.get("status", {}).get("train", {}).get("gradParams", {})
-            
+
             # Get progress from job status
             progress = obj.get("status", {}).get("train", {}).get("progress", None)
-            
+
+            # Extract diagnostic fields
+            train_status = obj.get("status", {}).get("train", {})
+            progress_rate = train_status.get("progressRate", None)
+            throughput = train_status.get("throughput", None)
+            step_time = train_status.get("stepTime", None)
+            current_gain = train_status.get("currentGain", None)
+            local_grad_params = train_status.get("localGradParams", None)
+
             record["submitted_jobs"].append({
                 "name": job_name,
                 "epoch": obj.get("status", {}).get("train", {}).get("epoch", 0),
@@ -153,7 +161,16 @@ if __name__ == "__main__":
                     "norm": grad_params.get("norm", None),
                     "var": grad_params.get("var", None)
                 } if grad_params else None,
-                "progress": progress
+                "progress": progress,
+                # NEW DIAGNOSTIC FIELDS:
+                "progress_rate": progress_rate,
+                "throughput": throughput,
+                "step_time": step_time,
+                "current_gain": current_gain,
+                "local_grad_params": {
+                    "sqr": local_grad_params.get("sqr", None),
+                    "var": local_grad_params.get("var", None)
+                } if local_grad_params else None
             })
         with open(args.output, "a") as f:
             json.dump(record, f)
