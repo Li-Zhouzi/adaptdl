@@ -329,7 +329,7 @@ class PolluxPolicy(object):
         # self.target_util = (self._min_util + self._max_util) / 2
 
         self._min_nodes = 2
-        self._max_nodes = 40
+        self._max_nodes = 80
 
         self.utility = []
 

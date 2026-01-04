@@ -28,7 +28,11 @@ def process_log_file(log_file_path):
     job_max_progress = {}  # Max progress observed per job
     # Track nodes in use at each timestamp
     nodes_in_use_dict = {}
+    # Track effective GPU usage at each timestamp
+    effective_gpu_usage_dict = {}
     scheduler_nodes = set()
+    # Track peak wanted nodes when ready_nodes == 40
+    peak_wanted_nodes = 0
     
     with open(log_file_path, 'r') as f:
         lines = f.readlines()
@@ -52,7 +56,7 @@ def process_log_file(log_file_path):
             # Extract cluster node information
             cluster_nodes = prev_log.get('cluster_nodes', {})
             ready_nodes = cluster_nodes.get('ready', 0)
-            assert ready_nodes == len(cluster_nodes.get('ready_node_names', [])), f"Expected {len(cluster_nodes.get('ready_node_names', []))} ready nodes, got {ready_nodes}"
+            # assert ready_nodes == len(cluster_nodes.get('ready_node_names', [])), f"Expected {len(cluster_nodes.get('ready_node_names', []))} ready nodes, got {ready_nodes}"
 
             # Calculate GPU metrics (use READY GPUs for total/average usage)
             ready_gpus = ready_nodes * NUM_GPU_PER_NODE
@@ -77,6 +81,8 @@ def process_log_file(log_file_path):
 
             # Track nodes in use at this timestamp
             nodes_in_use_dict[prev_log['timestamp']] = used_nodes
+            # Track effective GPU usage at this timestamp
+            effective_gpu_usage_dict[prev_log['timestamp']] = prev_effective_gpus
 
             fragmentation_waste_gpus = max(0, NUM_GPU_PER_NODE * used_nodes - used_gpus)
             ready_unused_waste_gpus = max(0, NUM_GPU_PER_NODE * (ready_nodes - used_nodes))
@@ -91,8 +97,32 @@ def process_log_file(log_file_path):
             # Total wasted capacity is the sum of the two components
             wasted_capacity_gpus = fragmentation_waste_gpus + ready_unused_waste_gpus
             wasted_capacity_hours += wasted_capacity_gpus * time_diff / 3600
-            
-        
+
+        # Check if ready_nodes == 40 and compute wanted nodes for queueing jobs
+        current_cluster_nodes = log_entry.get('cluster_nodes', {})
+        current_ready_nodes = current_cluster_nodes.get('ready', 0)
+
+        if current_ready_nodes == 40:
+            # Find queueing jobs (jobs with no allocation)
+            extra_wanted_nodes = 0
+            for job in log_entry['submitted_jobs']:
+                allocation = job.get('allocation', [])
+                if not allocation:  # Queueing job
+                    job_name = job['name']
+                    epoch = str(job['epoch'])
+                    # Extract application name from job_name (assuming format like "cifar10-1")
+                    app = job_name.rsplit('-', 1)[0]
+
+                    # Check if app and epoch exist in width_dict
+                    if app in width_dict and epoch in width_dict[app]:
+                        wanted_width = width_dict[app][epoch]
+                        wanted_nodes = wanted_width / NUM_GPU_PER_NODE
+                        extra_wanted_nodes += wanted_nodes
+
+            total_wanted_nodes = 40 + extra_wanted_nodes
+            peak_wanted_nodes = max(peak_wanted_nodes, total_wanted_nodes)
+
+
         # Build quick lookup for current step jobs by name
         current_jobs_by_name = {j['name']: j for j in log_entry['submitted_jobs']}
 
@@ -270,7 +300,9 @@ def process_log_file(log_file_path):
         job_max_progress,
         job_gpu_hours,
         nodes_in_use_dict,
+        effective_gpu_usage_dict,
         scheduler_nodes,
+        peak_wanted_nodes,
     )
 
 def is_pod_status_failing(pod_status):
@@ -745,6 +777,15 @@ def compute_mean_job_response_minus_queueing_time(jobs):
             total_queueing = sum(epoch_info.get('queueing_time', 0) for epoch_info in job_info['epochs'].values())
             effective_times.append(response_time - total_queueing)
     return (sum(effective_times) / len(effective_times)) if effective_times else 0.0
+
+def compute_percentile_job_response_time(jobs, percentile=95):
+    """Compute percentile of total response time per job (from first_seen to last epoch end)."""
+    response_times = []
+    for job_name, job_info in jobs.items():
+        if job_info['epochs']:
+            last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+            response_times.append(last_epoch_end - job_info['first_seen'])
+    return np.percentile(response_times, percentile) if response_times else 0.0
 
 def get_theoretical_duration(application, epoch, num_gpus):
     """Calculate theoretical duration using goodput function."""
@@ -1571,7 +1612,8 @@ def main():
 
     jobs, total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours,\
     wasted_capacity_hours, scheduler_waste_hours, last_job_arrival_time, completed_jobs_status, \
-    decreased_progress_issues, job_drop_sums, job_max_progress, job_gpu_hours, nodes_in_use_dict, scheduler_nodes = process_log_file(log_file_path)
+    decreased_progress_issues, job_drop_sums, job_max_progress, job_gpu_hours, nodes_in_use_dict, \
+    effective_gpu_usage_dict, scheduler_nodes, peak_wanted_nodes = process_log_file(log_file_path)
     
     # Find first job time for metrics calculation
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
@@ -1616,9 +1658,24 @@ def main():
     # Also save stacked response time plot
     # stacked_plot_filename = base_name + '_response_time_stacked.png'
     # plot_job_response_time_stacked(jobs, stacked_plot_filename)
-    
+
+    # Save effective GPU usage data to file in experiment_results/
+    experiment_results_dir = 'experiment_results'
+    os.makedirs(experiment_results_dir, exist_ok=True)
+
+    log_basename = os.path.basename(log_file_path)
+    gpu_usage_data_filename = os.path.join(experiment_results_dir,
+                                           os.path.splitext(log_basename)[0] + '_effective_gpu_usage.json')
+
+    with open(gpu_usage_data_filename, 'w') as f:
+        json.dump(effective_gpu_usage_dict, f, indent=2)
+    print(f"Effective GPU usage data saved to: {gpu_usage_data_filename}")
+
     metrics = calculate_metrics(total_gpu_hours, effective_gpu_hours, fragmentation_waste_hours, ready_unused_waste_hours, wasted_capacity_hours, scheduler_waste_hours, last_job_arrival_time, first_job_time)
     print_summary(metrics)
+
+    # Print peak wanted nodes
+    print(f"\nPeak Wanted Nodes (when ready_nodes == 40): {peak_wanted_nodes:.1f}")
 
     # Calculate and print time-average used number of nodes (with grace period)
     Grace_period_length = 60
@@ -1690,8 +1747,10 @@ def main():
     # Finally, print mean job total response time (placed at the very end)
     mean_rt = compute_mean_job_response_time(jobs)
     mean_rt_minus_queue = compute_mean_job_response_minus_queueing_time(jobs)
+    p95_rt = compute_percentile_job_response_time(jobs, 95)
     print("\n" + "="*60)
     print(f"Mean Job Response Time (s): {mean_rt:.1f}")
+    print(f"95th Percentile Job Response Time (s): {p95_rt:.1f}")
     print(f"Mean Job Response Time - Queueing (s): {mean_rt_minus_queue:.1f}")
     print("="*60)
 
