@@ -317,9 +317,9 @@ class PolluxPolicy(object):
         self._prev_nodes = None
         # Utilization thresholds for cluster autoscaling.
 
-        self.target_util = 0.9
-        self._min_util = 0.85
-        self._max_util = 0.95
+        self.target_util = 0.4
+        self._min_util = 0.28
+        self._max_util = 0.52
         # boundary_width = min(self.target_util, 1 - self.target_util) * 0.3
         # self._min_util = self.target_util - boundary_width
         # self._max_util = self.target_util + boundary_width
@@ -372,6 +372,8 @@ class PolluxPolicy(object):
         nodes_index = {key: idx for idx, key in enumerate(nodes)}
         state = np.zeros((len(jobs), len(nodes)), dtype=np.int)
         for job_key, alloc in allocations.items():
+            if job_key not in jobs_index:
+                continue  # Skip jobs that no longer exist
             for node_key in (key for key in alloc if key in nodes_index):
                 state[jobs_index[job_key], nodes_index[node_key]] += 1
         return state

@@ -284,7 +284,38 @@ def process_log_file(log_file_path):
     for job_name, job_info in jobs.items():
         for epoch_num, epoch_info in job_info['epochs'].items():
             epoch_info['duration'] = epoch_info['last_seen'] - epoch_info['first_seen']
-    
+
+    # Second pass: Recalculate effective GPU hours to only count successfully completed jobs
+    # Build set of successfully completed job names
+    successfully_completed_jobs = {
+        job_name for job_name, job_info in completed_jobs_status.items()
+        if not is_pod_status_failing(job_info['pod_status'])
+    }
+
+    # Re-process the log to recalculate effective GPU metrics and per-job GPU hours
+    effective_gpu_hours = 0
+    effective_gpu_usage_dict = {}
+    job_gpu_hours = {}  # Reset and recalculate for successful jobs only
+
+    for i in range(1, len(lines)):
+        prev_log = json.loads(lines[i-1].strip())
+        log_entry = json.loads(lines[i].strip())
+        timestamp = log_entry['timestamp']
+        time_diff = timestamp - prev_log['timestamp']
+
+        # Count only GPUs allocated to successfully completed jobs
+        prev_effective_gpus = 0
+        for job in prev_log['submitted_jobs']:
+            job_name = job['name']
+            allocation = job.get('allocation', [])
+            if allocation and job_name in successfully_completed_jobs:
+                prev_effective_gpus += len(allocation)
+                # Also accumulate per-job GPU hours
+                job_gpu_hours[job_name] = job_gpu_hours.get(job_name, 0.0) + (len(allocation) * time_diff / 3600.0)
+
+        effective_gpu_hours += prev_effective_gpus * time_diff / 3600
+        effective_gpu_usage_dict[prev_log['timestamp']] = prev_effective_gpus
+
     return (
         jobs,
         total_gpu_hours,
@@ -417,8 +448,9 @@ def print_failed_completed_jobs(completed_jobs_status):
         print()
 
 
-def print_mean_rescaling_time(jobs):
+def print_mean_rescaling_time(jobs, completed_jobs_status):
     """Calculate and print mean rescaling+container-creation time per job type.
+    Only includes jobs that completed (completion_time is not null) and did not fail.
 
     Uses the same rescaling detection logic, and attributes time as the sum of
     epoch-level rescaling_time and container_creation_time (falling back to the
@@ -427,6 +459,13 @@ def print_mean_rescaling_time(jobs):
     rescale_stats = {}
 
     for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name not in completed_jobs_status:
+            continue
+        completed_info = completed_jobs_status[job_name]
+        # Skip jobs that failed
+        if is_pod_status_failing(completed_info['pod_status']):
+            continue
         job_type = job_name.split('-')[0] if '-' in job_name else job_name
         epochs = sorted(job_info.get('epochs', {}).items())
         if not epochs:
@@ -718,14 +757,23 @@ def print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums,
         fraction = (total_drop / total_progress) if total_progress > 0 else 0.0
         print(f"{job_name} (occurrences: {occurrences}) | sum_drops: {total_drop:.6f}, total_progress: {total_progress:.6f}, fraction: {fraction:.6f}")
 
-def print_all_jobs_summary(jobs):
-    """Print response time and queueing/wasted time for all jobs."""
+def print_all_jobs_summary(jobs, completed_jobs_status):
+    """Print response time and queueing/wasted time for all jobs.
+    Only includes jobs that completed (completion_time is not null) and did not fail.
+    """
     print(f"\n" + "="*80)
-    print("ALL JOBS SUMMARY")
+    print("ALL JOBS SUMMARY (Completed Successfully)")
     print("="*80)
     print(f"{'Job Name':<20} {'Response Time(s)':<18} {'Queueing(s)':<12} {'Wasted(s)':<12} {'Idle(s)':<12}")
     print("-" * 80)
     for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name not in completed_jobs_status:
+            continue
+        completed_info = completed_jobs_status[job_name]
+        # Skip jobs that failed
+        if is_pod_status_failing(completed_info['pod_status']):
+            continue
         # Calculate total response time (from first seen to completion of last epoch)
         if job_info['epochs']:
             last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
@@ -758,33 +806,137 @@ def print_job_gpu_hours(job_gpu_hours):
         print(f"    '{job_name}': {hours:.6f},")
     print("}")
 
-def compute_mean_job_response_time(jobs):
-    """Compute mean total response time per job (from first_seen to last epoch end)."""
-    response_times = []
-    for job_name, job_info in jobs.items():
-        if job_info['epochs']:
-            last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
-            response_times.append(last_epoch_end - job_info['first_seen'])
-    return (sum(response_times) / len(response_times)) if response_times else 0.0
+def print_average_gpu_hours_per_job_type(job_gpu_hours):
+    """Calculate and print average GPU hours per job type."""
+    if not job_gpu_hours:
+        print("\nNo per-job GPU-hour data available.")
+        return
 
-def compute_mean_job_response_minus_queueing_time(jobs):
-    """Compute mean of (response time - queueing time) per job."""
-    effective_times = []
+    # Group GPU hours by job type
+    job_type_hours = {}
+    for job_name, hours in job_gpu_hours.items():
+        job_type = job_name.split('-')[0] if '-' in job_name else job_name
+        if job_type not in job_type_hours:
+            job_type_hours[job_type] = []
+        job_type_hours[job_type].append(hours)
+
+    # Calculate averages
+    print(f"\n" + "="*80)
+    print("AVERAGE GPU HOURS PER JOB TYPE")
+    print("="*80)
+    print(f"{'Job Type':<20} {'Avg GPU Hours':>15} {'Num Jobs':>12} {'Total GPU Hours':>18}")
+    print("-" * 80)
+
+    for job_type in sorted(job_type_hours.keys()):
+        hours_list = job_type_hours[job_type]
+        avg_hours = sum(hours_list) / len(hours_list)
+        num_jobs = len(hours_list)
+        total_hours = sum(hours_list)
+        print(f"{job_type:<20} {avg_hours:>15.2f} {num_jobs:>12} {total_hours:>18.2f}")
+
+    print("="*80)
+
+def print_average_response_time_per_job_type(jobs, completed_jobs_status):
+    """Calculate and print average response time per job type.
+    Only includes jobs that completed (completion_time is not null) and did not fail.
+    """
+    # Group response times by job type
+    job_type_response_times = {}
+
     for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name not in completed_jobs_status:
+            continue
+        completed_info = completed_jobs_status[job_name]
+        # Skip jobs that failed
+        if is_pod_status_failing(completed_info['pod_status']):
+            continue
+
+        # Calculate response time for successfully completed jobs
         if job_info['epochs']:
             last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
             response_time = last_epoch_end - job_info['first_seen']
-            total_queueing = sum(epoch_info.get('queueing_time', 0) for epoch_info in job_info['epochs'].values())
-            effective_times.append(response_time - total_queueing)
-    return (sum(effective_times) / len(effective_times)) if effective_times else 0.0
 
-def compute_percentile_job_response_time(jobs, percentile=95):
-    """Compute percentile of total response time per job (from first_seen to last epoch end)."""
+            # Extract job type
+            job_type = job_name.split('-')[0] if '-' in job_name else job_name
+            if job_type not in job_type_response_times:
+                job_type_response_times[job_type] = []
+            job_type_response_times[job_type].append(response_time)
+
+    if not job_type_response_times:
+        print("\nNo response time data available for completed jobs.")
+        return
+
+    # Calculate and print averages
+    print(f"\n" + "="*80)
+    print("AVERAGE RESPONSE TIME PER JOB TYPE")
+    print("="*80)
+    print(f"{'Job Type':<20} {'Avg Response Time(s)':>22} {'Num Jobs':>12} {'Total Time(s)':>18}")
+    print("-" * 80)
+
+    for job_type in sorted(job_type_response_times.keys()):
+        times_list = job_type_response_times[job_type]
+        avg_time = sum(times_list) / len(times_list)
+        num_jobs = len(times_list)
+        total_time = sum(times_list)
+        print(f"{job_type:<20} {avg_time:>22.1f} {num_jobs:>12} {total_time:>18.1f}")
+
+    print("="*80)
+
+def compute_mean_job_response_time(jobs, completed_jobs_status):
+    """Compute mean total response time per job (from first_seen to last epoch end).
+    Only includes jobs that completed (completion_time is not null) and did not fail.
+    """
     response_times = []
     for job_name, job_info in jobs.items():
-        if job_info['epochs']:
-            last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
-            response_times.append(last_epoch_end - job_info['first_seen'])
+        # Only include jobs that completed successfully
+        if job_name in completed_jobs_status:
+            completed_info = completed_jobs_status[job_name]
+            # Skip jobs that failed
+            if is_pod_status_failing(completed_info['pod_status']):
+                continue
+            # Calculate response time for successfully completed jobs
+            if job_info['epochs']:
+                last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+                response_times.append(last_epoch_end - job_info['first_seen'])
+    return (sum(response_times) / len(response_times)) if response_times else 0.0
+
+def compute_mean_job_response_minus_queueing_time(jobs, completed_jobs_status):
+    """Compute mean of (response time - queueing time) per job.
+    Only includes jobs that completed (completion_time is not null) and did not fail.
+    """
+    effective_times = []
+    for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name in completed_jobs_status:
+            completed_info = completed_jobs_status[job_name]
+            # Skip jobs that failed
+            if is_pod_status_failing(completed_info['pod_status']):
+                continue
+            # Calculate effective time for successfully completed jobs
+            if job_info['epochs']:
+                last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+                response_time = last_epoch_end - job_info['first_seen']
+                total_queueing = sum(epoch_info.get('queueing_time', 0) for epoch_info in job_info['epochs'].values())
+                effective_times.append(response_time - total_queueing)
+    return (sum(effective_times) / len(effective_times)) if effective_times else 0.0
+
+def compute_percentile_job_response_time(jobs, completed_jobs_status, percentile=95):
+    """Compute percentile of total response time per job (from first_seen to last epoch end).
+    Only includes jobs that completed (completion_time is not null) and did not fail.
+    """
+    response_times = []
+    for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name in completed_jobs_status:
+            completed_info = completed_jobs_status[job_name]
+            # Skip jobs that failed
+            if is_pod_status_failing(completed_info['pod_status']):
+                continue
+            # Calculate response time for successfully completed jobs
+            if job_info['epochs']:
+                last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+                response_times.append(last_epoch_end - job_info['first_seen'])
     return np.percentile(response_times, percentile) if response_times else 0.0
 
 def get_theoretical_duration(application, epoch, num_gpus):
@@ -1104,11 +1256,11 @@ def print_job_breakdown(job_name, jobs, scheduler_nodes=None):
         rescale = 0
         if previous_final_gpu_count is not None and final_gpu_count != previous_final_gpu_count:
             if application == "cifar10":
-                rescale = 50
+                rescale = 45
             elif application == "deepspeech2":
-                rescale = 100
+                rescale = 80
             elif application == "bert":
-                rescale = 300
+                rescale = 600
             else:
                 rescale = 0
 
@@ -1200,13 +1352,144 @@ def calculate_theoretical_response_time(job_name, job_info):
         previous_gpu_count = current_gpu_count
     return total_theoretical_time
 
-def plot_response_time_comparison(jobs, output_filename=None):
-    """Plot response time comparison with jobs on x-axis and horizontal dashed lines for theoretical times."""
+def calculate_theoretical_gpu_hours(job_name, job_info):
+    """Calculate theoretical GPU hours for a job including rescaling overhead.
+    Theoretical GPU hours = sum of (theoretical duration * GPU count) for each epoch.
+    """
+    application = job_name.split('-')[0]
+    job_epochs = job_info['epochs']
+
+    if not job_epochs:
+        return 0
+
+    total_theoretical_gpu_hours = 0
+    previous_gpu_count = None
+
+    for epoch in sorted(job_epochs.keys()):
+        epoch_info = job_epochs[epoch]
+        gpu_allocations = epoch_info['gpu_allocations']
+
+        if not gpu_allocations:
+            continue
+
+        # Calculate theoretical running time for this epoch
+        if len(gpu_allocations) == 1:
+            # Single GPU allocation - use direct theoretical duration
+            gpu_count = gpu_allocations[0]
+            try:
+                theoretical_duration = get_theoretical_duration(application, epoch, gpu_count)
+                # Convert to hours and multiply by GPU count
+                total_theoretical_gpu_hours += (theoretical_duration / 3600.0) * gpu_count
+            except (AssertionError, ValueError):
+                # If theoretical duration can't be calculated, skip this epoch
+                continue
+        else:
+            # Multiple GPU allocations - calculate for each and sum
+            for gpu_count in gpu_allocations:
+                try:
+                    theoretical_duration = get_theoretical_duration(application, epoch, gpu_count)
+                    # Convert to hours and multiply by GPU count
+                    total_theoretical_gpu_hours += (theoretical_duration / 3600.0) * gpu_count
+                except (AssertionError, ValueError):
+                    continue
+
+        # Add rescaling overhead GPU hours if GPU allocation changed
+        current_gpu_count = gpu_allocations[-1] if gpu_allocations else 0  # Use final allocation
+        if previous_gpu_count is not None and current_gpu_count != previous_gpu_count:
+            rescaling_time_seconds = 0
+            if application == "cifar10":
+                rescaling_time_seconds = 50  # 50 seconds rescaling overhead
+            elif application == "deepspeech2":
+                rescaling_time_seconds = 87  # 87 seconds rescaling overhead
+            elif application == "bert":
+                rescaling_time_seconds = 380  # 380 seconds rescaling overhead
+            else:
+                raise ValueError(f"Application {application} not supported")
+
+            # Rescaling overhead in GPU hours (using the new GPU count)
+            total_theoretical_gpu_hours += (rescaling_time_seconds / 3600.0) * current_gpu_count
+
+        previous_gpu_count = current_gpu_count
+
+    return total_theoretical_gpu_hours
+
+def print_gpu_hours_comparison(jobs, completed_jobs_status, job_gpu_hours):
+    """Print comparison of theoretical vs actual GPU hours for each job type."""
+    job_type_data = {}
+
+    for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name not in completed_jobs_status:
+            continue
+        completed_info = completed_jobs_status[job_name]
+        # Skip jobs that failed
+        if is_pod_status_failing(completed_info['pod_status']):
+            continue
+
+        # Calculate theoretical GPU hours
+        theoretical_gpu_hours = calculate_theoretical_gpu_hours(job_name, job_info)
+        actual_gpu_hours = job_gpu_hours.get(job_name, 0)
+
+        if theoretical_gpu_hours > 0 and actual_gpu_hours > 0:
+            job_type = job_name.split('-')[0] if '-' in job_name else job_name
+
+            if job_type not in job_type_data:
+                job_type_data[job_type] = {
+                    'theoretical': [],
+                    'actual': [],
+                    'ratios': []
+                }
+
+            ratio = actual_gpu_hours / theoretical_gpu_hours
+            job_type_data[job_type]['theoretical'].append(theoretical_gpu_hours)
+            job_type_data[job_type]['actual'].append(actual_gpu_hours)
+            job_type_data[job_type]['ratios'].append(ratio)
+
+    if not job_type_data:
+        print("\nNo GPU hours comparison data available.")
+        return
+
+    # Print comparison
+    print(f"\n" + "="*90)
+    print("THEORETICAL VS ACTUAL GPU HOURS COMPARISON BY JOB TYPE")
+    print("="*90)
+    print(f"{'Job Type':<15} {'Avg Theoretical':>16} {'Avg Actual':>16} {'Avg Ratio':>12} {'Num Jobs':>10}")
+    print("-" * 90)
+
+    for job_type in sorted(job_type_data.keys()):
+        data = job_type_data[job_type]
+        avg_theoretical = sum(data['theoretical']) / len(data['theoretical'])
+        avg_actual = sum(data['actual']) / len(data['actual'])
+        avg_ratio = sum(data['ratios']) / len(data['ratios'])
+        num_jobs = len(data['theoretical'])
+
+        print(f"{job_type:<15} {avg_theoretical:>16.2f} {avg_actual:>16.2f} {avg_ratio:>12.2f} {num_jobs:>10}")
+
+    print("="*90)
+
+def plot_response_time_comparison(jobs, completed_jobs_status, output_filename=None):
+    """Plot response time comparison with jobs on x-axis and horizontal dashed lines for theoretical times.
+    Only includes jobs that completed (completion_time is not null) and did not fail.
+    """
     job_names = []
     actual_response_times = []
     theoretical_response_times = []
-    
-    for job_name, job_info in jobs.items():
+    ratios = []
+    job_types = ["cifar10", "bert", "deepspeech2"]
+    job_sorted_dict = {}
+    for job_type in job_types:
+        for job_name, job_info in jobs.items():
+            # Only include jobs that completed successfully
+            if job_name in completed_jobs_status:
+                completed_info = completed_jobs_status[job_name]
+                # Skip jobs that failed
+                if is_pod_status_failing(completed_info['pod_status']):
+                    continue
+                if job_type in job_name:
+                    job_sorted_dict[job_name] = job_info
+
+
+    for job_name, job_info in job_sorted_dict.items():
         # Calculate actual response time
         if job_info['epochs']:
             last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
@@ -1220,8 +1503,11 @@ def plot_response_time_comparison(jobs, output_filename=None):
         if theoretical_response_time > 0:  # Only include jobs with valid theoretical times
             job_names.append(job_name)
             actual_response_times.append(actual_response_time)
+            ratio = actual_response_time / theoretical_response_time if theoretical_response_time > 0 else float('inf')
+            ratios.append(ratio)
             theoretical_response_times.append(theoretical_response_time)
     
+    print("mean JCT: ", np.mean(theoretical_response_times))
     if not job_names:
         print("No jobs with valid theoretical response times found.")
         return
@@ -1231,12 +1517,13 @@ def plot_response_time_comparison(jobs, output_filename=None):
     
     # Plot actual response times as bars
     x = np.arange(len(job_names))
-    bars = ax.bar(x, actual_response_times, alpha=0.7, label='Actual Response Time', color='steelblue')
+    # bars = ax.bar(x, actual_response_times, alpha=0.7, label='Actual Response Time', color='steelblue')
+    bars = ax.bar(x, ratios, alpha=0.7, label='Actual Response Time', color='steelblue')
     
     # Add horizontal dashed lines for theoretical response times
-    for i, theoretical_time in enumerate(theoretical_response_times):
-        ax.axhline(y=theoretical_time, xmin=(i-0.4)/len(job_names), xmax=(i+0.4)/len(job_names), 
-                  color='red', linestyle='--', linewidth=2, alpha=0.8)
+    # for i, theoretical_time in enumerate(theoretical_response_times):
+    #     ax.axhline(y=theoretical_time, xmin=(i-0.4)/len(job_names), xmax=(i+0.4)/len(job_names), 
+    #               color='red', linestyle='--', linewidth=2, alpha=0.8)
     
     # Add a legend entry for the theoretical lines
     ax.axhline(y=-1, color='red', linestyle='--', linewidth=2, alpha=0.8, label='Theoretical Response Time')
@@ -1281,8 +1568,9 @@ def plot_response_time_comparison(jobs, output_filename=None):
 
     
 
-def plot_job_response_time_stacked(jobs, output_filename=None):
+def plot_job_response_time_stacked(jobs, completed_jobs_status, output_filename=None):
     """Plot per-job total response time as stacked bars of Productive, Wasted, and Queueing.
+    Only includes jobs that completed (completion_time is not null) and did not fail.
 
     - X axis: job names
     - Y axis: total response time (seconds)
@@ -1294,6 +1582,13 @@ def plot_job_response_time_stacked(jobs, output_filename=None):
     wasted_times = []
 
     for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name not in completed_jobs_status:
+            continue
+        completed_info = completed_jobs_status[job_name]
+        # Skip jobs that failed
+        if is_pod_status_failing(completed_info['pod_status']):
+            continue
         if job_info['epochs']:
             last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
             response_time = last_epoch_end - job_info['first_seen']
@@ -1619,18 +1914,24 @@ def main():
     first_job_time = min(job_info['first_seen'] for job_info in jobs.values()) if jobs else 0
     
     # Print response time and wasted time for all jobs
-    print_all_jobs_summary(jobs)
+    print_all_jobs_summary(jobs, completed_jobs_status)
     # Print per-job GPU-hours
     # print_job_gpu_hours(job_gpu_hours)
+
+    # Print average GPU hours per job type
+    print_average_gpu_hours_per_job_type(job_gpu_hours)
+
+    # Print theoretical vs actual GPU hours comparison
+    print_gpu_hours_comparison(jobs, completed_jobs_status, job_gpu_hours)
 
     # Print jobs that completed with failing pod status
     print_failed_completed_jobs(completed_jobs_status)
 
     # Hardcoded specific job breakdown
     specific_job_breakdown = 'deepspeech2-94'
-    print_job_breakdown(specific_job_breakdown, jobs, scheduler_nodes)
+    # print_job_breakdown(specific_job_breakdown, jobs, scheduler_nodes)
 
-    print_mean_rescaling_time(jobs)
+    print_mean_rescaling_time(jobs, completed_jobs_status)
 
     # plot_rescaling_time_histograms(jobs)
     # plot_rescaling_time_breakdown_histograms(jobs)
@@ -1653,11 +1954,11 @@ def main():
     import os
     base_name = os.path.splitext(log_file_path)[0]  # Remove extension properly
     # Plot response time comparison
-    # plot_filename = base_name + '_response_time_comparison.png'
-    # plot_response_time_comparison(jobs, plot_filename)
+    plot_filename = base_name + '_response_time_comparison.png'
+    plot_response_time_comparison(jobs, completed_jobs_status, plot_filename)
     # Also save stacked response time plot
     # stacked_plot_filename = base_name + '_response_time_stacked.png'
-    # plot_job_response_time_stacked(jobs, stacked_plot_filename)
+    # plot_job_response_time_stacked(jobs, completed_jobs_status, stacked_plot_filename)
 
     # Save effective GPU usage data to file in experiment_results/
     experiment_results_dir = 'experiment_results'
@@ -1745,19 +2046,69 @@ def main():
         print("="*60)
 
     # Finally, print mean job total response time (placed at the very end)
-    mean_rt = compute_mean_job_response_time(jobs)
-    mean_rt_minus_queue = compute_mean_job_response_minus_queueing_time(jobs)
-    p95_rt = compute_percentile_job_response_time(jobs, 95)
+    mean_rt = compute_mean_job_response_time(jobs, completed_jobs_status)
+    mean_rt_minus_queue = compute_mean_job_response_minus_queueing_time(jobs, completed_jobs_status)
+    p95_rt = compute_percentile_job_response_time(jobs, completed_jobs_status, 95)
     print("\n" + "="*60)
     print(f"Mean Job Response Time (s): {mean_rt:.1f}")
     print(f"95th Percentile Job Response Time (s): {p95_rt:.1f}")
     print(f"Mean Job Response Time - Queueing (s): {mean_rt_minus_queue:.1f}")
     print("="*60)
 
+    # Calculate and print theoretical metrics
+    theoretical_response_times = []
+    theoretical_gpu_hours_list = []
+
+    for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name not in completed_jobs_status:
+            continue
+        completed_info = completed_jobs_status[job_name]
+        # Skip jobs that failed
+        if is_pod_status_failing(completed_info['pod_status']):
+            continue
+
+        # Calculate theoretical response time
+        theoretical_rt = calculate_theoretical_response_time(job_name, job_info)
+        if theoretical_rt > 0:
+            theoretical_response_times.append(theoretical_rt)
+
+        # Calculate theoretical GPU hours
+        theoretical_gpu_hrs = calculate_theoretical_gpu_hours(job_name, job_info)
+        if theoretical_gpu_hrs > 0:
+            theoretical_gpu_hours_list.append(theoretical_gpu_hrs)
+
+    # Print theoretical metrics
+    print("\n" + "="*60)
+    print("THEORETICAL METRICS (Successfully Completed Jobs)")
+    print("="*60)
+
+    if theoretical_response_times:
+        mean_theoretical_rt = sum(theoretical_response_times) / len(theoretical_response_times)
+        print(f"Mean Theoretical Job Response Time (s): {mean_theoretical_rt:.1f}")
+    else:
+        print("Mean Theoretical Job Response Time (s): N/A")
+
+    if theoretical_gpu_hours_list:
+        total_theoretical_gpu_hours = sum(theoretical_gpu_hours_list)
+        print(f"Total Theoretical GPU Hours: {total_theoretical_gpu_hours:.2f}")
+        # Also show actual total for comparison
+        total_actual_gpu_hours = sum(job_gpu_hours.values())
+        print(f"Total Actual GPU Hours: {total_actual_gpu_hours:.2f}")
+        gpu_efficiency = (total_theoretical_gpu_hours / total_actual_gpu_hours * 100) if total_actual_gpu_hours > 0 else 0
+        print(f"GPU Efficiency: {gpu_efficiency:.1f}%")
+    else:
+        print("Total Theoretical GPU Hours: N/A")
+
+    print("="*60)
+
+    # Print average response time per job type
+    print_average_response_time_per_job_type(jobs, completed_jobs_status)
+
     # At the very end, warn about any jobs with decreasing progress
     print_decreasing_progress_warnings(decreased_progress_issues, job_drop_sums, job_max_progress)
 
-    analyze_idle_waste_decomposition(log_file_path, first_job_time, last_job_arrival_time)
+    # analyze_idle_waste_decomposition(log_file_path, first_job_time, last_job_arrival_time)
 
     # print("response_dict={")
     # for job_name, job_info in jobs.items():
