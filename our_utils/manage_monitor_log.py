@@ -448,15 +448,25 @@ def print_failed_completed_jobs(completed_jobs_status):
         print()
 
 
-def print_mean_rescaling_time(jobs, completed_jobs_status):
+def print_mean_rescaling_time(jobs, completed_jobs_status, log_file_path=None):
     """Calculate and print mean rescaling+container-creation time per job type.
     Only includes jobs that completed (completion_time is not null) and did not fail.
 
     Uses the same rescaling detection logic, and attributes time as the sum of
     epoch-level rescaling_time and container_creation_time (falling back to the
     next epoch if needed as before).
+
+    For fixed-width logs (containing 'fix' or 'FW' in the filename), counts each
+    rescaled epoch as 1 event regardless of how many rescalings occurred within it.
+    For other logs, counts each individual rescaling as a separate event.
     """
     rescale_stats = {}
+
+    # Detect if this is a fixed-width log
+    is_fixed_width = False
+    if log_file_path:
+        log_filename = log_file_path.lower()
+        is_fixed_width = 'fix' in log_filename or 'fw' in log_filename.replace('-', '').replace('_', '')
 
     for job_name, job_info in jobs.items():
         # Only include jobs that completed successfully
@@ -502,8 +512,6 @@ def print_mean_rescaling_time(jobs, completed_jobs_status):
                 float(epoch_info.get('rescaling_time', 0) or 0)
                 + float(epoch_info.get('container_creation_time', 0) or 0)
             )
-            if job_name == 'cifar10-46':
-                print(f"Rescaling detected for job {job_name}, epoch {epoch_num}, rescale_count: {rescale_count}")
             if wasted_time <= 0:
                 if idx + 1 >= len(epochs):
                     raise AssertionError(
@@ -520,7 +528,12 @@ def print_mean_rescaling_time(jobs, completed_jobs_status):
                 wasted_time = next_wasted
 
             stats = rescale_stats.setdefault(job_type, {'num_rescaling': 0, 'total_time': 0.0})
-            stats['num_rescaling'] += rescale_count
+            # For fixed-width logs, count each rescaled epoch as 1 event
+            # For other logs, count each individual rescaling
+            if is_fixed_width:
+                stats['num_rescaling'] += 1
+            else:
+                stats['num_rescaling'] += rescale_count
             stats['total_time'] += wasted_time
 
             previous_final_alloc = current_final_alloc
@@ -1295,31 +1308,43 @@ def print_job_breakdown(job_name, jobs, scheduler_nodes=None):
     print(f"Total Wasted Time (s): {total_wasted:.1f}")
     print(f"Total Idle Time (s): {total_queueing + total_wasted:.1f}")
 
-def calculate_theoretical_response_time(job_name, job_info):
-    """Calculate theoretical response time for a job including rescaling overhead."""
+def calculate_theoretical_response_time(job_name, job_info, return_breakdown=False):
+    """Calculate theoretical response time for a job including rescaling overhead.
+
+    Args:
+        job_name: Name of the job
+        job_info: Job information dictionary
+        return_breakdown: If True, returns (total, running_time, rescaling_time)
+                         If False, returns total only (for backward compatibility)
+
+    Returns:
+        If return_breakdown=False: total_time
+        If return_breakdown=True: (total_time, running_time, rescaling_time)
+    """
     application = job_name.split('-')[0]
     job_epochs = job_info['epochs']
-    
+
     if not job_epochs:
-        return 0
-    
-    total_theoretical_time = 0
+        return (0, 0, 0) if return_breakdown else 0
+
+    theoretical_running_time = 0
+    theoretical_rescaling_time = 0
     previous_gpu_count = None
-    
+
     for epoch in sorted(job_epochs.keys()):
         epoch_info = job_epochs[epoch]
         gpu_allocations = epoch_info['gpu_allocations']
-        
+
         if not gpu_allocations:
             continue
-            
+
         # Calculate theoretical running time for this epoch
         if len(gpu_allocations) == 1:
             # Single GPU allocation - use direct theoretical duration
             gpu_count = gpu_allocations[0]
             try:
                 theoretical_duration = get_theoretical_duration(application, epoch, gpu_count)
-                total_theoretical_time += theoretical_duration
+                theoretical_running_time += theoretical_duration
             except (AssertionError, ValueError):
                 # If theoretical duration can't be calculated, skip this epoch
                 continue
@@ -1332,37 +1357,54 @@ def calculate_theoretical_response_time(job_name, job_info):
                     theoretical_durations.append(theoretical_duration)
                 except (AssertionError, ValueError):
                     continue
-            
+
             if theoretical_durations:
                 avg_theoretical_duration = sum(theoretical_durations) / len(theoretical_durations)
-                total_theoretical_time += avg_theoretical_duration
-        
+                theoretical_running_time += avg_theoretical_duration
+
         # Add rescaling overhead if GPU allocation changed
         current_gpu_count = gpu_allocations[-1] if gpu_allocations else 0  # Use final allocation
         if previous_gpu_count is not None and current_gpu_count != previous_gpu_count:
             if application == "cifar10":
-                total_theoretical_time += 50  # 120 seconds rescaling overhead
+                theoretical_rescaling_time += 65
             elif application == "deepspeech2":
-                total_theoretical_time += 87  # 150 seconds rescaling overhead
+                theoretical_rescaling_time += 130
             elif application == "bert":
-                total_theoretical_time += 380  # 300 seconds rescaling overhead
+                theoretical_rescaling_time += 751
             else:
                 raise ValueError(f"Application {application} not supported")
-        
-        previous_gpu_count = current_gpu_count
-    return total_theoretical_time
 
-def calculate_theoretical_gpu_hours(job_name, job_info):
+        previous_gpu_count = current_gpu_count
+
+    total_theoretical_time = theoretical_running_time + theoretical_rescaling_time
+
+    if return_breakdown:
+        return (total_theoretical_time, theoretical_running_time, theoretical_rescaling_time)
+    else:
+        return total_theoretical_time
+
+def calculate_theoretical_gpu_hours(job_name, job_info, return_breakdown=False):
     """Calculate theoretical GPU hours for a job including rescaling overhead.
     Theoretical GPU hours = sum of (theoretical duration * GPU count) for each epoch.
+
+    Args:
+        job_name: Name of the job
+        job_info: Job information dictionary
+        return_breakdown: If True, returns (total, running_gpu_hours, rescaling_gpu_hours)
+                         If False, returns total only (for backward compatibility)
+
+    Returns:
+        If return_breakdown=False: total_gpu_hours
+        If return_breakdown=True: (total_gpu_hours, running_gpu_hours, rescaling_gpu_hours)
     """
     application = job_name.split('-')[0]
     job_epochs = job_info['epochs']
 
     if not job_epochs:
-        return 0
+        return (0, 0, 0) if return_breakdown else 0
 
-    total_theoretical_gpu_hours = 0
+    theoretical_running_gpu_hours = 0
+    theoretical_rescaling_gpu_hours = 0
     previous_gpu_count = None
 
     for epoch in sorted(job_epochs.keys()):
@@ -1379,7 +1421,7 @@ def calculate_theoretical_gpu_hours(job_name, job_info):
             try:
                 theoretical_duration = get_theoretical_duration(application, epoch, gpu_count)
                 # Convert to hours and multiply by GPU count
-                total_theoretical_gpu_hours += (theoretical_duration / 3600.0) * gpu_count
+                theoretical_running_gpu_hours += (theoretical_duration / 3600.0) * gpu_count
             except (AssertionError, ValueError):
                 # If theoretical duration can't be calculated, skip this epoch
                 continue
@@ -1389,7 +1431,7 @@ def calculate_theoretical_gpu_hours(job_name, job_info):
                 try:
                     theoretical_duration = get_theoretical_duration(application, epoch, gpu_count)
                     # Convert to hours and multiply by GPU count
-                    total_theoretical_gpu_hours += (theoretical_duration / 3600.0) * gpu_count
+                    theoretical_running_gpu_hours += (theoretical_duration / 3600.0) * gpu_count
                 except (AssertionError, ValueError):
                     continue
 
@@ -1398,20 +1440,82 @@ def calculate_theoretical_gpu_hours(job_name, job_info):
         if previous_gpu_count is not None and current_gpu_count != previous_gpu_count:
             rescaling_time_seconds = 0
             if application == "cifar10":
-                rescaling_time_seconds = 50  # 50 seconds rescaling overhead
+                rescaling_time_seconds = 65  # 65 seconds rescaling overhead
             elif application == "deepspeech2":
-                rescaling_time_seconds = 87  # 87 seconds rescaling overhead
+                rescaling_time_seconds = 130  # 130 seconds rescaling overhead
             elif application == "bert":
-                rescaling_time_seconds = 380  # 380 seconds rescaling overhead
+                rescaling_time_seconds = 751  # 751 seconds rescaling overhead
             else:
                 raise ValueError(f"Application {application} not supported")
 
             # Rescaling overhead in GPU hours (using the new GPU count)
-            total_theoretical_gpu_hours += (rescaling_time_seconds / 3600.0) * current_gpu_count
+            theoretical_rescaling_gpu_hours += (rescaling_time_seconds / 3600.0) * current_gpu_count
 
         previous_gpu_count = current_gpu_count
 
-    return total_theoretical_gpu_hours
+    total_theoretical_gpu_hours = theoretical_running_gpu_hours + theoretical_rescaling_gpu_hours
+
+    if return_breakdown:
+        return (total_theoretical_gpu_hours, theoretical_running_gpu_hours, theoretical_rescaling_gpu_hours)
+    else:
+        return total_theoretical_gpu_hours
+
+def calculate_actual_jct_breakdown(job_name, job_info):
+    """Calculate actual JCT breakdown into running time and rescaling time.
+
+    Returns:
+        (total_jct, running_time, rescaling_time, queueing_time)
+    """
+    if not job_info['epochs']:
+        return (0, 0, 0, 0)
+
+    # Total JCT
+    last_epoch_end = max(epoch_info['last_seen'] for epoch_info in job_info['epochs'].values())
+    total_jct = last_epoch_end - job_info['first_seen']
+
+    # Sum rescaling and container creation time across all epochs
+    rescaling_time = 0
+    queueing_time = 0
+    for epoch_info in job_info['epochs'].values():
+        rescaling_time += float(epoch_info.get('rescaling_time', 0) or 0)
+        rescaling_time += float(epoch_info.get('container_creation_time', 0) or 0)
+        queueing_time += float(epoch_info.get('queueing_time', 0) or 0)
+
+    # Running time = Total JCT - Rescaling time - Queueing time
+    running_time = total_jct - rescaling_time - queueing_time
+
+    return (total_jct, running_time, rescaling_time, queueing_time)
+
+def calculate_actual_gpu_hours_breakdown(job_name, job_info, total_gpu_hours):
+    """Calculate actual GPU hours breakdown into running and rescaling GPU hours.
+
+    This requires processing the log to track GPU allocation during rescaling vs running.
+    For now, we'll estimate based on time proportions.
+
+    Returns:
+        (total_gpu_hours, running_gpu_hours, rescaling_gpu_hours)
+    """
+    if not job_info['epochs']:
+        return (total_gpu_hours, total_gpu_hours, 0)
+
+    # Calculate rescaling GPU hours by summing (rescaling_time * gpu_count) for each epoch
+    rescaling_gpu_hours = 0
+
+    for epoch_info in job_info['epochs'].values():
+        rescaling_time_seconds = (
+            float(epoch_info.get('rescaling_time', 0) or 0) +
+            float(epoch_info.get('container_creation_time', 0) or 0)
+        )
+        gpu_allocations = epoch_info.get('gpu_allocations', [])
+        if gpu_allocations:
+            # Use the final GPU allocation for this epoch
+            gpu_count = gpu_allocations[-1] if gpu_allocations else 0
+            rescaling_gpu_hours += (rescaling_time_seconds / 3600.0) * gpu_count
+
+    # Running GPU hours = Total GPU hours - Rescaling GPU hours
+    running_gpu_hours = total_gpu_hours - rescaling_gpu_hours
+
+    return (total_gpu_hours, running_gpu_hours, rescaling_gpu_hours)
 
 def print_gpu_hours_comparison(jobs, completed_jobs_status, job_gpu_hours):
     """Print comparison of theoretical vs actual GPU hours for each job type."""
@@ -1928,10 +2032,10 @@ def main():
     print_failed_completed_jobs(completed_jobs_status)
 
     # Hardcoded specific job breakdown
-    specific_job_breakdown = 'deepspeech2-94'
-    # print_job_breakdown(specific_job_breakdown, jobs, scheduler_nodes)
+    specific_job_breakdown = 'cifar10-8'
+    print_job_breakdown(specific_job_breakdown, jobs, scheduler_nodes)
 
-    print_mean_rescaling_time(jobs, completed_jobs_status)
+    print_mean_rescaling_time(jobs, completed_jobs_status, log_file_path)
 
     # plot_rescaling_time_histograms(jobs)
     # plot_rescaling_time_breakdown_histograms(jobs)
@@ -2055,9 +2159,20 @@ def main():
     print(f"Mean Job Response Time - Queueing (s): {mean_rt_minus_queue:.1f}")
     print("="*60)
 
-    # Calculate and print theoretical metrics
+    # Calculate and print theoretical and actual metrics with breakdowns
     theoretical_response_times = []
+    theoretical_running_times = []
+    theoretical_rescaling_times = []
     theoretical_gpu_hours_list = []
+    theoretical_running_gpu_hours_list = []
+    theoretical_rescaling_gpu_hours_list = []
+
+    actual_response_times = []
+    actual_running_times = []
+    actual_rescaling_times = []
+    actual_queueing_times = []
+    actual_running_gpu_hours_list = []
+    actual_rescaling_gpu_hours_list = []
 
     for job_name, job_info in jobs.items():
         # Only include jobs that completed successfully
@@ -2068,39 +2183,92 @@ def main():
         if is_pod_status_failing(completed_info['pod_status']):
             continue
 
-        # Calculate theoretical response time
-        theoretical_rt = calculate_theoretical_response_time(job_name, job_info)
-        if theoretical_rt > 0:
-            theoretical_response_times.append(theoretical_rt)
+        # Calculate theoretical response time with breakdown
+        total_theo_rt, theo_run, theo_rescale = calculate_theoretical_response_time(job_name, job_info, return_breakdown=True)
+        if total_theo_rt > 0:
+            theoretical_response_times.append(total_theo_rt)
+            theoretical_running_times.append(theo_run)
+            theoretical_rescaling_times.append(theo_rescale)
 
-        # Calculate theoretical GPU hours
-        theoretical_gpu_hrs = calculate_theoretical_gpu_hours(job_name, job_info)
-        if theoretical_gpu_hrs > 0:
-            theoretical_gpu_hours_list.append(theoretical_gpu_hrs)
+        # Calculate theoretical GPU hours with breakdown
+        total_theo_gpu, theo_run_gpu, theo_rescale_gpu = calculate_theoretical_gpu_hours(job_name, job_info, return_breakdown=True)
+        if total_theo_gpu > 0:
+            theoretical_gpu_hours_list.append(total_theo_gpu)
+            theoretical_running_gpu_hours_list.append(theo_run_gpu)
+            theoretical_rescaling_gpu_hours_list.append(theo_rescale_gpu)
 
-    # Print theoretical metrics
-    print("\n" + "="*60)
-    print("THEORETICAL METRICS (Successfully Completed Jobs)")
-    print("="*60)
+        # Calculate actual JCT breakdown
+        total_actual_rt, actual_run, actual_rescale, actual_queue = calculate_actual_jct_breakdown(job_name, job_info)
+        if total_actual_rt > 0:
+            actual_response_times.append(total_actual_rt)
+            actual_running_times.append(actual_run)
+            actual_rescaling_times.append(actual_rescale)
+            actual_queueing_times.append(actual_queue)
 
+        # Calculate actual GPU hours breakdown
+        if job_name in job_gpu_hours:
+            total_actual_gpu = job_gpu_hours[job_name]
+            _, actual_run_gpu, actual_rescale_gpu = calculate_actual_gpu_hours_breakdown(job_name, job_info, total_actual_gpu)
+            actual_running_gpu_hours_list.append(actual_run_gpu)
+            actual_rescaling_gpu_hours_list.append(actual_rescale_gpu)
+
+    # Print breakdown metrics
+    print("\n" + "="*80)
+    print("JCT AND GPU HOURS BREAKDOWN (Successfully Completed Jobs)")
+    print("="*80)
+
+    # Print Actual JCT breakdown
+    if actual_response_times:
+        mean_actual_rt = sum(actual_response_times) / len(actual_response_times)
+        mean_actual_run = sum(actual_running_times) / len(actual_running_times)
+        mean_actual_rescale = sum(actual_rescaling_times) / len(actual_rescaling_times)
+        mean_actual_queue = sum(actual_queueing_times) / len(actual_queueing_times)
+
+        print("\nActual Mean JCT Breakdown:")
+        print(f"  Total Mean JCT:           {mean_actual_rt:.1f}s")
+        print(f"    - Running Time:         {mean_actual_run:.1f}s ({mean_actual_run/mean_actual_rt*100:.1f}%)")
+        print(f"    - Rescaling Time:       {mean_actual_rescale:.1f}s ({mean_actual_rescale/mean_actual_rt*100:.1f}%)")
+        print(f"    - Queueing Time:        {mean_actual_queue:.1f}s ({mean_actual_queue/mean_actual_rt*100:.1f}%)")
+
+    # Print Theoretical JCT breakdown
     if theoretical_response_times:
         mean_theoretical_rt = sum(theoretical_response_times) / len(theoretical_response_times)
-        print(f"Mean Theoretical Job Response Time (s): {mean_theoretical_rt:.1f}")
-    else:
-        print("Mean Theoretical Job Response Time (s): N/A")
+        mean_theoretical_run = sum(theoretical_running_times) / len(theoretical_running_times)
+        mean_theoretical_rescale = sum(theoretical_rescaling_times) / len(theoretical_rescaling_times)
 
+        print("\nTheoretical Mean JCT Breakdown:")
+        print(f"  Total Mean JCT:           {mean_theoretical_rt:.1f}s")
+        print(f"    - Running Time:         {mean_theoretical_run:.1f}s ({mean_theoretical_run/mean_theoretical_rt*100:.1f}%)")
+        print(f"    - Rescaling Time:       {mean_theoretical_rescale:.1f}s ({mean_theoretical_rescale/mean_theoretical_rt*100:.1f}%)")
+
+    # Print Actual GPU hours breakdown
+    if actual_running_gpu_hours_list:
+        total_actual_gpu_hours = sum(job_gpu_hours.values())
+        total_actual_run_gpu = sum(actual_running_gpu_hours_list)
+        total_actual_rescale_gpu = sum(actual_rescaling_gpu_hours_list)
+
+        print("\nActual GPU Hours Breakdown:")
+        print(f"  Total GPU Hours:          {total_actual_gpu_hours:.2f}")
+        print(f"    - Running GPU Hours:    {total_actual_run_gpu:.2f} ({total_actual_run_gpu/total_actual_gpu_hours*100:.1f}%)")
+        print(f"    - Rescaling GPU Hours:  {total_actual_rescale_gpu:.2f} ({total_actual_rescale_gpu/total_actual_gpu_hours*100:.1f}%)")
+
+    # Print Theoretical GPU hours breakdown
     if theoretical_gpu_hours_list:
         total_theoretical_gpu_hours = sum(theoretical_gpu_hours_list)
-        print(f"Total Theoretical GPU Hours: {total_theoretical_gpu_hours:.2f}")
-        # Also show actual total for comparison
-        total_actual_gpu_hours = sum(job_gpu_hours.values())
-        print(f"Total Actual GPU Hours: {total_actual_gpu_hours:.2f}")
-        gpu_efficiency = (total_theoretical_gpu_hours / total_actual_gpu_hours * 100) if total_actual_gpu_hours > 0 else 0
-        print(f"GPU Efficiency: {gpu_efficiency:.1f}%")
-    else:
-        print("Total Theoretical GPU Hours: N/A")
+        total_theoretical_run_gpu = sum(theoretical_running_gpu_hours_list)
+        total_theoretical_rescale_gpu = sum(theoretical_rescaling_gpu_hours_list)
 
-    print("="*60)
+        print("\nTheoretical GPU Hours Breakdown:")
+        print(f"  Total GPU Hours:          {total_theoretical_gpu_hours:.2f}")
+        print(f"    - Running GPU Hours:    {total_theoretical_run_gpu:.2f} ({total_theoretical_run_gpu/total_theoretical_gpu_hours*100:.1f}%)")
+        print(f"    - Rescaling GPU Hours:  {total_theoretical_rescale_gpu:.2f} ({total_theoretical_rescale_gpu/total_theoretical_gpu_hours*100:.1f}%)")
+
+        # Also show efficiency
+        if total_actual_gpu_hours > 0:
+            gpu_efficiency = (total_theoretical_gpu_hours / total_actual_gpu_hours * 100)
+            print(f"\n  GPU Efficiency:           {gpu_efficiency:.1f}%")
+
+    print("="*80)
 
     # Print average response time per job type
     print_average_response_time_per_job_type(jobs, completed_jobs_status)

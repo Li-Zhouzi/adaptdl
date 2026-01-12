@@ -42,8 +42,8 @@ def plot_two_effective_gpu_usage(gpu_usage_dict1, gpu_usage_dict2, label1='Exper
         start_time2 = timestamps2[0]
         relative_times2 = [(t - start_time2) for t in timestamps2]
 
-        ax.plot(relative_times2, gpu_counts2, linewidth=1.5, color='coral', label=label2, alpha=0.8)
-        ax.fill_between(relative_times2, gpu_counts2, alpha=0.2, color='coral')
+        ax.plot(relative_times2, gpu_counts2, linewidth=1.5, color='green', label=label2, alpha=0.8)
+        ax.fill_between(relative_times2, gpu_counts2, alpha=0.2, color='green')
 
     ax.set_xlabel('Time (seconds)', fontsize=24)
     ax.set_ylabel('Number of GPUs', fontsize=24)
@@ -86,10 +86,11 @@ def main():
 
     file1 = sys.argv[1]
     file2 = sys.argv[2]
+    # python ./our_utils/plot_gpu_usage.py ./experiment_results/monitor_log_effective_gpu_usage-fw48.json ./experiment_results/monitor_log_effective_gpu_usage-pollux0.6.json ./gpu-usage.png
 
     # Parse optional arguments
-    label1 = 'Experiment 1'
-    label2 = 'Experiment 2'
+    label1 = 'BOA Constrictor'
+    label2 = 'Pollux w/ autoscaling'
     output_filename = None
 
     if len(sys.argv) == 4:
