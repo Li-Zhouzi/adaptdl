@@ -570,6 +570,273 @@ def print_mean_rescaling_time(jobs, completed_jobs_status, log_file_path=None):
         )
 
 
+def print_mean_rescaling_count_per_job_type(jobs, completed_jobs_status, log_file_path=None):
+    """For each job type, print the mean number of rescaling events per job.
+
+    Uses the same rescaling detection logic as print_mean_rescaling_time:
+    only successfully completed jobs are counted, the last epoch's rescale-to-0
+    is ignored, and fixed-width logs (filename containing 'fix' or 'FW') count
+    each rescaled epoch as 1 event instead of summing per-epoch rescale counts.
+    """
+    is_fixed_width = False
+    if log_file_path:
+        log_filename = log_file_path.lower()
+        is_fixed_width = 'fix' in log_filename or 'fw' in log_filename.replace('-', '').replace('_', '')
+
+    per_type = {}  # job_type -> {'num_jobs': int, 'total_rescales': int}
+    by_type_jobs = {}  # job_type -> list of (job_name, count)
+
+    for job_name, job_info in jobs.items():
+        if job_name not in completed_jobs_status:
+            continue
+        if is_pod_status_failing(completed_jobs_status[job_name]['pod_status']):
+            continue
+
+        job_type = job_name.split('-')[0] if '-' in job_name else job_name
+        epochs = sorted(job_info.get('epochs', {}).items())
+        if not epochs:
+            continue
+
+        job_rescales = 0
+        previous_final_alloc = None
+        previous_alloc_len = 0
+
+        for idx, (epoch_num, epoch_info) in enumerate(epochs):
+            gpu_allocations = epoch_info.get('gpu_allocations', [])
+            current_alloc_len = len(gpu_allocations)
+            current_final_alloc = gpu_allocations[-1] if gpu_allocations else 0
+
+            rescale_count = max(0, current_alloc_len - 1)
+
+            if (
+                previous_final_alloc is not None
+                and previous_alloc_len == 1
+                and current_alloc_len == 1
+                and current_final_alloc != previous_final_alloc
+            ):
+                rescale_count += 1
+
+            if idx == len(epochs) - 1 and rescale_count > 0:
+                rescale_count = 0  # ignore the last epoch's rescaling to 0
+
+            if rescale_count > 0:
+                job_rescales += 1 if is_fixed_width else rescale_count
+
+            previous_final_alloc = current_final_alloc
+            previous_alloc_len = current_alloc_len
+
+        stats = per_type.setdefault(job_type, {'num_jobs': 0, 'total_rescales': 0})
+        stats['num_jobs'] += 1
+        stats['total_rescales'] += job_rescales
+        by_type_jobs.setdefault(job_type, []).append((job_name, job_rescales))
+
+    if not per_type:
+        print("\nNo completed jobs found for rescaling-count statistics.")
+        return
+
+    print(f"\n" + "=" * 80)
+    print("MEAN RESCALING COUNT PER JOB BY JOB TYPE")
+    if is_fixed_width:
+        print("(fixed-width log: each rescaled epoch counted as 1 event)")
+    print("=" * 80)
+
+    overall_jobs = 0
+    overall_rescales = 0
+    for job_type in sorted(per_type.keys()):
+        stats = per_type[job_type]
+        njobs = stats['num_jobs']
+        total = stats['total_rescales']
+        mean = total / njobs if njobs > 0 else 0.0
+        print(
+            f"{job_type:<15} mean_rescales/job: {mean:.2f} | "
+            f"jobs: {njobs}, total_rescales: {total}"
+        )
+        overall_jobs += njobs
+        overall_rescales += total
+
+    if overall_jobs > 0:
+        print("-" * 80)
+        print(
+            f"Overall mean rescales/job: {overall_rescales / overall_jobs:.2f} "
+            f"({overall_rescales} rescales across {overall_jobs} jobs)"
+        )
+
+    print(f"\n" + "=" * 80)
+    print("RESCALING COUNT PER JOB, BY JOB TYPE")
+    print("=" * 80)
+    for job_type in sorted(by_type_jobs.keys()):
+        entries = sorted(by_type_jobs[job_type], key=lambda x: x[0])
+        print(f"\n{job_type.upper()}:")
+        for name, count in entries:
+            print(f"  {name:<30} {count}")
+
+    print(f"\n" + "=" * 80)
+    print("RESCALING COUNT PER JOB, ALL TYPES")
+    print("=" * 80)
+    all_entries = sorted(
+        ((n, c) for entries in by_type_jobs.values() for n, c in entries),
+        key=lambda x: x[0],
+    )
+    for name, count in all_entries:
+        print(f"  {name:<30} {count}")
+
+
+def print_rescaling_breakdown_with_threshold(jobs, completed_jobs_status, log_file_path=None):
+    """Print mean rescaling and container creation times separately, with threshold analysis.
+
+    For each job type:
+    1. Print overall mean rescaling time and container creation time separately
+    2. Apply threshold on sum and show means for cases where sum > threshold vs sum <= threshold
+
+    Thresholds per job type (configurable):
+    - cifar10: 60s
+    - bert: 60s
+    - deepspeech2: 60s
+    """
+    # Configurable thresholds per job type
+    thresholds = {
+        'cifar10': 60,
+        'bert': 60,
+        'deepspeech2': 60
+    }
+
+    # Detect if this is a fixed-width log
+    is_fixed_width = False
+    if log_file_path:
+        log_filename = log_file_path.lower()
+        is_fixed_width = 'fix' in log_filename or 'fw' in log_filename.replace('-', '').replace('_', '')
+
+    # Collect (rescaling_time, container_creation_time) pairs for each job type
+    rescale_data = {}
+
+    for job_name, job_info in jobs.items():
+        # Only include jobs that completed successfully
+        if job_name not in completed_jobs_status:
+            continue
+        completed_info = completed_jobs_status[job_name]
+        # Skip jobs that failed
+        if is_pod_status_failing(completed_info['pod_status']):
+            continue
+
+        job_type = job_name.split('-')[0] if '-' in job_name else job_name
+        epochs = sorted(job_info.get('epochs', {}).items())
+        if not epochs:
+            continue
+
+        if job_type not in rescale_data:
+            rescale_data[job_type] = []
+
+        previous_final_alloc = None
+        previous_alloc_len = 0
+
+        for idx, (epoch_num, epoch_info) in enumerate(epochs):
+            gpu_allocations = epoch_info.get('gpu_allocations', [])
+            current_alloc_len = len(gpu_allocations)
+            current_final_alloc = gpu_allocations[-1] if gpu_allocations else 0
+
+            rescale_count = max(0, current_alloc_len - 1)
+
+            if (
+                previous_final_alloc is not None
+                and previous_alloc_len == 1
+                and current_alloc_len == 1
+                and current_final_alloc != previous_final_alloc
+            ):
+                rescale_count += 1
+
+            if idx == len(epochs) - 1 and rescale_count > 0:
+                rescale_count = 0  # ignore the last epoch's rescaling to 0
+
+            if rescale_count <= 0:
+                previous_final_alloc = current_final_alloc
+                previous_alloc_len = current_alloc_len
+                continue
+
+            # Get rescaling and container creation times separately
+            rescaling_time = float(epoch_info.get('rescaling_time', 0) or 0)
+            container_time = float(epoch_info.get('container_creation_time', 0) or 0)
+
+            # If both are 0, check next epoch
+            if rescaling_time <= 0 and container_time <= 0:
+                if idx + 1 < len(epochs):
+                    next_epoch = epochs[idx + 1][1]
+                    rescaling_time = float(next_epoch.get('rescaling_time', 0) or 0)
+                    container_time = float(next_epoch.get('container_creation_time', 0) or 0)
+
+            # For fixed-width logs, count each rescaled epoch as 1 event
+            # For other logs, divide by rescale_count to get per-event time
+            if is_fixed_width:
+                rescale_data[job_type].append((rescaling_time, container_time))
+            else:
+                # Add rescale_count copies of per-event times
+                per_event_rescaling = rescaling_time / rescale_count if rescale_count > 0 else rescaling_time
+                per_event_container = container_time / rescale_count if rescale_count > 0 else container_time
+                for _ in range(rescale_count):
+                    rescale_data[job_type].append((per_event_rescaling, per_event_container))
+
+            previous_final_alloc = current_final_alloc
+            previous_alloc_len = current_alloc_len
+
+    if not rescale_data:
+        print("\nNo rescaling events detected across jobs.")
+        return
+
+    print(f"\n" + "=" * 80)
+    print("RESCALING BREAKDOWN: RESCALING vs CONTAINER CREATION TIME")
+    print("=" * 80)
+
+    for job_type in sorted(rescale_data.keys()):
+        pairs = rescale_data[job_type]
+        if not pairs:
+            continue
+
+        # Overall statistics
+        rescaling_times = [r for r, c in pairs]
+        container_times = [c for r, c in pairs]
+        total_times = [r + c for r, c in pairs]
+
+        mean_rescaling = sum(rescaling_times) / len(rescaling_times)
+        mean_container = sum(container_times) / len(container_times)
+        mean_total = sum(total_times) / len(total_times)
+
+        print(f"\n{job_type.upper()}:")
+        print(f"  Total events: {len(pairs)}")
+        print(f"  Mean rescaling time:          {mean_rescaling:.2f}s")
+        print(f"  Mean container creation time: {mean_container:.2f}s")
+        print(f"  Mean total time:              {mean_total:.2f}s")
+
+        # Threshold analysis
+        threshold = thresholds.get(job_type, 60)
+        above_threshold = [(r, c) for r, c in pairs if (r + c) > threshold]
+        below_threshold = [(r, c) for r, c in pairs if (r + c) <= threshold]
+
+        print(f"\n  Threshold analysis (threshold = {threshold}s):")
+
+        if above_threshold:
+            above_rescaling = [r for r, c in above_threshold]
+            above_container = [c for r, c in above_threshold]
+            above_total = [r + c for r, c in above_threshold]
+            print(f"    Cases where sum > {threshold}s ({len(above_threshold)} events):")
+            print(f"      Mean rescaling:          {sum(above_rescaling)/len(above_rescaling):.2f}s")
+            print(f"      Mean container creation: {sum(above_container)/len(above_container):.2f}s")
+            print(f"      Mean total:              {sum(above_total)/len(above_total):.2f}s")
+        else:
+            print(f"    Cases where sum > {threshold}s: No events")
+
+        if below_threshold:
+            below_rescaling = [r for r, c in below_threshold]
+            below_container = [c for r, c in below_threshold]
+            below_total = [r + c for r, c in below_threshold]
+            print(f"    Cases where sum <= {threshold}s ({len(below_threshold)} events):")
+            print(f"      Mean rescaling:          {sum(below_rescaling)/len(below_rescaling):.2f}s")
+            print(f"      Mean container creation: {sum(below_container)/len(below_container):.2f}s")
+            print(f"      Mean total:              {sum(below_total)/len(below_total):.2f}s")
+        else:
+            print(f"    Cases where sum <= {threshold}s: No events")
+
+    print("=" * 80)
+
+
 def plot_rescaling_time_histograms(jobs):
     """Plot histograms of per-rescaling times for CIFAR10, BERT, and DeepSpeech2.
 
@@ -2036,6 +2303,10 @@ def main():
     print_job_breakdown(specific_job_breakdown, jobs, scheduler_nodes)
 
     print_mean_rescaling_time(jobs, completed_jobs_status, log_file_path)
+
+    print_mean_rescaling_count_per_job_type(jobs, completed_jobs_status, log_file_path)
+
+    print_rescaling_breakdown_with_threshold(jobs, completed_jobs_status, log_file_path)
 
     # plot_rescaling_time_histograms(jobs)
     # plot_rescaling_time_breakdown_histograms(jobs)

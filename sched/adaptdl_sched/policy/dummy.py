@@ -52,27 +52,28 @@ class DummyPolicy(object):
         """
 
         # Only for debugging purposes
-        assert len(nodes) == 2, "DEBUGGING BRANCH"
+        # assert len(nodes) == 2, "DEBUGGING BRANCH"
         node_names = list(nodes.keys())
         new_allocations = {}
         for job, job_info in jobs.items():
             # assert job.application == "cifar10", "DEBUGGING BRANCH"
             LOG.info(f"DummyPolicy optimize: progress={job_info.progress}")
             if job_info.progress < 1000:
-                allocation = [node_names[0]]
-            elif job_info.progress < 2000:
-                allocation = [node_names[0], node_names[1]]
+                allocation = [node_names[0],node_names[0]]
+                desired_nodes = 2
             elif job_info.progress < 3000:
-                allocation = [node_names[0]]
-            elif job_info.progress < 4000:
-                allocation = [node_names[0], node_names[1]]
-            elif job_info.progress < 5000:
-                allocation = [node_names[0]]
+                allocation = [node_names[0],node_names[0],node_names[0],node_names[0]]
+                desired_nodes = 3
             else:
-                allocation = [node_names[0], node_names[1]]
+                if len(node_names) == 2:
+                    allocation = [node_names[0], node_names[0],node_names[0],node_names[0]]
+                    desired_nodes = 3
+                else:
+                    allocation = [node_names[0], node_names[0],node_names[0],node_names[0], node_names[2],node_names[2],node_names[2],node_names[2],node_names[1],node_names[1],node_names[1],node_names[1]]
+                    desired_nodes = 3
             new_allocations[job] = allocation
 
-        return new_allocations, 2
+        return new_allocations, desired_nodes
 
 
         

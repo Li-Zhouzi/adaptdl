@@ -5,6 +5,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import numpy as np
 import importlib.util
+from plot_config import apply_plot_style
 
 # Import goodput_functions from goodput-fix-profile.py
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -266,6 +267,8 @@ def plot_goodput_comparison(goodput_profile, job_epoch_list, goodput_functions, 
         goodput_functions: Dictionary {job_type: {epoch: {num_gpus: goodput}}} from goodput-fix-profile.py
         output_file: Optional filename to save the figure
     """
+    apply_plot_style()
+
     if len(job_epoch_list) != 9:
         raise ValueError("job_epoch_list must contain exactly 9 (job_type, epoch) tuples")
 
@@ -280,7 +283,7 @@ def plot_goodput_comparison(goodput_profile, job_epoch_list, goodput_functions, 
             theoretical_data = goodput_functions[job_type][epoch]
             gpu_counts = sorted(theoretical_data.keys())
             goodputs = [theoretical_data[g] for g in gpu_counts]
-            ax.plot(gpu_counts, goodputs, 'r-', linewidth=2, label='Theoretical')
+            ax.plot(gpu_counts, goodputs, 'r-', label='Theoretical')
 
         # Plot actual mean goodput in blue
         if job_type in goodput_profile and epoch in goodput_profile[job_type]:
@@ -294,7 +297,7 @@ def plot_goodput_comparison(goodput_profile, job_epoch_list, goodput_functions, 
                 else:
                     mean_goodputs.append(0)
 
-            ax.plot(gpu_counts_actual, mean_goodputs, 'bo', markersize=8, label='Measured (mean)')
+            ax.plot(gpu_counts_actual, mean_goodputs, 'bo', label='Measured (mean)')
 
         ax.set_xlabel('Number of GPUs')
         ax.set_ylabel('Goodput (samples/sec)')
@@ -327,6 +330,8 @@ def plot_speedup_and_gpu_hours(goodput_functions, output_file_prefix=None):
         goodput_functions: Dictionary {job_type: {epoch: {num_gpus: goodput}}}
         output_file_prefix: Optional prefix for output filenames (e.g., "cifar10_analysis")
     """
+    apply_plot_style()
+
     cifar10_data = goodput_functions.get('cifar10', {})
     if not cifar10_data:
         print("Error: No cifar10 data found in goodput_functions")
@@ -364,24 +369,21 @@ def plot_speedup_and_gpu_hours(goodput_functions, output_file_prefix=None):
                 speedup = epoch_data[k] / baseline_goodput
                 speedups.append(speedup)
 
-            ax1.plot(gpu_counts, speedups, marker='o', color=color,
-                    linewidth=2, markersize=6, label=f'Epoch {epoch}')
+            ax1.plot(gpu_counts, speedups, marker='o', color=color, label=f'Epoch {epoch}')
 
     # Plot perfect speedup (45-degree line, y=x)
     if all_gpu_counts:
         max_gpu = max(all_gpu_counts)
         perfect_speedup_x = list(range(1, max_gpu + 1))
         perfect_speedup_y = perfect_speedup_x
-        ax1.plot(perfect_speedup_x, perfect_speedup_y, 'k--',
-                linewidth=2, label='Perfect Speedup')
+        ax1.plot(perfect_speedup_x, perfect_speedup_y, 'k--', label='Perfect Speedup')
 
-    ax1.set_xlabel('Number of GPUs', fontsize=24)
-    ax1.set_ylabel('Speedup', fontsize=24)
-    ax1.set_ylim(0, 15)
+    ax1.set_xlabel('Number of GPUs')
+    ax1.set_ylabel('Speedup')
+    # ax1.set_ylim(0, 15)
     ax1.set_xticks([1, 2, 4, 8, 12, 16, 24, 32])
-    ax1.tick_params(axis='both', which='major', labelsize=22)
-    ax1.legend(fontsize=24)
-    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    # ax1.grid(True, alpha=0.3)
 
     if output_file_prefix:
         speedup_file = f"{output_file_prefix}_speedup.png"
@@ -420,19 +422,17 @@ def plot_speedup_and_gpu_hours(goodput_functions, output_file_prefix=None):
         gpu_counts_list = sorted(total_gpu_hours.keys())
         gpu_hours_list = [total_gpu_hours[k] for k in gpu_counts_list]
 
-        ax2.plot(gpu_counts_list, gpu_hours_list, marker='o', color='purple',
-                linewidth=2, markersize=8)
+        ax2.plot(gpu_counts_list, gpu_hours_list, marker='o', color='purple')
 
         # Print some statistics
         print("\nTotal GPU hours for different GPU counts:")
         for k in gpu_counts_list:
             print(f"  {k} GPUs: {total_gpu_hours[k]:.2f} GPU-hours")
 
-    ax2.set_xlabel('Number of GPUs', fontsize=24)
-    ax2.set_ylabel('Total GPU Hours', fontsize=24)
+    ax2.set_xlabel('Number of GPUs')
+    ax2.set_ylabel('Total GPU Hours')
     ax2.set_xticks([1, 2, 4, 8, 12, 16, 24, 32])
-    ax2.tick_params(axis='both', which='major', labelsize=22)
-    ax2.grid(True, alpha=0.3)
+    # ax2.grid(True, alpha=0.3)
 
     if output_file_prefix:
         gpu_hours_file = f"{output_file_prefix}_gpu_hours.png"

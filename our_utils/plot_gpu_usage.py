@@ -2,6 +2,7 @@ import json
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
+from plot_config import apply_plot_style
 
 
 def plot_two_effective_gpu_usage(gpu_usage_dict1, gpu_usage_dict2, label1='Experiment 1', label2='Experiment 2', output_filename=None):
@@ -15,6 +16,8 @@ def plot_two_effective_gpu_usage(gpu_usage_dict1, gpu_usage_dict2, label1='Exper
         label2: Label for second experiment
         output_filename: Optional filename to save the plot
     """
+    apply_plot_style()
+
     if not gpu_usage_dict1 and not gpu_usage_dict2:
         print("No effective GPU usage data to plot.")
         return
@@ -45,12 +48,11 @@ def plot_two_effective_gpu_usage(gpu_usage_dict1, gpu_usage_dict2, label1='Exper
         ax.plot(relative_times2, gpu_counts2, linewidth=1.5, color='green', label=label2, alpha=0.8)
         ax.fill_between(relative_times2, gpu_counts2, alpha=0.2, color='green')
 
-    ax.set_xlabel('Time (seconds)', fontsize=24)
-    ax.set_ylabel('Number of GPUs', fontsize=24)
+    ax.set_xlabel('Time (seconds)')
+    ax.set_ylabel('Number of GPUs')
     # ax.set_title('Effective GPU Usage Over Time - Comparison', fontsize=14, fontweight='bold')
     ax.grid(True, alpha=0.3, linestyle='--')
-    ax.legend(loc='best', fontsize=24)
-    ax.tick_params(axis='both', which='major', labelsize=22)  # Make axis numbers (ticks) larger
+    ax.legend(loc='best')
 
     plt.tight_layout()
 

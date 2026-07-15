@@ -116,6 +116,7 @@ class FixedWidthPolicy(object):
             if node_name not in scheduler_node_names:
                 prioritized_nodes.append(node_name)
 
+        unfit_partial_jobs = 0
         for job_key, job_info in jobs.items():
             if job_key in new_allocations:
                 continue  # Already allocated or handled (e.g. 0-GPU job)
@@ -133,6 +134,9 @@ class FixedWidthPolicy(object):
                 # If job wants multiple of 4 GPUs, only use nodes with all 4 GPUs available
                 if gpu_wanted % 4 == 0 and available_gpus[node_name] != 4:
                     continue
+                # Partial-node job: require a single node that fits all replicas (no cross-node split)
+                if gpu_wanted < 4 and available_gpus[node_name] < gpu_wanted:
+                    continue
 
                 gpus = available_gpus[node_name]
                 while len(current_alloc) < gpu_wanted and gpus >= gpus_per_replica:
@@ -144,14 +148,18 @@ class FixedWidthPolicy(object):
             total_gpus_needed += self.width[job_info.application][str(job_info.epoch)]
             if len(current_alloc) < gpu_wanted:
                 LOG.warning(f"Job {job_key}: wanted {gpu_wanted} GPUs, got {len(current_alloc)}")
+                if gpu_wanted < 4:
+                    assert gpu_wanted == 2, f"Unfit partial-node job {job_key} wanted {gpu_wanted} GPUs, expected 2"
+                    unfit_partial_jobs += 1
 
         desired_nodes = math.ceil(total_gpus_needed / node_template.resources.get("nvidia.com/gpu", 1))
 
         # Calculate actual nodes used in allocations
         actual_nodes_used = len(set.union(*map(set, new_allocations.values()))) if new_allocations else 0
 
-        # Desired nodes should be at least the actual nodes used (due to imperfect bin-packing)
-        desired_nodes = max(desired_nodes, actual_nodes_used)
+        # Desired nodes should be at least the actual nodes used (due to imperfect bin-packing),
+        # plus extra nodes for partial-node jobs that couldn't fit (2 unfit 2-GPU jobs -> 1 node).
+        desired_nodes = max(desired_nodes, actual_nodes_used + math.ceil(unfit_partial_jobs / 2))
 
         LOG.info(f"FixedWidthPolicy optimize results: {new_allocations}, desired_nodes: {desired_nodes}")
         if desired_nodes > self.max_nodes:

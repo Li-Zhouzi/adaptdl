@@ -1,0 +1,38 @@
+# Matplotlib style for consistent plotting
+# Usage: plt.style.use('plot_style.mplstyle')
+
+# Figure properties
+figure.figsize: 10, 8
+figure.dpi: 100
+savefig.dpi: 300
+savefig.bbox: tight
+savefig.pad_inches: 0.1
+
+# Font sizes
+font.size: 22
+axes.labelsize: 28
+axes.titlesize: 28
+xtick.labelsize: 22
+ytick.labelsize: 22
+legend.fontsize: 28
+
+# Line properties
+lines.linewidth: 4
+lines.markersize: 8
+
+# Grid
+grid.alpha: 0.3
+grid.linewidth: 0.8
+
+# Axes
+axes.linewidth: 1.5
+axes.grid: False
+
+# Legend
+legend.frameon: True
+legend.framealpha: 0.9
+legend.edgecolor: black
+
+# Colors - using default but can be customized
+axes.prop_cycle: cycler('color', ['1f77b4', 'ff7f0e', '2ca02c', 'd62728', '9467bd', '8c564b', 'e377c2', '7f7f7f', 'bcbd22', '17becf'])
+
